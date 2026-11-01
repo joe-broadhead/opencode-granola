@@ -1,0 +1,97 @@
+# Publishes a vX.Y.Z tag on master to npm, after the release environment's approval, in this order: guard, npm ci,
+# npm run check, pack once, the pack test on that exact tarball, then npm publish of that tarball with npm trusted
+# publishing and provenance. A rerun skips the publish when that version is already on npm.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # trusted publishing and provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # First, before anything is installed or built. `npm publish --dry-run` does not refuse a private
+      # package, so the workflow checks package.json itself.
+      - name: Refuse a private package or a tag that differs from the version
+        run: |
+          node -e '
+            const pkg = require("./package.json")
+            if (pkg.private !== undefined && pkg.private !== false) {
+              console.error("::error::package.json has \"private\": " + JSON.stringify(pkg.private) + ", so nothing was published.")
+              process.exit(1)
+            }
+            if (process.env.GITHUB_REF_NAME !== "v" + pkg.version) {
+              console.error("::error::The tag " + process.env.GITHUB_REF_NAME + " does not match the package version " + pkg.version + ".")
+              process.exit(1)
+            }
+          '
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false # no caches in release builds
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.4 # the Bun inside stock OpenCode 2.2.3 and 2.2.4
+          no-cache: true
+      - name: Require npm 11.5.1 or later for trusted publishing
+        run: |
+          node -e '
+            const [major, minor, patch] = process.argv[1].split(".").map(Number)
+            if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) {
+              console.error("::error::npm " + process.argv[1] + " cannot use trusted publishing. It needs npm 11.5.1 or later.")
+              process.exit(1)
+            }
+          ' "$(npm --version)"
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - name: Pack once
+        id: pack
+        shell: bash
+        run: |
+          mkdir "$RUNNER_TEMP/package"
+          npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP/package" > "$RUNNER_TEMP/pack.json"
+          name=$(node -e 'console.log(require(process.argv[1])[0].filename)' "$RUNNER_TEMP/pack.json")
+          tarball="$RUNNER_TEMP/package/$name"
+          sha256sum "$tarball"
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+      - name: Run the pack test on that tarball
+        env:
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+        run: node test/pack-smoke.mjs --tarball "$TARBALL"
+      - name: Publish the tarball with provenance
+        env:
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+        run: |
+          name=$(node -p 'require("./package.json").name')
+          version=$(node -p 'require("./package.json").version')
+          # A rerun must not fail on a version that an earlier run already published. E404 means not published yet.
+          if published=$(npm view "$name@$version" version 2>"$RUNNER_TEMP/view.err"); then
+            if [ "$published" = "$version" ]; then
+              echo "::notice::$name@$version is already on npm, so it was not published again."
+              exit 0
+            fi
+          elif ! grep -q E404 "$RUNNER_TEMP/view.err"; then
+            cat "$RUNNER_TEMP/view.err"
+            echo "::error::Could not check whether $name@$version is already on npm."
+            exit 1
+          fi
+          tag=latest
+          case "$GITHUB_REF_NAME" in *-*) tag=next ;; esac
+          npm publish "$TARBALL" --provenance --access public --tag "$tag"

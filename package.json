@@ -1,0 +1,59 @@
+{
+  "name": "@joe-broadhead/opencode-granola",
+  "version": "0.0.0",
+  "description": "Unofficial OpenCode plugin for Granola meeting notes, through Granola's official MCP server",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "granola"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joe-broadhead/opencode-granola.git"
+  },
+  "homepage": "https://github.com/joe-broadhead/opencode-granola#readme",
+  "bugs": {
+    "url": "https://github.com/joe-broadhead/opencode-granola/issues"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./tui": "./dist/tui.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "opencode": {
+    "host": ">=2.2.3 <2.3.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tui.json --noEmit && tsc -p test/tsconfig.json",
+    "build": "node scripts/build.mjs",
+    "lint": "node scripts/check-forbidden.mjs",
+    "test": "vitest run",
+    "test:host": "bun test --timeout 120000 ./test/integration",
+    "test:pack": "node test/pack-smoke.mjs",
+    "check": "npm run typecheck && npm run lint && npm run build && npm test && npm run test:host && npm run test:pack"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@opencode/client": "2.2.3",
+    "@opencode/plugin": "2.2.3",
+    "@opencode/sdk": "2.2.3",
+    "@opencode/theme": "2.2.3",
+    "@opentui/core": "0.8.0",
+    "@opentui/solid": "0.8.0",
+    "@types/node": "22.20.5",
+    "babel-preset-solid": "1.9.16",
+    "esbuild": "0.28.2",
+    "solid-js": "1.9.16",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5",
+    "web-tree-sitter": "0.25.10"
+  }
+}

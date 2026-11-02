@@ -57,6 +57,7 @@
     "web-tree-sitter": "0.25.10"
   },
   "jelly": {
+    "title": "Granola",
     "tools": [
       {
         "name": "granola.get_account_info",
@@ -173,6 +174,13 @@
     ],
     "rpc": [],
     "views": [],
+    "signIns": [
+      {
+        "id": "granola",
+        "label": "Granola",
+        "server": "granola"
+      }
+    ],
     "contributes": {
       "homeFeeds": [],
       "homeWidgets": [],

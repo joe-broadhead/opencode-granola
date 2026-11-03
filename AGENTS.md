@@ -20,7 +20,12 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
   base allow and never weakens a stricter agent. Agents that miss it are named by status, with the block to paste.
 - **Granola's tools stay Granola's.** Classify them in `src/known-tools.ts` to match the live server; unknown tools
   ask. `sign_out` stays hidden.
-- **Errors** are `CODE: what happened. Next step: one step.` Upstream errors pass through unchanged.
+- **Errors** are `CODE: what happened. Next step: one step.` Upstream errors pass through unchanged, except in the
+  tools RPC for scripts, which gives Granola's first line only, redacted, as `UPSTREAM_ERROR`.
+- **Scripts read only.** The tools RPC, `granola.meetings.tools`, makes exactly the known reads methods; writes,
+  `sign_out`, `export_markdown` and unknown tools never are. `src/host/tools-rpc.ts` is a copy of a module shared by
+  several plugins: change only its block between the `PLUGIN-SPECIFIC` markers here, and the rest in the shared copy
+  first. The executor it calls skips tool hooks, so it applies the hook's work itself.
 - **Text** in skills, errors and status is plain language with no process terms (`test/ux.test.ts`). Docs describe
   what the code does now. No tokens, sign-in links, meeting content or personal data anywhere; test data is invented.
 - **Releases** come only from the release workflow on a `vX.Y.Z` tag; it refuses a private package or a tag that
@@ -36,7 +41,9 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 
 - `ui.slot` in `src`;
 - the deprecated `ctx.generate.text` and `experimental.policies`, and the experimental `experimental.artifact`;
-- a permission `evaluate` hook, and a second argument to `permission.assert`;
+- a permission `evaluate` hook, except exactly one in `src/host/tools-rpc.ts`: it turns an ask on one of the tools
+  RPC's own script calls in flight into a deny, because no one can answer it, and touches nothing else;
+- a second argument to `permission.assert`;
 - `Plugin.image`;
 - imports of private host source, paths inside `@opencode/*` packages, `@opencode/ai`, other private host packages,
   `@opencode-ai/*`, machine-local paths, and `effect` in `src`;

@@ -25,7 +25,7 @@ export const HOST_VERSIONS = ["2.2.3", "2.2.4"] as const
 export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" | "integration" | "location" | "mcp" | "permission" | "plugin" | "rpc" | "server" | "session" | "skill">
 
 /**
- * - main: connected, with the user's own rules and agents;
+ * - main: connected, with the user's own rules and agents, including two for scripts;
  * - needs-auth and pending: the two connection states before Granola's tools are available;
  * - adopted: the user's own `granola` entry for the official URL;
  * - conflict: the user's own `granola` entry for another server;
@@ -57,6 +57,7 @@ export interface Host {
 const rule = (effect: Rule["effect"]) => (action: string, resource = "*"): Rule => ({ action, resource, effect })
 const allow = rule("allow")
 const deny = rule("deny")
+const ask = rule("ask")
 
 /** The user's own top-level rules for Granola tools in the main project. */
 const USER_RULES: readonly Rule[] = [
@@ -87,6 +88,9 @@ function projectConfig(project: Project, plugin: string, fake: SyntheticGranola,
           reviewer: configOnly("Defined only in user config"),
           // The fix status gives for an agent defined only in user config: the block, then the user's own rules.
           fixed: configOnly("Has the Granola permission block", [...DEFAULT_RULES, ...USER_RULES]),
+          // For scripts: one denies every Granola tool, the other asks before one read.
+          locked: configOnly("Denies Granola", [...DEFAULT_RULES, ...USER_RULES, deny("granola_*")]),
+          careful: configOnly("Asks before get_meetings", [...DEFAULT_RULES, ...USER_RULES, ask("granola_get_meetings")]),
         },
         experimental: { schedules: true },
       }

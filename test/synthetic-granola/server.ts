@@ -24,6 +24,10 @@ export const WORKSPACE = "Synthetic workspace"
 export const MEETING = "m-1"
 /** A meeting whose transcript the server refuses with Granola's plan error, as on a free plan. */
 export const PLAN_LIMITED = "m-free"
+/** A meeting whose transcript read fails with UPSTREAM_FAILURE. */
+export const FAILING = "m-fail"
+/** Granola's error for FAILING: two lines, the first with a signed URL. */
+export const UPSTREAM_FAILURE = "Transcript storage refused https://files.example.invalid/t.json?X-Amz-Signature=fake-signature-123\nTraceback: second line"
 
 export interface Call {
   readonly tool: string
@@ -96,6 +100,7 @@ function call(name: string, args: Record<string, unknown>) {
     case "get_meetings":
       return text(meetings(Array.isArray(args.meeting_ids) ? args.meeting_ids.map(String) : []))
     case "get_meeting_transcript": {
+      if (args.meeting_id === FAILING) return { isError: true, ...text(UPSTREAM_FAILURE) }
       if (args.meeting_id === PLAN_LIMITED) return { isError: true, ...text("Transcripts are only available to paid Granola tiers. Do not retry unless the plan changes.") }
       if (args.meeting_id !== MEETING) return { isError: true, ...text("Meeting not found") }
       const value = { meeting_id: MEETING, title: "Weekly sync", transcript: TRANSCRIPT, total_chars: TRANSCRIPT.length, truncated: false }

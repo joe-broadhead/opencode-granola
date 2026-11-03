@@ -9,6 +9,18 @@ All notable changes to this project are documented here. The format follows [Kee
 - A `jelly` section in `package.json`: each tool with its permission, its default effect and whether it only reads, the skill ids. Jelly reads it without loading the plugin and applies the declared asks, because its agents have no base allow rule for this plugin's own default rules to follow. `docs/jelly.md` explains it.
 - `title` and `signIns` in the `jelly` section: the name Jelly shows on the plugin's card, and what the plugin signs in to, so that one card can say whether each sign-in is connected and start, renew or end it. `docs/jelly.md` lists them.
 
+## [0.0.1] - 2026-11-03
+
+### Added
+
+- The tools RPC, `granola.meetings.tools`: a script can call Granola's ten read tools with no model, through
+  `opencode api`, as a session and its agent. It gets exactly the access that agent's model has: a tool its rules hide
+  is refused, OpenCode checks each call against the agent's and the session's rules, and an ask is refused at once
+  because no one is there to answer it. `describe` lists the methods with each tool's live input schema. Granola's
+  writes, `sign_out`, `export_markdown` and any tool Granola adds later are never methods. An account read records the
+  workspace for status, and a server that is not connected gets the same codes and next steps as for the model.
+  `docs/scripting.md` explains it.
+
 ## [0.0.0] - 2026-11-01
 
 ### Added

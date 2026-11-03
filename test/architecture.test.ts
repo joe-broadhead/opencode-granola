@@ -53,8 +53,14 @@ describe("production architecture", () => {
   })
 
   it("uses none of the fork-only or retired host APIs", () => {
-    const forbidden = /mcp\.catalog|mcp\.attest|supports[A-Z]|responsePolicy|capabilities:|image:|options\.mcp|hook\("evaluate"|\.assert\([^;]*?,\s*\{\s*signal|generate\.text|experimental\.policies/
+    const forbidden = /mcp\.catalog|mcp\.attest|supports[A-Z]|responsePolicy|capabilities:|image:|options\.mcp|\.assert\([^;]*?,\s*\{\s*signal|generate\.text|experimental\.policies/
     for (const file of files) expect(readFileSync(file, "utf8"), relative(root, file)).not.toMatch(forbidden)
+  })
+
+  it("hooks permission evaluation only in the tools RPC, exactly once", () => {
+    // It turns an ask on one of the RPC's own script calls in flight into a deny, because no one can answer it.
+    const hooks = files.map((file) => [relative(root, file), readFileSync(file, "utf8").match(/hook\("evaluate"/g)?.length ?? 0] as const)
+    expect(hooks.filter(([, count]) => count > 0)).toEqual([["src/host/tools-rpc.ts", 1]])
   })
 
   it("rejects bypasses rather than only today's source text", () => {

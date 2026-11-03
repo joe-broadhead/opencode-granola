@@ -60,6 +60,10 @@ Reads run without a prompt. OpenCode asks the user before each of these, unless 
 
 Make a change only when the user asked for it, and say first what it will do. A folder with workspace visibility shares every note in it with the whole workspace. If the user declines or the permission is denied, do not retry or find another way. In `opencode run` with nobody present to answer, these calls are denied unless the user's OpenCode permissions allow them. If `/granola-status` warns that an agent did not get Granola's permission defaults, pass the warning and its fix to the user.
 
+## Scripts
+
+When the user wants a job that runs without you, such as a cron job or a shell script, it can call Granola's read tools through the OpenCode server, with no model. The RPC `granola.meetings.tools` has one method per read, such as `list_meetings`, `get_meetings` and `get_meeting_transcript`, with the tools' own input, and `describe`, which lists them with their input schemas. Each call is `opencode api post /api/rpc/granola.meetings.tools/<method>` with the body `{"input":{"sessionID":"<session>","input":<the tool's input>}}`. The script runs as that session's agent, under its permission rules, so have the script create its session once with `opencode api post /api/session` and a body such as `{"title":"weekly meetings","agent":"build"}`. An ask is refused, so the agent needs the reads allowed; the default rules allow them. Scripts cannot make changes, sign out or export files. The details are in the plugin's `docs/scripting.md`.
+
 ## Save meetings as Markdown
 
 `export_markdown` writes the notes, the transcript, or both, for 1 to 20 meetings into one Markdown file in the user's export folder; `/granola-status` shows the folder. The content goes straight to the file without passing through the conversation, so prefer it to reading a long transcript just to save it.

@@ -2,7 +2,9 @@ import type { Plugin } from "@opencode/plugin"
 import { registerCommands, type CommandsContext } from "./commands.js"
 import { registerExport, type ExportContext } from "./export/index.js"
 import { checkHost } from "./host-check.js"
+import type { ToolsRpcOptions } from "./host/tools-rpc.js"
 import { registerIntegration, type IntegrationContext } from "./integration.js"
+import { SERVER } from "./known-tools.js"
 import { readPackageInfo } from "./meta.js"
 import { parseOptions } from "./options.js"
 import { registerPermissions } from "./permissions.js"
@@ -23,7 +25,13 @@ export type SetupContext = {
   readonly rpc: Pick<Plugin.Context["rpc"], "register">
 } & IntegrationContext & StatusContext & ToolsContext & CommandsContext & ExportContext
 
-export async function setup(ctx: SetupContext): Promise<() => Promise<void>> {
+/**
+ * Registers the tools RPC, `granola.meetings.tools`, and returns its cleanup. It needs more of the plugin context than
+ * setup's, so index.ts binds it to the real context.
+ */
+export type ToolsRpc = (options: ToolsRpcOptions) => Promise<() => Promise<void>>
+
+export async function setup(ctx: SetupContext, toolsRpc: ToolsRpc): Promise<() => Promise<void>> {
   const info = readPackageInfo()
   const options = parseOptions(ctx.options)
   const host = checkHost(ctx.app.version, info.testedHost, options.allowUntestedHost)
@@ -45,5 +53,11 @@ export async function setup(ctx: SetupContext): Promise<() => Promise<void>> {
   await registerSkills(ctx)
   await registerExport(ctx, options)
   await registerRpc(ctx, status)
-  return () => integration.dispose()
+  // Scripts call Granola's reads with no model, as a session and its agent; a user's own granola server is not ours.
+  const stopTools = await toolsRpc({ mcp: { server: SERVER, managed: () => server.conflict() === undefined } })
+  return async () => {
+    tools?.dispose()
+    await stopTools()
+    await integration.dispose()
+  }
 }

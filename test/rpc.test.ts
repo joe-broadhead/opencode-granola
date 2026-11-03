@@ -26,7 +26,7 @@ describe("status RPC", () => {
 
   it("is registered by setup and serves the status model that /granola-status prints", async () => {
     const host = fakeHost()
-    await setup(host.ctx)
+    await setup(host.ctx, host.toolsRpc)
     host.listed.servers = [{ name: "granola", title: "Granola", status: { status: "needs_auth", error: "see https://auth.example/x" } }]
     const handlers = host.rpc.get(Granola.id)!
     expect(Object.keys(handlers)).toEqual(["status"])

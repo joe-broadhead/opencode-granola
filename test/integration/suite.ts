@@ -1,22 +1,26 @@
 // The host test, run against every host in embedded.test.ts and binary.test.ts. It checks what the plugin
 // registers on a real OpenCode host and how OpenCode then runs Granola's tools and the plugin's own: the default
-// permission rules and their precedence, status in every connection state, the export, and unloading.
+// permission rules and their precedence, status in every connection state, the export, the tools RPC for scripts, and
+// unloading.
 import { createHash } from "node:crypto"
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { setTimeout as sleep } from "node:timers/promises"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { connectionProblem, toolUnavailable } from "../../src/errors.js"
+import { KNOWN_READS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { HIDDEN_TOOLS, PLUGIN_TOOLS, WRITE_TOOLS } from "../../src/known-tools.js"
 import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
 import { Granola } from "../../src/rpc/contract.js"
-import { agentFix, formatStatus, type Status } from "../../src/status.js"
-import { MEETING, PLAN_LIMITED, TITLE, TOOLS, WORKSPACE, type SyntheticGranola } from "../synthetic-granola/server.js"
+import { agentFix, CONFLICT_NEXT, formatStatus, type Status } from "../../src/status.js"
+import { FAILING, MEETING, PLAN_LIMITED, TITLE, TOOLS, UPSTREAM_FAILURE, WORKSPACE, type SyntheticGranola } from "../synthetic-granola/server.js"
 import { ADOPTED_SERVER, globalPaths, OFFICIAL_URL, OTHER_SERVER, repositoryChanges, REPO, type Host, type Project } from "./harness.js"
 import type { CallInput, CallResult, Outcome, ProbeState } from "./probe/index.js"
 
 const VERSION = (JSON.parse(readFileSync(join(REPO, "package.json"), "utf8")) as { version: string }).version
 const SKILLS = ["granola", "granola-meeting-brief"]
 /** Agents defined only in the main project's config; OpenCode creates them after package plugins run. */
-const CONFIG_ONLY = ["reviewer", "fixed"]
+const CONFIG_ONLY = ["reviewer", "fixed", "locked", "careful"]
 
 const isBaseAllow = (rule: Rule) => rule.action === "*" && rule.resource === "*" && rule.effect === "allow"
 const blocks = (permissions: readonly Rule[]) => permissions.filter((rule) => rule.action === "granola_*" && rule.effect === "ask").length
@@ -421,6 +425,131 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
 
       test("the user's deny still wins over it", async () => {
         expect(await run("main", { agent: "general", tool: id("add_note_to_folder") })).toMatchObject({ asked: [], error: { tag: "Permission.BlockedError" } })
+      })
+    })
+
+    describe("the tools RPC for scripts", () => {
+      const sessions: Record<string, string> = {}
+      const scriptRule = (action: string, effect: Rule["effect"]): Rule => ({ action, resource: "*", effect })
+      /** A tools RPC call's output, or its error's type, code, next step and message. */
+      async function script(project: Project, method: string, input: unknown): Promise<Record<string, any>> {
+        try {
+          return { value: (await host.client.rpc.call({ rpcID: TOOLS_RPC_ID, method, input: input as never, ...at(project) })).output }
+        } catch (error) {
+          const e = error as Record<string, any>
+          return { type: e.type ?? e._tag, code: e.data?.code, next: e.data?.next, message: String(e.message ?? e) }
+        }
+      }
+      const call = (session: string, method: string, input: unknown, project: Project = "main") =>
+        script(project, method, { sessionID: sessions[session] ?? session, input })
+
+      beforeAll(async () => {
+        await statusWhen("main", connected)
+        const create = async (input: Record<string, unknown>) => (await host.client.session.create({ title: "Granola script", ...at("main"), ...input })).id
+        sessions.build = await create({ agent: "build" })
+        sessions.locked = await create({ agent: "locked" })
+        sessions.careful = await create({ agent: "careful" })
+        sessions.agentless = await create({})
+        // Session rules come after the agent's: one narrows build, the other reopens one read for locked.
+        sessions.narrow = await create({ agent: "build", permissions: [scriptRule(id("get_meetings"), "deny")] })
+        sessions.reopen = await create({ agent: "locked", permissions: [scriptRule(id("get_meetings"), "allow")] })
+      }, 60_000)
+
+      test("describe lists exactly the ten known reads, with the live schemas of those Granola offers", async () => {
+        const { value } = await script("main", "describe", {})
+        expect(value.id).toBe(TOOLS_RPC_ID)
+        expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...KNOWN_READS])
+        const offered = value.methods.filter((method: { available: boolean }) => method.available).map((method: { name: string }) => method.name)
+        expect(offered.sort()).toEqual([...TOOLS.read].sort())
+        for (const method of value.methods) {
+          expect(structuredClone(method)).toMatchObject({ kind: "mcp", tool: id(method.name), action: id(method.name) })
+          if (!method.available) expect(method.reason).toBe("TOOL_UNAVAILABLE")
+        }
+        const listed = value.methods.find((method: { name: string }) => method.name === "get_meetings")
+        expect(listed.input).toMatchObject({ type: "object", properties: { meeting_ids: { type: "array" } } })
+      })
+
+      test("a write, sign_out, export_markdown or an unknown tool is no method, even where a rule allows it", async () => {
+        const calls = received()
+        for (const name of [...WRITE_TOOLS, ...HIDDEN_TOOLS, ...PLUGIN_TOOLS, ...TOOLS.unknown]) {
+          const result = await call("build", name, {})
+          expect({ name, failed: result.type === "failed", missing: /not.?found|unknown/i.test(result.message ?? "") }).toEqual({ name, failed: false, missing: true })
+        }
+        expect(calls()).toEqual([])
+      })
+
+      test("runs a known read as a session whose agent allows it, with no model turn", async () => {
+        const calls = received()
+        // A result with only text has that text as its output too, as OpenCode's executor gives it.
+        const meetings = await call("build", "get_meetings", { meeting_ids: [MEETING] })
+        expect(meetings.value.text).toContain(`id="${MEETING}"`)
+        expect(meetings.value).toEqual({ output: meetings.value.text, text: meetings.value.text })
+        const transcript = await call("build", "get_meeting_transcript", { meeting_id: MEETING })
+        expect(transcript.value).toMatchObject({ output: { meeting_id: MEETING, transcript: expect.stringContaining("Welcome") }, text: expect.any(String) })
+        expect(calls()).toEqual(["get_meetings", "get_meeting_transcript"])
+        const session = await host.client.session.get({ sessionID: sessions.build! })
+        expect(session.tokens).toMatchObject({ input: 0, output: 0 })
+      })
+
+      test("an account read records the workspace that status shows, as the model path does", async () => {
+        // Nothing has read the account in the adopted project yet; the script's session belongs to main.
+        expect(Object.hasOwn(await statusWhen("adopted", connected), "workspace")).toBe(false)
+        expect((await call("build", "get_account_info", {}, "adopted")).value).toMatchObject({ text: expect.stringContaining(WORKSPACE) })
+        expect(await status("adopted")).toMatchObject({ workspace: WORKSPACE })
+      })
+
+      test("refuses a session whose agent denies Granola, before Granola is called", async () => {
+        const calls = received()
+        expect(await call("locked", "get_meetings", { meeting_ids: [MEETING] })).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(calls()).toEqual([])
+      })
+
+      test("refuses an ask at once, and leaves no approval prompt waiting", async () => {
+        const calls = received()
+        const started = Date.now()
+        const result = await call("careful", "get_meetings", { meeting_ids: [MEETING] })
+        expect(result).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(result.message).toMatch(/cannot answer an approval prompt/)
+        expect(Date.now() - started).toBeLessThan(5_000)
+        const { data: pending } = await host.client.permission.request.list(at("main"))
+        expect(pending.filter((request) => JSON.stringify(request).includes(sessions.careful!))).toEqual([])
+        expect(calls()).toEqual([])
+        // The same agent's other reads have no ask, so they run.
+        expect((await call("careful", "list_meetings", {})).value).toMatchObject({ text: expect.any(String) })
+      })
+
+      test("applies the session's rules after the agent's", async () => {
+        expect(await call("narrow", "get_meetings", { meeting_ids: [MEETING] })).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect((await call("narrow", "list_meetings", {})).value).toMatchObject({ text: expect.any(String) })
+        expect((await call("reopen", "get_meetings", { meeting_ids: [MEETING] })).value).toMatchObject({ text: expect.stringContaining(MEETING) })
+        expect(await call("reopen", "list_meetings", {})).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+      })
+
+      test("gives Granola's own error as UPSTREAM_ERROR: its first line, with the signed URL redacted", async () => {
+        const result = await call("build", "get_meeting_transcript", { meeting_id: FAILING })
+        expect(result).toMatchObject({ type: "failed", code: "UPSTREAM_ERROR" })
+        expect(result.message).toContain("https://files.example.invalid/t.json?[redacted]")
+        for (const hidden of ["fake-signature-123", "second line"]) expect(result.message).not.toContain(hidden)
+        expect(UPSTREAM_FAILURE).toContain("fake-signature-123")
+      })
+
+      test("names a read the server does not offer, a server that needs a sign-in, and the user's own server", async () => {
+        expect(await call("build", "list_templates", {})).toMatchObject({ type: "failed", code: "TOOL_UNAVAILABLE", next: toolUnavailable("list_templates").next })
+        await statusWhen("needs-auth", settled)
+        const signIn = connectionProblem("needs_auth")!
+        expect(await call("build", "list_meetings", {}, "needs-auth")).toMatchObject({ type: "failed", code: signIn.code, next: signIn.next })
+        const calls = received()
+        expect(await call("build", "list_meetings", {}, "conflict")).toMatchObject({ type: "failed", code: "SERVER_CONFLICT", next: CONFLICT_NEXT })
+        expect(calls()).toEqual([])
+      })
+
+      test("names an unknown session, a session without an agent, and rejects an envelope with extra keys", async () => {
+        expect(await call("ses_does_not_exist", "list_meetings", {})).toMatchObject({ type: "failed", code: "SESSION_UNKNOWN" })
+        expect(await call("agentless", "list_meetings", {})).toMatchObject({ type: "failed", code: "SESSION_AGENT_REQUIRED" })
+        const calls = received()
+        for (const envelope of [{ sessionID: sessions.build, input: {}, extra: true }, { input: {} }, { sessionID: sessions.build, input: "q" }])
+          expect(await script("main", "list_meetings", envelope)).toMatchObject({ type: "rpc.invalid_input" })
+        expect(calls()).toEqual([])
       })
     })
 

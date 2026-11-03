@@ -290,6 +290,8 @@ Every error has a code, a message and a next step, in the form `CODE: message Ne
 | `SKILLS_INVALID` | The bundled skill *path* needs front matter with a name that matches its folder and a description. | Reinstall the plugin. |
 | `PACKAGE_INVALID` | The Granola plugin's package.json *problem*. | Reinstall the plugin. |
 
+Scripts that use the tools RPC get their own error codes; see [Scripting](scripting.md#errors).
+
 When a Granola tool fails because the server is not available, the plugin replaces OpenCode's message with the
 matching connection error. The reason in `CONNECTION_FAILED` is shortened to one line, with web addresses
 replaced by `<url>`. OpenCode's sign-in error is never repeated, because it can contain a sign-in link.

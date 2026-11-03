@@ -12,6 +12,8 @@ export interface ToolsState {
   hidden(): number
   /** The active workspace's display name from the last successful account read, kept in memory only. */
   workspace(): string | undefined
+  /** Stops hearing account reads from the tools RPC. */
+  dispose(): void
 }
 
 export interface ToolsContext {
@@ -30,9 +32,23 @@ export async function unavailableProblem(ctx: { readonly mcp: Pick<Plugin.Contex
     ?? connectionProblem("pending")!
 }
 
+type AccountResult = Parameters<typeof workspaceName>[0]
+
+/**
+ * Every running plugin instance's workspace setter. The tools RPC's account reads skip the execute.after hook, and its
+ * result shaping has no instance of its own, so it tells every instance. They share OpenCode's one Granola sign-in.
+ */
+const workspaceSetters = new Set<(result: AccountResult) => void>()
+
+/** Records the workspace from a get_account_info result that a script read through the tools RPC. */
+export function captureWorkspace(result: AccountResult): void {
+  for (const set of workspaceSetters) set(result)
+}
+
 export async function registerTools(ctx: ToolsContext): Promise<ToolsState> {
   let hidden = 0
   let workspace: string | undefined
+  const setWorkspace = (result: AccountResult) => void (workspace = workspaceName(result) ?? workspace)
 
   await ctx.tool.transform((editor) => {
     editor.namespace({ name: SERVER, description: NAMESPACE_DESCRIPTION })
@@ -48,7 +64,7 @@ export async function registerTools(ctx: ToolsContext): Promise<ToolsState> {
     const kind = classify(event.tool)
     if (kind === undefined || kind === "plugin") return
     if (event.status === "completed") {
-      if (event.tool === toolID("get_account_info")) workspace = workspaceName(event.result) ?? workspace
+      if (event.tool === toolID("get_account_info")) setWorkspace(event.result)
       return
     }
     if (!event.error.message.startsWith(UNAVAILABLE)) return
@@ -59,5 +75,6 @@ export async function registerTools(ctx: ToolsContext): Promise<ToolsState> {
     }
   })
 
-  return { hidden: () => hidden, workspace: () => workspace }
+  workspaceSetters.add(setWorkspace)
+  return { hidden: () => hidden, workspace: () => workspace, dispose: () => void workspaceSetters.delete(setWorkspace) }
 }

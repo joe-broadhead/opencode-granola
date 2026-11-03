@@ -19,6 +19,7 @@ OpenCode 2.2.x
 │    commands         /granola-status
 │    skills           granola, granola-meeting-brief
 │    rpc              granola.meetings/status
+│    tools RPC        granola.meetings.tools: describe and the ten known reads, for scripts
 └─ TUI part "granola.meetings.tui"   (dist/tui.js, one bundle)
      status dialog: palette entry "Granola: Status", slash /granola
 ```
@@ -27,8 +28,8 @@ OpenCode 2.2.x
 
 | Path | Role |
 | --- | --- |
-| `src/index.ts` | `Plugin.define` with the id `granola.meetings`. |
-| `src/setup.ts` | Wires the parts below in order. Its `SetupContext` names exactly the parts of OpenCode's context that the plugin uses. |
+| `src/index.ts` | `Plugin.define` with the id `granola.meetings`; binds the tools RPC to OpenCode's full context. |
+| `src/setup.ts` | Wires the parts below in order. Its `SetupContext` names exactly the parts of OpenCode's context that the plugin uses, apart from the tools RPC's. |
 | `src/meta.ts` | Reads the version and the tested OpenCode range (`opencode.host`) from `package.json`. |
 | `src/options.ts` | Strict option parsing: `exportDirectory` and `allowUntestedHost`. |
 | `src/host-check.ts` | Compares `ctx.app.version` with the tested range; refuses with `HOST_UNTESTED` unless `allowUntestedHost` is set. |
@@ -46,6 +47,7 @@ OpenCode 2.2.x
 | `src/io/markdown-export.ts` | The atomic file writer. |
 | `src/rpc/` | The RPC contract, shared by the server and the TUI part, and its registration. |
 | `src/tui/` | The terminal UI status dialog, bundled into `dist/tui.js`. |
+| `src/host/tools-rpc.ts` | The tools RPC for scripts. A copy of a module shared by several plugins; only its marked block is Granola's. |
 
 ## Permissions
 
@@ -75,7 +77,7 @@ name.
 One model, built by `buildStatus` in `src/status.ts`, serves `/granola-status`, the RPC method and the TUI
 dialog. It reads only OpenCode's local state: `ctx.mcp.list()` for the connection, `ctx.tool.list()` for tool counts
 and `ctx.agent.list()` for agents that missed the defaults. It never calls Granola. The workspace name comes from the
-last successful `get_account_info` call, seen by the `execute.after` hook, and is kept in memory only.
+last successful `get_account_info` call, seen by the `execute.after` hook or the tools RPC, and is kept in memory only.
 
 ## Export
 
@@ -86,6 +88,19 @@ renders one Markdown document, and writes it atomically under the export folder 
 refuses transcripts for the user's plan, or does not list the transcript tool, the export keeps the notes and marks
 each transcript as not on the plan. Those executors skip
 OpenCode's tool hooks, so the export maps connection failures to the plugin's error codes itself.
+
+## Scripts
+
+The tools RPC, `granola.meetings.tools`, lets a script call Granola's ten known reads with no model
+([Scripting](scripting.md)). Each call names a session; the session's agent and rules decide, exactly as for the
+model. The RPC refuses a tool those rules hide, then calls the tool's executor from `ctx.tool.list()`, which checks the
+agent's rules, the session's rules and saved approvals. A permission `evaluate` hook turns an ask on one of the RPC's
+own calls in flight into a deny, since no one can answer it. Only the known reads are methods: the list is
+`READ_TOOLS` in `src/known-tools.ts`.
+
+The executor skips `execute.after`, so the RPC does the hook's work itself. An account read records the workspace with
+the hook's own function; the RPC tells every running instance of the plugin, which share OpenCode's one Granola
+sign-in. A call to a server that is not connected gets the connection codes and next steps of `src/errors.ts`.
 
 ## Build
 

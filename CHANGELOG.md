@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- The tools RPC, `granola.meetings.tools`: a script can call Granola's ten read tools with no model, through
+  `opencode api`, as a session and its agent. It gets exactly the access that agent's model has: a tool its rules hide
+  is refused, OpenCode checks each call against the agent's and the session's rules, and an ask is refused at once
+  because no one is there to answer it. `describe` lists the methods with each tool's live input schema. Granola's
+  writes, `sign_out`, `export_markdown` and any tool Granola adds later are never methods. An account read records the
+  workspace for status, and a server that is not connected gets the same codes and next steps as for the model.
+  `docs/scripting.md` explains it.
+
 ## [0.0.0] - 2026-11-01
 
 ### Added

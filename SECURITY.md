@@ -65,3 +65,26 @@ has the rules and how to change them. Things to know:
   would ask is refused. `opencode run --auto` approves every request that no rule denies.
 - **The `granola_*` rule also matches other servers** whose names start with `granola_`. For their tools it only adds
   prompts.
+
+## Scripts
+
+The tools RPC (`granola.meetings.tools`, see
+[docs/scripting.md](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md)) runs Granola's ten
+read tools for a script, with no model. It adds no authority:
+
+- A script names a session that names an agent, and runs as them. A tool that the agent's or the session's rules hide
+  from the model is refused. OpenCode's own executor then checks the call against the agent's rules, the session's
+  rules and saved approvals, as it does for the model.
+- An ask on a script's call is denied, not prompted: no one is there to answer it. The plugin's permission hook changes
+  only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.
+- Only the ten known reads are methods. Granola's writes and sends, `sign_out`, `export_markdown` and any tool Granola
+  adds later never are, even with an allow rule.
+- The call goes through OpenCode's own MCP connection and sign-in. The plugin never sees the token, and returns none.
+- Meeting content in a result is untrusted, as it is for the model.
+- Granola's error text reaches the script only as the first line, at most 300 characters, with tokens and URL query
+  strings removed.
+- OpenCode's `execute.before` and `execute.after` tool hooks, from any plugin, do not run for a script's call, so
+  another plugin's policy hook does not see it. The plugin applies its own hook's work itself. A script's calls are not
+  recorded in the session.
+- The RPC is reachable only by callers of the OpenCode server API, who already hold the server's full authority. The
+  session is not a login: it scopes a script to what its agent may do.

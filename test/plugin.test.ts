@@ -26,7 +26,7 @@ describe("plugin definition", () => {
 
   it("registers the server, the permission defaults, the status command and the skills", async () => {
     const host = fakeHost({ baseAgents: () => [agent("build")] })
-    await setup(host.ctx)
+    await setup(host.ctx, host.toolsRpc)
     expect(host.servers.get("granola")).toEqual({ type: "remote", url: OFFICIAL_URL })
     expect(host.agents.get("build")!.permissions.slice(1, 1 + DEFAULT_RULES.length)).toEqual(DEFAULT_RULES)
     expect(host.tools.has("granola_status")).toBe(false)
@@ -37,7 +37,7 @@ describe("plugin definition", () => {
 
   it("serves status with the package version, the host version and the export directory", async () => {
     const host = fakeHost({ options: { exportDirectory: "/data/Granola" } })
-    await setup(host.ctx)
+    await setup(host.ctx, host.toolsRpc)
     host.listed.servers = [{ name: "granola", status: { status: "pending" } }]
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
     expect(result).toMatchObject({ state: "pending", pluginVersion: pkg.version, hostVersion: "2.2.3", exportDirectory: "/data/Granola", next: "Retry in a few seconds." })
@@ -45,7 +45,7 @@ describe("plugin definition", () => {
 
   it.each(["2.3.0", "2.2.2", "0.0.0-dev-202610301200"])("refuses OpenCode %s with HOST_UNTESTED before registering anything", async (version) => {
     const host = fakeHost({ version })
-    const error = await rejection(Promise.resolve(setup(host.ctx)))
+    const error = await rejection(Promise.resolve(setup(host.ctx, host.toolsRpc)))
     expect(error.code).toBe("HOST_UNTESTED")
     expect(error.message).toContain(`found ${version}`)
     expect(host.servers.size).toBe(0)
@@ -53,13 +53,14 @@ describe("plugin definition", () => {
 
   it("loads on an untested host with allowUntestedHost and warns in status", async () => {
     const host = fakeHost({ version: "2.3.0", options: { allowUntestedHost: true } })
-    await setup(host.ctx)
+    await setup(host.ctx, host.toolsRpc)
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
     expect(result.hostWarning).toContain("outside the tested line >=2.2.3 <2.3.0")
   })
 
   it("fails setup with one error that names a bad option", async () => {
-    const error = await rejection(Promise.resolve(setup(fakeHost({ options: { exportRoots: ["/x"] } }).ctx)))
+    const host = fakeHost({ options: { exportRoots: ["/x"] } })
+    const error = await rejection(Promise.resolve(setup(host.ctx, host.toolsRpc)))
     expect(error.code).toBe("OPTIONS_INVALID")
     expect(error.message).toContain("exportRoots is not supported")
   })

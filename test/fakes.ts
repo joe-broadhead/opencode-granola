@@ -1,5 +1,6 @@
+import { registerToolsRpc } from "../src/host/tools-rpc.js"
 import type { Rule } from "../src/permissions.js"
-import type { SetupContext } from "../src/setup.js"
+import type { SetupContext, ToolsRpc } from "../src/setup.js"
 
 type Listed<T extends (...args: never[]) => Promise<{ data: readonly unknown[] }>> = Awaited<ReturnType<T>>["data"][number]
 export type FakeServer = Listed<SetupContext["mcp"]["list"]>
@@ -11,6 +12,12 @@ type CommandInput = Parameters<Parameters<Parameters<SetupContext["command"]["tr
 /** Records every transform and hook so tests can replay them the way the host rebuilds state. */
 export interface FakeHost {
   ctx: SetupContext
+  /** The tools RPC, registered on this fake with the few more context parts it uses. */
+  toolsRpc: ToolsRpc
+  /** The permission evaluate hook the tools RPC registered, if any. */
+  evaluate?: (evaluation: unknown) => void
+  /** Sessions ctx.session.get finds, with their agent and own rules. */
+  sessions: Map<string, { agent?: string; permissions?: Rule[] }>
   agents: Map<string, { id: string; permissions: Rule[] }>
   servers: Map<string, Record<string, unknown>>
   tools: Map<string, { id: string; name: string; description?: string; options?: Record<string, unknown>; input?: unknown; output?: unknown; execute?: (input: unknown, context: unknown) => Promise<unknown> }>
@@ -134,8 +141,39 @@ export function fakeHost(config: Options = {}): FakeHost {
     event: { subscribe: (options?: { signal?: AbortSignal }) => quiet(options?.signal) },
   } satisfies SetupContext
 
+  // The tools RPC also reads sessions and agents and hooks permission evaluation; setup's context leaves those out.
+  const toolsRpc: ToolsRpc = (options) => registerToolsRpc({
+    ...ctx,
+    location,
+    session: {
+      ...ctx.session,
+      get: async ({ sessionID }: { sessionID: string }) => {
+        const session = host.sessions.get(sessionID)
+        if (!session) throw Object.assign(new Error(`Session not found: ${sessionID}`), { _tag: "Session.NotFoundError" })
+        return { id: sessionID, location, ...session }
+      },
+    },
+    agent: {
+      ...ctx.agent,
+      get: async ({ agentID }: { agentID: string }) => {
+        const agent = host.listed.agents.find((entry) => entry.id === agentID)
+        if (!agent) throw Object.assign(new Error(`Agent not found: ${agentID}`), { _tag: "Agent.NotFoundError" })
+        return { location, data: agentInfo(agent) }
+      },
+    },
+    permission: {
+      ...ctx.permission,
+      hook: async (_name: "evaluate", callback: (evaluation: unknown) => void) => {
+        host.evaluate = callback
+        return { dispose: async () => void (host.evaluate = undefined) }
+      },
+    },
+  } as never, options)
+
   const host: FakeHost = {
     ctx,
+    toolsRpc,
+    sessions: new Map(),
     agents: new Map(),
     servers: new Map(),
     tools: new Map(),

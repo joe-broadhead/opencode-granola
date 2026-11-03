@@ -114,7 +114,8 @@ Use `type(scope): summary`, for example `fix(status): explain a disabled server`
 ### Versioning
 
 The version follows semantic versioning on the plugin's contract: its options, the tool names and inputs, the
-commands, the skill names, the server name `granola`, the RPC method `granola.meetings/status` and the default rules.
+commands, the skill names, the server name `granola`, the RPC method `granola.meetings/status`, the tools RPC `granola.meetings.tools` with `describe` and one method per
+known read, and the default rules.
 While the major version is 0, a breaking change raises the minor version, and anything else the patch version.
 
 Each release supports one tested OpenCode line, stated as `opencode.host` in `package.json` and enforced by the host

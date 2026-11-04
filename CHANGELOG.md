@@ -40,6 +40,19 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Fixed
 
 - A failed connection's reason no longer ends in doubled punctuation, as in `…access the url?.`.
+- The README's sign-in check quoted a status line that does not exist. It now says the `Connection` row shows
+  `connected` and the `Tools` row how many Granola tools are available.
+- The README said Explore is left unchanged. Explore and Title also get the block; their own later deny rules still
+  keep Granola's tools out.
+- The README's Uninstall now says why to sign out first: once the plugin is removed, `opencode mcp logout granola`
+  answers "MCP server not found" and the sign-in stays in OpenCode's credential store. It signs out, checks with
+  `opencode auth list`, then removes the plugin, reloads, and checks with `opencode mcp list`.
+- The README now says what to do after `opencode plugin add` (run `opencode reload`, then `/granola-status`), how to
+  update the plugin, and, under Troubleshooting, that Granola's free plan returns only the last 30 days of meetings.
+- `docs/scripting.md` said `opencode api` runs in the directory you call it from. It runs in the OpenCode service's
+  default location, your home directory; the doc now says how to target a project. It also says that `opencode api`
+  exits with status 1 for an RPC error, and that a result with only text has that text as its `output`.
+- The `granola` skill now names the `folder_id` filter of `search_meetings` and `list_meetings`.
 - A script's call that found Granola disconnected, while Granola reads connected again by the time the plugin looks,
   now gets `CONNECTING` and "Retry in a few seconds.", as the model does. It got `CONNECTION_FAILED` and a reconnect
   step before.

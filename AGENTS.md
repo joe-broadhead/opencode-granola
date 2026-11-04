@@ -8,7 +8,9 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 ## Rules
 
 - **Public APIs only:** `@opencode/plugin` 2.2.3 in `src`, plus `@opencode/sdk` and `@opencode/client` in tests. The
-  tested line is `opencode.host` in `package.json`, exactly `>=2.2.3 <2.3.0`; the host check reads it from there.
+  supported range is `opencode.host` in `package.json`, exactly `>=2.2.3 <2.3.0`; the host check reads it from there.
+  `TESTED_HOSTS` in `src/hosts.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5); status calls only those
+  tested, and the host and pack tests run on each.
 - **Greenfield.** No migration code, compatibility paths or dead code, exports, dependencies, docs or tests. Delete
   rather than deprecate.
 - **No runtime dependencies or peers.** OpenCode packages, OpenTUI and Solid are devDependencies. Ship prebuilt
@@ -16,8 +18,13 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 - **Two self-contained bundles.** `scripts/build.mjs` (esbuild) writes only `dist/index.js` and `dist/tui.js`. Neither
   imports a sibling file; only `@opencode/plugin`, OpenTUI, Solid and `node:*` stay external. `tsc` only typechecks.
 - **Nothing always visible.** Status lives in `/granola-status` and the `/granola` dialog.
+- **One status model.** `src/status.ts` builds it; the rows are Connection, Account, Access, Export folder, Tools,
+  Agents without default rules (`none` when empty), OpenCode and exactly one Next step. The status RPC carries the
+  shared fields `version`, `host`, `state` (machine form, such as `sign_in_required`), `unguardedAgents` and
+  `nextStep`, and maps a failed read to its error `unavailable`.
 - **Default rules, not hooks.** `ctx.agent.transform` inserts the block from `src/permissions.ts` after each agent's
-  base allow and never weakens a stricter agent. Agents that miss it are named by status, with the block to paste.
+  base allow and never weakens a stricter agent. Agents that miss it, and whose own rules would let an unknown
+  Granola tool run without asking, are named by status, with the block to paste.
 - **Granola's tools stay Granola's.** Classify them in `src/known-tools.ts` to match the live server; unknown tools
   ask. `sign_out` stays hidden.
 - **Errors** are `CODE: what happened. Next step: one step.` Upstream errors pass through unchanged, except in the
@@ -31,7 +38,8 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 - **Releases** come only from the release workflow on a `vX.Y.Z` tag; it refuses a private package or a tag that
   differs from the version.
 - **Tests** use narrow fakes typed against `SetupContext` with `satisfies`. Host tests run isolated hosts with
-  Granola's URL routed to `test/synthetic-granola/`. Never call Granola, never point a CLI at your own OpenCode
+  Granola's URL routed to `test/synthetic-granola/`, each in a git repository under the system's `/tmp` (never under
+  `TMPDIR` or `HOME`) and each stock host on its own port. Never call Granola, never point a CLI at your own OpenCode
   service, and never type a prompt into a real TUI or `opencode run`.
 - `npm run check` passes before every commit.
 

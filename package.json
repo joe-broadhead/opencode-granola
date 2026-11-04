@@ -23,6 +23,7 @@
   },
   "files": [
     "dist",
+    "assets",
     "skills",
     "README.md",
     "LICENSE",
@@ -58,6 +59,8 @@
   },
   "jelly": {
     "title": "Granola",
+    "summary": "Your Granola meetings and notes.",
+    "icon": "assets/icon.svg",
     "tools": [
       {
         "name": "granola.get_account_info",

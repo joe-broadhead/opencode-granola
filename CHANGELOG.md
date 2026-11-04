@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The tools RPC's `describe` takes no input: anything but `{}` or nothing now gets `describe takes no input`. An
+  envelope that is not an object gets `the envelope must be an object, such as {…}`.
+- A refused permission check now names the action that was refused, when it is not the method's own.
+
+### Fixed
+
+- A script's call that found Granola disconnected, while Granola reads connected again by the time the plugin looks,
+  now gets `CONNECTING` and "Retry in a few seconds.", as the model does. It got `CONNECTION_FAILED` and a reconnect
+  step before.
+
 ## [0.0.1] - 2026-11-03
 
 ### Added

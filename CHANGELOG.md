@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- A `jelly` section in `package.json`, which [Jelly](https://heyjelly.ai) reads without loading the plugin:
+  - Granola's 10 reads (they run), its 7 writes and `export_markdown` (they ask), each with its permission and
+    whether it only reads, so that Jelly's agents, which have no base allow rule for the plugin's default rules to
+    follow, still ask before a write;
+  - the skill ids, the name Jelly shows on the plugin's card, and the `granola` server's sign-in.
+
+  [docs/jelly.md](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/jelly.md) explains each part.
+
 ## [0.0.2] - 2026-11-04
 
 ### Added

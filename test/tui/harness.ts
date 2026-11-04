@@ -18,7 +18,7 @@ export interface Scenario {
 }
 
 const VERSION = (JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string }).version
-const SIGN_IN = "Run /connect and choose Granola, or run opencode mcp auth granola in a terminal."
+const SIGN_IN = "Run /connect and choose Granola, then press o or Enter to open the sign-in page (in a terminal, opencode mcp auth granola opens it automatically)."
 const tone = (base: string) => ({ base, muted: base })
 const colors = { text: { base: "#eeeeee", muted: "#888888", feedback: { success: tone("#00ff00"), warning: tone("#ffff00"), error: tone("#ff0000"), info: tone("#00ffff") } } }
 const theme = { ...colors, surface: () => colors }
@@ -30,25 +30,25 @@ function status(overrides: Partial<Status>): Status {
     tools: { visible: 17, hidden: 1, unknown: 0, unknownNames: [] },
     unguardedAgents: [],
     exportDirectory: "/home/someone/Granola",
-    pluginVersion: VERSION,
-    hostVersion: "2.2.3",
-    next: "Nothing to do.",
+    version: VERSION,
+    host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
+    nextStep: "Nothing to do.",
     ...overrides,
   }
 }
 
 const signedOut: Status = status({
-  state: "needs_auth",
+  state: "sign_in_required",
   title: undefined,
   tools: { visible: 0, hidden: 0, unknown: 0, unknownNames: [] },
-  problem: { code: "AUTH_REQUIRED", message: "Granola needs you to sign in.", next: SIGN_IN },
-  next: SIGN_IN,
+  problem: { code: "AUTH_REQUIRED", message: "Granola needs you to sign in." },
+  nextStep: SIGN_IN,
 })
 
 const SCENARIOS: Record<string, Scenario> = {
   "needs sign-in": { rpc: { status: signedOut } },
   connecting: {
-    rpc: { status: status({ state: "pending", title: undefined, problem: { code: "CONNECTING", message: "Granola is still connecting.", next: "Retry in a few seconds." }, next: "Retry in a few seconds." }) },
+    rpc: { status: status({ state: "connecting", title: undefined, problem: { code: "CONNECTING", message: "Granola is still connecting." }, nextStep: "Retry in a few seconds." }) },
   },
   "connected without a workspace": { rpc: { status: status({}) } },
   "connected with a workspace": {
@@ -57,12 +57,15 @@ const SCENARIOS: Record<string, Scenario> = {
   "RPC unavailable": {
     rpc: { error: { type: "rpc.unavailable", message: "No handler for granola.meetings" } },
   },
+  "status unreadable": {
+    rpc: { error: { type: "unavailable", message: "STATUS_UNAVAILABLE: Granola status could not be read. Next step: Run /granola-status again in a few seconds." } },
+  },
   "agents without the defaults": {
     rpc: {
       status: status({
         unguardedAgents: ["reviewer"],
         permissionsBlock: [{ action: "granola_*", resource: "*", effect: "ask" }, { action: "granola_get_meetings", resource: "*", effect: "allow" }],
-        next: "Put the Granola block first in that agent's own permissions (agents.reviewer.permissions), followed by your top-level rules for granola_ actions.",
+        nextStep: "Put the Granola block first in that agent's own permissions (agents.reviewer.permissions), followed by your top-level rules for granola_ actions.",
       }),
     },
   },

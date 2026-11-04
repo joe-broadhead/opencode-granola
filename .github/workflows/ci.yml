@@ -30,15 +30,15 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          # Caches ~/.npm per OS and architecture. The pack test installs the stock @opencode/cli releases
-          # it names through npm, so that file is part of the key.
+          # Caches ~/.npm per OS and architecture. The host and pack tests install the stock @opencode/cli releases
+          # listed in src/hosts.ts (TESTED_HOSTS: 2.2.3, 2.2.4 and 2.2.5) through npm, so that file is part of the key.
           cache: npm
           cache-dependency-path: |
             package-lock.json
-            test/pack-smoke.mjs
+            src/hosts.ts
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: 1.4.4 # the Bun inside stock OpenCode 2.2.3 and 2.2.4
+          bun-version: 1.4.4 # the Bun inside stock OpenCode 2.2.3, 2.2.4 and 2.2.5
       # OpenCode installs plugins with scripts off, and no dev dependency needs its install script.
       - run: npm ci --ignore-scripts
       - run: npm run check

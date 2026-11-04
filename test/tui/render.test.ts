@@ -53,7 +53,7 @@ describe("prebuilt TUI part", () => {
   it("sign-in required: the Connection row, the code and one Next step", () => {
     const dialog = flat(results["needs sign-in"]!.dialog)
     expect(squash(dialog).startsWith(squash("Granola status Connection sign-in required: Granola needs you to sign in. (AUTH_REQUIRED)"))).toBe(true)
-    expect(squash(dialog)).toContain(squash("Next step Run /connect and choose Granola, or run opencode mcp auth granola in a terminal."))
+    expect(squash(dialog)).toContain(squash("Next step Run /connect and choose Granola, then press o or Enter to open the sign-in page (in a terminal, opencode mcp auth granola opens it automatically)."))
     expect(dialog.split("Next step").length).toBe(2)
     expect(dialog.endsWith("r refresh · esc close")).toBe(true)
   })
@@ -64,9 +64,11 @@ describe("prebuilt TUI part", () => {
   })
 
   it("connected: the shared rows in the shared order, and Nothing to do", () => {
-    const dialog = flat(results["connected without a workspace"]!.dialog)
-    const order = ["Connection connected (Granola)", "Account workspace unknown until the agent reads your Granola account", "Access reads run", "Export folder /home/someone/Granola", "Tools 17 available, 1 hidden", "OpenCode 2.2.3 (tested)", "Next step Nothing to do."]
-    const positions = order.map((part) => dialog.indexOf(part))
+    // The two-column layout wraps long labels and values, so compare without whitespace. The label column wraps
+    // "Agents without default rules" after its value's first line.
+    const dialog = squash(results["connected without a workspace"]!.dialog)
+    const order = ["Connection connected (Granola)", "Account workspace unknown until the agent reads your Granola account", "Access reads run", "Export folder /home/someone/Granola", "Tools 17 available, 1 hidden", "Agents without none default rules", "OpenCode 2.2.3 (tested; supported range >=2.2.3 <2.3.0)", "Next step Nothing to do."]
+    const positions = order.map((part) => dialog.indexOf(squash(part)))
     expect(positions.every((position) => position >= 0)).toBe(true)
     expect([...positions].sort((a, b) => a - b)).toEqual(positions)
     expect(flat(results["connected with a workspace"]!.dialog)).toContain("Account workspace Acme Research")
@@ -76,10 +78,15 @@ describe("prebuilt TUI part", () => {
     expect(flat(results["RPC unavailable"]!.dialog)).toContain("Connection unknown: the Granola plugin is not running on this OpenCode server")
   })
 
+  it("status unreadable: names STATUS_UNAVAILABLE and says to refresh", () => {
+    expect(squash(results["status unreadable"]!.dialog)).toContain(squash("Connection unknown: Granola status could not be read (STATUS_UNAVAILABLE)"))
+    expect(squash(results["status unreadable"]!.dialog)).toContain(squash("Next step Press r to refresh in a few seconds."))
+  })
+
   it("names agents without the default rules and shows the config to paste", () => {
     const dialog = squash(results["agents without the defaults"]!.dialog)
     for (const line of [
-      "reviewer: Granola writes run there without asking",
+      "reviewer: Granola changes and new tools may run there",
       `{"action":"granola_*","resource":"*","effect":"ask"},`,
       `{"action":"granola_get_meetings","resource":"*","effect":"allow"},`,
     ]) expect(dialog).toContain(squash(line))

@@ -4,12 +4,17 @@ import { Granola, type Status } from "../rpc/contract.js"
 import { SERVER, STATUS_SLASH, view, type Details } from "./model.js"
 import { StatusDialog } from "./view.js"
 
-/** Client RPC failures carry a type; these two mean no server part answers for the contract. */
-function reason(error: unknown): string {
+/**
+ * Client RPC failures carry a type: the first two mean no server part answers for the contract, and `unavailable` is
+ * the status method's own error, when the server part could not read the status.
+ */
+function failure(error: unknown): Details {
   const type = typeof error === "object" && error !== null && "type" in error ? error.type : undefined
-  return type === "rpc.unavailable" || type === "rpc.method_not_found"
-    ? "the Granola plugin is not running on this OpenCode server"
-    : "the status request failed"
+  if (type === "unavailable") return { type: "unavailable", reason: "Granola status could not be read (STATUS_UNAVAILABLE)", next: "Press r to refresh in a few seconds." }
+  return {
+    type: "unavailable",
+    reason: type === "rpc.unavailable" || type === "rpc.method_not_found" ? "the Granola plugin is not running on this OpenCode server" : "the status request failed",
+  }
 }
 
 const plugin: Plugin.Definition = {
@@ -29,7 +34,7 @@ const plugin: Plugin.Definition = {
       const request = ++generation
       void context.client.rpc(Granola).status({}, context.location ? { location: context.location } : {})
         // The server validates the output against the contract's schema before it answers.
-        .then((status): Details => ({ type: "ready", status: status as Status }), (error: unknown): Details => ({ type: "unavailable", reason: reason(error) }))
+        .then((status): Details => ({ type: "ready", status: status as Status }), failure)
         .then((next) => {
           if (request === generation) setDetails(next)
         })

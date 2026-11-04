@@ -40,7 +40,23 @@ describe("plugin definition", () => {
     await setup(host.ctx, host.toolsRpc)
     host.listed.servers = [{ name: "granola", status: { status: "pending" } }]
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
-    expect(result).toMatchObject({ state: "pending", pluginVersion: pkg.version, hostVersion: "2.2.3", exportDirectory: "/data/Granola", next: "Retry in a few seconds." })
+    expect(result).toMatchObject({
+      version: pkg.version,
+      host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
+      state: "connecting",
+      exportDirectory: "/data/Granola",
+      nextStep: "Retry in a few seconds.",
+    })
+  })
+
+  it("sets everything up on a release inside the range that is not tested, and calls it untested", async () => {
+    const host = fakeHost({ version: "2.2.6" })
+    await setup(host.ctx, host.toolsRpc)
+    expect(host.servers.size).toBe(1)
+    host.listed.servers = [{ name: "granola", status: { status: "connected" } }]
+    const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
+    expect(result).toMatchObject({ state: "connected", host: { version: "2.2.6", tested: false }, nextStep: "If Granola misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5." })
+    expect(result.hostWarning).toBeUndefined()
   })
 
   it.each(["2.3.0", "2.2.2", "0.0.0-dev-202610301200"])("refuses OpenCode %s with HOST_UNTESTED before registering anything", async (version) => {
@@ -55,7 +71,8 @@ describe("plugin definition", () => {
     const host = fakeHost({ version: "2.3.0", options: { allowUntestedHost: true } })
     await setup(host.ctx, host.toolsRpc)
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
-    expect(result.hostWarning).toContain("outside the tested line >=2.2.3 <2.3.0")
+    expect(result.hostWarning).toContain("outside the supported range >=2.2.3 <2.3.0")
+    expect(result.host).toEqual({ version: "2.3.0", range: ">=2.2.3 <2.3.0", tested: false })
   })
 
   it("fails setup with one error that names a bad option", async () => {
@@ -68,7 +85,7 @@ describe("plugin definition", () => {
 
 describe("package metadata", () => {
   it("reads the version and the tested OpenCode line from package.json", () => {
-    expect(readPackageInfo()).toEqual({ version: pkg.version, testedHost: pkg.opencode.host })
+    expect(readPackageInfo()).toEqual({ version: pkg.version, hostRange: pkg.opencode.host })
     expect(pkg.opencode.host).toBe(">=2.2.3 <2.3.0")
   })
 

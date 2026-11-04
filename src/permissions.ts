@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode/plugin"
-import { READ_TOOLS, WRITE_TOOLS, toolID } from "./known-tools.js"
+import { READ_TOOLS, toolID } from "./known-tools.js"
 
 export interface Rule {
   action: string
@@ -52,25 +52,23 @@ export function matches(input: string, pattern: string): boolean {
   return new RegExp(`^${source}$`, "s").test(input)
 }
 
-function winner(action: string, rules: readonly Readonly<Rule>[]): Readonly<Rule> | undefined {
-  return rules.findLast((rule) => matches(action, rule.action) && matches("*", rule.resource))
+/** The effect of `rules` for a Granola tool call (resource `*`): the last matching rule wins, and no match asks. */
+export function evaluate(rules: readonly Readonly<Rule>[], action: string): Rule["effect"] {
+  return rules.findLast((rule) => matches(action, rule.action) && matches("*", rule.resource))?.effect ?? "ask"
 }
 
-// Any action outside the known-tool table stands in for a new upstream tool.
-const SIDE_EFFECTS = [...WRITE_TOOLS.map(toolID), toolID("unknown_tool")]
+/** Stands in for a Granola tool this plugin version does not know yet. */
+const UNKNOWN_TOOL = toolID("unknown_tool")
 
 /**
- * Agents that missed the defaults (for example agents defined only in the user's config, which OpenCode
- * creates after plugins run) and would run a Granola write or unknown tool without asking, because only a
- * generic rule such as the base `* * allow` matches it.
+ * Agents that need the per-agent fix: they have a base allow but missed the defaults (for example agents defined only
+ * in the user's config, which OpenCode creates after plugins run), and their own rules would let a Granola tool this
+ * plugin does not know run without asking. An agent whose rules already ask or deny for every Granola tool needs no
+ * fix and is not listed.
  */
 export function unguardedAgents(agents: readonly { readonly id: string; readonly permissions: readonly Readonly<Rule>[] }[]): string[] {
   return agents
-    .filter((agent) => !hasDefaults(agent.permissions))
-    .filter((agent) => SIDE_EFFECTS.some((action) => {
-      const rule = winner(action, agent.permissions)
-      return rule?.effect === "allow" && !rule.action.startsWith("granola")
-    }))
+    .filter((agent) => agent.permissions.some(isBaseAllow) && !hasDefaults(agent.permissions) && evaluate(agent.permissions, UNKNOWN_TOOL) === "allow")
     .map((agent) => agent.id)
 }
 

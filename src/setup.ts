@@ -34,7 +34,7 @@ export type ToolsRpc = (options: ToolsRpcOptions) => Promise<() => Promise<void>
 export async function setup(ctx: SetupContext, toolsRpc: ToolsRpc): Promise<() => Promise<void>> {
   const info = readPackageInfo()
   const options = parseOptions(ctx.options)
-  const host = checkHost(ctx.app.version, info.testedHost, options.allowUntestedHost)
+  const host = checkHost(ctx.app.version, info.hostRange, options.allowUntestedHost)
 
   const server = await registerServer(ctx)
   const integration = await registerIntegration(ctx, server.conflict)
@@ -45,7 +45,7 @@ export async function setup(ctx: SetupContext, toolsRpc: ToolsRpc): Promise<() =
     workspace: tools?.workspace(),
     conflict: server.conflict(),
     exportDirectory: options.exportDirectory,
-    pluginVersion: info.version,
+    version: info.version,
     host,
   }))
   tools = await registerTools(ctx)

@@ -1,17 +1,20 @@
 // Starts OpenCode hosts for the host test: the public `@opencode/sdk` embedded in this process, or a stock
 // `opencode serve` binary. Each host gets its own temp root holding OpenCode's home, the XDG directories, TMPDIR,
 // its state, the export folders and one project directory per case, and refuses to run if OpenCode resolves its
-// global paths anywhere else. The probe plugin routes Granola's official URL to the
+// global paths anywhere else. The root sits under the system's /tmp, never under TMPDIR or HOME, where OpenCode's
+// upward search would find the `.opencode` agents and skills of the person running the tests, and it is a git
+// repository, which ends that search. Each stock host listens on its own free port. The probe plugin routes Granola's official URL to the
 // synthetic server on 127.0.0.1; any other outbound HTTP goes to a dead proxy.
 import { spawn, spawnSync } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { createServer } from "node:net"
-import { arch, platform, tmpdir } from "node:os"
+import { arch, platform } from "node:os"
 import { join, sep } from "node:path"
 import { setTimeout as sleep } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
 import { OpenCode as Remote, type OpenCodeClient } from "@opencode/client"
+import { TESTED_HOSTS } from "../../src/hosts.js"
 import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
 import type { SyntheticGranola } from "../synthetic-granola/server.js"
 
@@ -19,8 +22,21 @@ export const REPO = realpathSync(fileURLToPath(new URL("../..", import.meta.url)
 const PROBE = join(REPO, "test", "integration", "probe")
 export const OFFICIAL_URL = "https://mcp.granola.ai/mcp"
 
-/** The stock OpenCode releases the plugin is tested on. */
-export const HOST_VERSIONS = ["2.2.3", "2.2.4"] as const
+/** The stock OpenCode releases the plugin is tested on: the one list in src/hosts.ts. */
+export const HOST_VERSIONS: readonly string[] = TESTED_HOSTS
+
+/** The system temp directory, resolved (/private/tmp on macOS). Not TMPDIR, which may sit under HOME. */
+export const TEMP = realpathSync("/tmp")
+
+/** A new directory under TEMP; with `repository`, also a git repository, so OpenCode's upward search stops there. */
+export function tempDirectory(prefix: string, repository = false): string {
+  const path = realpathSync(mkdtempSync(join(TEMP, prefix)))
+  if (repository) {
+    const result = spawnSync("git", ["init", "--quiet", path], { encoding: "utf8" })
+    if (result.status !== 0) throw new Error(`git init ${path} failed: ${result.stderr}`)
+  }
+  return path
+}
 
 export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" | "integration" | "location" | "mcp" | "permission" | "plugin" | "rpc" | "server" | "session" | "skill">
 
@@ -124,7 +140,7 @@ interface Root {
 }
 
 function makeRoot(label: string, plugin: string, fake: SyntheticGranola): Root {
-  const path = realpathSync(mkdtempSync(join(tmpdir(), `granola-host-${label}-`)))
+  const path = tempDirectory(`granola-host-${label}-`, true)
   const home = join(path, "home")
   const env = {
     HOME: home,
@@ -260,21 +276,34 @@ export async function startEmbedded(fake: SyntheticGranola, version: string = SD
   }
 }
 
+const binaries = new Map<string, string>()
+const installs: string[] = []
+
+/** Removes the stock releases stockBinary installed. Bun's test runner does not emit `exit`, so suites call this. */
+export function removeInstalls(): void {
+  for (const dir of installs.splice(0)) rmSync(dir, { recursive: true, force: true })
+  binaries.clear()
+}
+
 /**
  * The stock CLI for `version`. Set OPENCODE_BIN_2_2_3 (and so on) to a binary you already have; otherwise the
- * unmodified npm release is installed into a temp directory with scripts disabled.
+ * unmodified npm release is installed into a temp directory with scripts disabled, once per version and run, and
+ * removed by removeInstalls().
  */
-function stockBinary(version: string): { readonly path: string; remove(): void } {
+function stockBinary(version: string): string {
   const given = process.env[`OPENCODE_BIN_${version.replaceAll(".", "_")}`]
-  if (given !== undefined && given !== "") return { path: given, remove: () => {} }
-  const dir = mkdtempSync(join(tmpdir(), `granola-host-opencode-${version}-`))
-  const result = spawnSync("npm", ["install", "--prefix", dir, "--ignore-scripts", "--no-audit", "--no-fund", `@opencode/cli@${version}`], { encoding: "utf8" })
+  if (given !== undefined && given !== "") return given
+  const known = binaries.get(version)
+  if (known !== undefined) return known
+  const dir = tempDirectory(`granola-host-opencode-${version}-`)
+  installs.push(dir)
+  // Its own package.json, and npm's cwd set to it: npm walks up from a folder that has none.
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "granola-host-opencode", private: true }))
+  const result = spawnSync("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund", `@opencode/cli@${version}`], { cwd: dir, encoding: "utf8" })
   const path = join(dir, "node_modules", "@opencode", `cli-${platform()}-${arch()}`, "bin", "opencode")
-  if (result.status !== 0 || !existsSync(path)) {
-    rmSync(dir, { recursive: true, force: true })
-    throw new Error(`Could not install @opencode/cli@${version} for ${platform()}-${arch()}:\n${result.stderr}`)
-  }
-  return { path, remove: () => rmSync(dir, { recursive: true, force: true }) }
+  if (result.status !== 0 || !existsSync(path)) throw new Error(`Could not install @opencode/cli@${version} for ${platform()}-${arch()}:\n${result.stderr}`)
+  binaries.set(version, path)
+  return path
 }
 
 /** Every `opencode debug paths` entry must sit inside the temp root. The command is local; it does not use the server. */
@@ -309,26 +338,23 @@ export async function startBinary(version: string, fake: SyntheticGranola): Prom
   const password = randomUUID()
   const port = await freePort()
   const env = { ...root.env, ...OFFLINE, ...QUIET, PATH: "/usr/bin:/bin", OPENCODE_PASSWORD: password }
-  const stop = () => {
-    root.remove()
-    binary.remove()
-  }
+  const stop = () => root.remove()
 
   // Prints "opencode v2.2.3".
-  const reported = spawnSync(binary.path, ["--version"], { cwd: root.path, env, encoding: "utf8" })
+  const reported = spawnSync(binary, ["--version"], { cwd: root.path, env, encoding: "utf8" })
   if (reported.stdout.trim() !== `opencode v${version}`) {
     stop()
-    throw new Error(`${binary.path} reports ${JSON.stringify(reported.stdout.trim())}, expected ${version}`)
+    throw new Error(`${binary} reports ${JSON.stringify(reported.stdout.trim())}, expected ${version}`)
   }
   try {
-    assertDebugPaths(binary.path, env, root.path)
+    assertDebugPaths(binary, env, root.path)
   } catch (error) {
     stop()
     throw error
   }
 
   let output = ""
-  const server = spawn(binary.path, ["serve", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: root.path, env, stdio: ["ignore", "pipe", "pipe"] })
+  const server = spawn(binary, ["serve", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: root.path, env, stdio: ["ignore", "pipe", "pipe"] })
   server.stdout.on("data", (chunk: Buffer) => void (output += chunk.toString()))
   server.stderr.on("data", (chunk: Buffer) => void (output += chunk.toString()))
   const exited = new Promise<void>((resolve) => server.once("exit", () => resolve()))

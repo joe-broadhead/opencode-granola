@@ -22,7 +22,8 @@ export interface Problem {
 
 export type ConnectionState = "connected" | "pending" | "disabled" | "failed" | "needs_auth" | "absent"
 
-export const SIGN_IN_STEPS = "Run /connect and choose Granola, or run opencode mcp auth granola in a terminal."
+export const SIGN_IN_STEPS =
+  "Run /connect and choose Granola, then press o or Enter to open the sign-in page (in a terminal, opencode mcp auth granola opens it automatically)."
 
 export function describe(problem: Problem): string {
   return `${problem.code}: ${problem.message} Next step: ${problem.next}`
@@ -56,6 +57,9 @@ export function shortReason(text: string | undefined): string {
   return reason.length > 160 ? `${reason.slice(0, 157)}...` : reason
 }
 
+/** Ends a reason with a full stop, unless it already ends a sentence, as "Is the computer able to access the url?" does. */
+const sentence = (reason: string) => (/[.?!]$/.test(reason) ? reason : `${reason}.`)
+
 /** The row of the connection-state table; undefined when Granola is connected. */
 export function connectionProblem(state: ConnectionState, error?: string): Problem | undefined {
   switch (state) {
@@ -65,7 +69,7 @@ export function connectionProblem(state: ConnectionState, error?: string): Probl
       return {
         code: "NOT_REGISTERED",
         message: "The Granola connection isn't registered yet.",
-        next: "Retry in a few seconds; if it persists, check that plugins in your OpenCode config lists the Granola plugin and that no mcp.servers.granola entry points elsewhere.",
+        next: "Retry in a few seconds; if it persists, check that no organisation policy (mcp.use) or other plugin removes the granola server, then restart OpenCode.",
       }
     case "pending":
       return { code: "CONNECTING", message: "Granola is still connecting.", next: "Retry in a few seconds." }
@@ -75,14 +79,14 @@ export function connectionProblem(state: ConnectionState, error?: string): Probl
     case "failed":
       return {
         code: "CONNECTION_FAILED",
-        message: `Granola connection failed: ${shortReason(error)}.`,
+        message: `Granola connection failed: ${sentence(shortReason(error))}`,
         next: "Reconnect Granola from /mcps, and if it keeps failing, run /connect and choose Granola to sign in again.",
       }
     case "disabled":
       return {
         code: "DISABLED",
-        message: "Granola is disabled in your OpenCode config.",
-        next: "Remove disabled: true from mcp.servers.granola in your OpenCode config.",
+        message: "Granola is disabled in OpenCode.",
+        next: 'Enable granola in /mcps, or remove "disabled": true from mcp.servers.granola in your OpenCode config.',
       }
   }
 }
@@ -109,11 +113,11 @@ export function invalidOption(key: string, problem: string): Problem {
   }
 }
 
-export function hostUntested(tested: string, found: string): Problem {
+export function hostUntested(range: string, found: string): Problem {
   return {
     code: "HOST_UNTESTED",
-    message: `The Granola plugin is tested with OpenCode ${tested}, found ${found}.`,
-    next: "Use a tested OpenCode version, or set the plugin option allowUntestedHost to true to run anyway.",
+    message: `The Granola plugin supports OpenCode ${range}, found ${found || "no version"}.`,
+    next: `Use OpenCode ${range}, or set the plugin option allowUntestedHost to true to run anyway.`,
   }
 }
 

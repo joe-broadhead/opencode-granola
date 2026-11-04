@@ -30,9 +30,10 @@ OpenCode 2.2.x
 | --- | --- |
 | `src/index.ts` | `Plugin.define` with the id `granola.meetings`; binds the tools RPC to OpenCode's full context. |
 | `src/setup.ts` | Wires the parts below in order. Its `SetupContext` names exactly the parts of OpenCode's context that the plugin uses, apart from the tools RPC's. |
-| `src/meta.ts` | Reads the version and the tested OpenCode range (`opencode.host`) from `package.json`. |
+| `src/meta.ts` | Reads the version and the supported OpenCode range (`opencode.host`) from `package.json`. |
+| `src/hosts.ts` | `TESTED_HOSTS`, the one list of tested OpenCode releases, which status and the host and pack tests read. |
 | `src/options.ts` | Strict option parsing: `exportDirectory` and `allowUntestedHost`. |
-| `src/host-check.ts` | Compares `ctx.app.version` with the tested range; refuses with `HOST_UNTESTED` unless `allowUntestedHost` is set. |
+| `src/host-check.ts` | Compares `ctx.app.version` with the supported range; refuses with `HOST_UNTESTED` unless `allowUntestedHost` is set, and marks a release outside `TESTED_HOSTS` untested. |
 | `src/server.ts` | Registers the official server under `granola`, or records a conflict with the user's own entry. |
 | `src/known-tools.ts` | The known-tool table: reads, writes, the hidden `sign_out`, and the plugin's own tools. |
 | `src/permissions.ts` | The default rule block, its insertion, and the check for agents that missed it. |
@@ -59,8 +60,8 @@ weakened. The transform is synchronous and idempotent: OpenCode replays it on ev
 once.
 
 Agents defined only in the user's config are created after plugins run and miss the block. The status model finds
-them, by checking which agents would let a Granola write or a new tool run through a generic allow rule, and gives
-the per-agent fix.
+them, by checking which agents have a base allow, lack the block, and would let a Granola tool this plugin does not
+know run without asking, and gives the per-agent fix.
 
 The default rules are the whole permission mechanism. Plugin tools are not prompted by OpenCode, so
 `export_markdown` calls `ctx.permission.assert` itself, with its file path as the resource.
@@ -76,7 +77,9 @@ name.
 
 One model, built by `buildStatus` in `src/status.ts`, serves `/granola-status`, the RPC method and the TUI
 dialog. It reads only OpenCode's local state: `ctx.mcp.list()` for the connection, `ctx.tool.list()` for tool counts
-and `ctx.agent.list()` for agents that missed the defaults. It never calls Granola. The workspace name comes from the
+and `ctx.agent.list()` for agents that missed the defaults. It never calls Granola. The RPC carries the fields every
+plugin of this family shares (`version`, `host`, `state`, `unguardedAgents`, `nextStep`), and answers a status it
+cannot read with its error `unavailable`. The workspace name comes from the
 last successful `get_account_info` call, seen by the `execute.after` hook or the tools RPC, and is kept in memory only.
 
 ## Export

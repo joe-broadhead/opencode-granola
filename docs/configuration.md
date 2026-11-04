@@ -24,7 +24,7 @@ Options go in the plugin's entry in `plugins`. Both are optional.
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `exportDirectory` | `Granola` in your home folder | Where `export_markdown` writes files. It must be an absolute path; write out your home folder instead of `~`. The folder is created on the first approved export. |
-| `allowUntestedHost` | `false` | `true` lets the plugin run on an OpenCode version outside the tested line (`>=2.2.3 <2.3.0`). Status then shows a warning. |
+| `allowUntestedHost` | `false` | `true` lets the plugin run on an OpenCode version outside the supported range (`>=2.2.3 <2.3.0`). Status then shows a warning. See [Host check](#host-check). |
 
 The options are checked strictly when the plugin starts. An unknown key or a wrong type stops the plugin with one error
 that names the key, for example:
@@ -74,7 +74,8 @@ So:
 - Everything else under `granola_` asks first: Granola's writes (`create_folder`, `update_folder`,
   `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and `give_feedback`), any Granola tool that this
   plugin version does not know yet, and `export_markdown`.
-- Agents without the base rule, such as Explore, are left unchanged. Plan keeps its own restrictions.
+- Explore and Title also get the block, but their own later deny rules still keep Granola's tools out. Plan keeps its
+  own restrictions. An agent without the base rule gets no rules.
 
 OpenCode applies the last rule that matches. Your top-level `permissions` come after the plugin's block in each agent,
 an agent's own `permissions` come after those, and answers you saved with "Always allow" are checked last. So your
@@ -86,7 +87,10 @@ These rules are the whole permission mechanism; approvals are configured only th
 
 OpenCode creates agents that are defined only in your own config after plugins have started, so they do not get the
 block. In those agents, Granola's writes would run without asking. `/granola-status` and the
-status dialog list each such agent under "Agents without default rules" and give the fix:
+status dialog list each such agent under "Agents without default rules" and give the fix. An agent is listed when it
+has a base allow, lacks the block, and its own rules would let a Granola tool this plugin does not know run without
+asking. An agent whose rules already ask or deny for every Granola tool needs no fix and is not listed. With no such
+agent, the row reads `none`. The fix:
 
 > Put the Granola block first in that agent's own permissions (agents.<agent>.permissions), followed by your
 > top-level rules for granola_ actions.
@@ -270,6 +274,54 @@ A folder rule like this covers exports that the model or a direct tool call make
 Mode programs that run with nobody present are checked for every path, so they need `"resource": "*"`, as in the
 recipe above.
 
+## Host check
+
+When it loads, the plugin compares the OpenCode version with its supported range, `>=2.2.3 <2.3.0`, which
+`package.json` declares as `opencode.host`. Every check runs on OpenCode 2.2.3, 2.2.4 and 2.2.5, the tested releases.
+
+- **A tested release:** the plugin sets everything up. The `OpenCode` row reads, for example,
+  `2.2.5 (tested; supported range >=2.2.3 <2.3.0), plugin <version>`.
+- **Another release inside the range, such as 2.2.6:** the plugin sets everything up too. The `OpenCode` row calls the
+  version `untested` (the RPC's `host.tested` is `false`); the state and the next step are the same as on a tested
+  release.
+- **Outside the range, including prereleases and development builds:** the plugin does not start, with
+  `HOST_UNTESTED`.
+- **Outside the range with `"allowUntestedHost": true`:** the plugin sets everything up, and the `OpenCode` row says
+  `host untested`. When nothing else is needed, the next step reads
+  `If Granola misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5.`
+
+The plugin has no status-only mode: outside the range it does not start at all, so its status never has the state
+`host_untested`.
+
+## Status and RPC
+
+`/granola-status`, the TUI `/granola` dialog and the RPC method `status` (RPC ID `granola.meetings`) share one status
+model. It reads only OpenCode's local state and holds no token and no sign-in link. `version`, `host`, `state`,
+`unguardedAgents` and `nextStep` are the fields every plugin of this family shares, with the same names and meanings:
+
+| Field | Content |
+| --- | --- |
+| `version` | The plugin's version |
+| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.2.3, 2.2.4 and 2.2.5) |
+| `state` | `connected`, `sign_in_required`, `connecting`, `disabled`, `failed`, `not_configured` or `conflict`. The text surfaces show the same states as `connected`, `sign-in required`, `connecting`, `disabled`, `failed`, `not configured` and `conflict`. |
+| `title` | Granola's display title, when connected |
+| `problem` | `code` and `message`, whenever Granola is not connected and there is no conflict |
+| `conflict` | With the state `conflict`: why the user's own `granola` server is not this plugin's |
+| `tools` | `visible`: Granola's tools the model can call now, unknown ones included (not the plugin's export); `hidden`: tools the plugin removed, such as `sign_out`; `unknown`: tools this plugin version does not know; `unknownNames`: at most 20 of their names, only those made of lowercase letters, digits and `_` |
+| `workspace` | The active workspace from the most recent account read in this OpenCode run |
+| `unguardedAgents` | Agents that would run an unknown Granola tool without asking; empty when there are none |
+| `permissionsBlock` | With `unguardedAgents`: the rules to put first in each of those agents' own `permissions` |
+| `exportDirectory` | The export folder |
+| `hostWarning` | Only on a host outside the supported range that runs because of `allowUntestedHost` |
+| `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
+
+The text surfaces show the rows `Connection`, `Account`, `Access`, `Export folder`, `Tools`,
+`Agents without default rules`, `OpenCode` and `Next step`, in that order, every row always there. The RPC has one
+error, `unavailable`, with `data: { code: "STATUS_UNAVAILABLE", next }`.
+
+Scripts have a second RPC, `granola.meetings.tools`, which calls Granola's read tools with no model. It has its own
+error codes; see [Scripting](scripting.md).
+
 ## Errors
 
 Every error has a code, a message and a next step, in the form `CODE: message Next step: next step`.
@@ -278,15 +330,15 @@ Every error has a code, a message and a next step, in the form `CODE: message Ne
 
 | Code | Message | Next step |
 | --- | --- | --- |
-| `NOT_REGISTERED` | The Granola connection isn't registered yet. | Retry in a few seconds; if it persists, check that plugins in your OpenCode config lists the Granola plugin and that no mcp.servers.granola entry points elsewhere. |
+| `NOT_REGISTERED` | The Granola connection isn't registered yet. | Retry in a few seconds; if it persists, check that no organisation policy (mcp.use) or other plugin removes the granola server, then restart OpenCode. |
 | `CONNECTING` | Granola is still connecting. | Retry in a few seconds. |
-| `AUTH_REQUIRED` | Granola needs you to sign in. | Run /connect and choose Granola, or run opencode mcp auth granola in a terminal. |
-| `CONNECTION_FAILED` | Granola connection failed: *reason*. | Reconnect Granola from /mcps, and if it keeps failing, run /connect and choose Granola to sign in again. |
-| `DISABLED` | Granola is disabled in your OpenCode config. | Remove disabled: true from mcp.servers.granola in your OpenCode config. |
+| `AUTH_REQUIRED` | Granola needs you to sign in. | Run /connect and choose Granola, then press o or Enter to open the sign-in page (in a terminal, opencode mcp auth granola opens it automatically). |
+| `CONNECTION_FAILED` | Granola connection failed: *reason*, ending with one full stop, question mark or exclamation mark. | Reconnect Granola from /mcps, and if it keeps failing, run /connect and choose Granola to sign in again. |
+| `DISABLED` | Granola is disabled in OpenCode. | Enable granola in /mcps, or remove "disabled": true from mcp.servers.granola in your OpenCode config. |
 | `TOOL_UNAVAILABLE` | Granola does not offer *tool* for this account. | Your Granola plan may not include it; run /granola-status to see the tools Granola offers you. |
-| `HOST_UNTESTED` | The Granola plugin is tested with OpenCode >=2.2.3 <2.3.0, found *version*. | Use a tested OpenCode version, or set the plugin option allowUntestedHost to true to run anyway. |
+| `HOST_UNTESTED` | The Granola plugin supports OpenCode >=2.2.3 <2.3.0, found *version*. | Use OpenCode >=2.2.3 <2.3.0, or set the plugin option allowUntestedHost to true to run anyway. |
 | `OPTIONS_INVALID` | Plugin option *key* *problem*. | Fix the Granola plugin options in your OpenCode config, then reload OpenCode. |
-| `STATUS_UNAVAILABLE` | Granola status could not be read. | Run /granola-status again in a few seconds. |
+| `STATUS_UNAVAILABLE` | Granola status could not be read. | Run /granola-status again in a few seconds. The status RPC answers with its error `unavailable`, and the `/granola` dialog says to press r in a few seconds. |
 | `SKILLS_INVALID` | The bundled skill *path* needs front matter with a name that matches its folder and a description. | Reinstall the plugin. |
 | `PACKAGE_INVALID` | The Granola plugin's package.json *problem*. | Reinstall the plugin. |
 

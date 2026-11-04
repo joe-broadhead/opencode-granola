@@ -4,26 +4,28 @@
 // @opencode/plugin, OpenTUI and Solid itself. Next to those host packages, '.' and './tui' import under Bun, and './rpc' is not exported.
 //
 // Usage: node test/pack-smoke.mjs [--tarball <path>]. Without --tarball it builds and packs the repository; with it,
-// it tests that exact tarball, as release.yml does before publishing it. Needs npm and Bun. Set OPENCODE_BIN_2_2_3 and
-// OPENCODE_BIN_2_2_4 to stock opencode binaries you already have; otherwise each @opencode/cli release is installed
-// into a temp directory.
+// it tests that exact tarball, as release.yml does before publishing it. Needs npm and Bun. Set OPENCODE_BIN_2_2_3,
+// OPENCODE_BIN_2_2_4 and OPENCODE_BIN_2_2_5 to stock opencode binaries you already have; otherwise each @opencode/cli
+// release is installed into a temp directory, once per run.
 import assert from "node:assert/strict"
 import { spawn, spawnSync } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { createServer } from "node:net"
-import { arch, platform, tmpdir } from "node:os"
+import { arch, platform } from "node:os"
 import { join, relative, resolve, sep } from "node:path"
 import { after, before, test } from "node:test"
 import { setTimeout as sleep } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
+// Node 24 strips the types of this one plain module, so the pack test shares the host test's list.
+import { TESTED_HOSTS } from "../src/hosts.ts"
 
 const REPO = realpathSync(fileURLToPath(new URL("..", import.meta.url)))
 const pkg = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8"))
 
-/** The stock OpenCode releases the package is tested on. */
-const HOST_VERSIONS = ["2.2.3", "2.2.4"]
+/** The stock OpenCode releases the package is tested on: the one list in src/hosts.ts. */
+const HOST_VERSIONS = TESTED_HOSTS
 const TESTED_HOST = ">=2.2.3 <2.3.0"
 const MAX_BYTES = 1024 * 1024
 const OFFICIAL_URL = "https://mcp.granola.ai/mcp"
@@ -50,8 +52,11 @@ const QUIET = {
   OPENCODE_DISABLE_FREE_MODELS: "1",
 }
 
-// Outside the repository, so module resolution cannot fall back to the repository's own node_modules.
-const work = realpathSync(mkdtempSync(join(tmpdir(), "granola-pack-")))
+// Outside the repository, so module resolution cannot fall back to the repository's own node_modules. Under the
+// system's /tmp, never under TMPDIR or HOME, and a git repository, so OpenCode's upward search finds no `.opencode`
+// folder of the person running the test.
+const work = realpathSync(mkdtempSync(join(realpathSync("/tmp"), "granola-pack-")))
+run("git", ["init", "--quiet", work], work)
 after(() => rmSync(work, { recursive: true, force: true }))
 
 const tarballFlag = process.argv.indexOf("--tarball")
@@ -167,17 +172,24 @@ test("dist holds exactly two self-contained entries, which import only modules O
   assert.deepEqual(foreignImports(probe, TUI_MODULES), ["./chunk.js", "./old.js", "./status.js", "a require() or a computed import()"])
 })
 
+const binaries = new Map()
+
 /**
  * The stock CLI for `version`: OPENCODE_BIN_2_2_3 (and so on) if set, otherwise the unmodified npm release,
- * installed into the temp directory with scripts off.
+ * installed into the temp directory with scripts off, once per version.
  */
 function stockBinary(version) {
   const given = process.env[`OPENCODE_BIN_${version.replaceAll(".", "_")}`]
   if (given) return given
+  if (binaries.has(version)) return binaries.get(version)
   const dir = join(work, `opencode-${version}`)
-  run("npm", ["install", "--prefix", dir, "--ignore-scripts", "--no-audit", "--no-fund", `@opencode/cli@${version}`], work)
+  mkdirSync(dir)
+  // Its own package.json, so npm installs here and never walks up to another project.
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "granola-pack-opencode", private: true }))
+  run("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund", `@opencode/cli@${version}`], dir)
   const path = join(dir, "node_modules", "@opencode", `cli-${platform()}-${arch()}`, "bin", "opencode")
   assert.ok(existsSync(path), `@opencode/cli@${version} has no binary for ${platform()}-${arch()}`)
+  binaries.set(version, path)
   return path
 }
 
@@ -311,8 +323,10 @@ for (const version of HOST_VERSIONS) {
 
       const { output: status } = await host.api("POST", "/api/rpc/granola.meetings/status", { input: {} })
       assert.equal(status.state, "disabled")
-      assert.equal(status.pluginVersion, pkg.version)
-      assert.equal(status.hostVersion, version)
+      assert.equal(status.version, pkg.version)
+      assert.deepEqual(status.host, { version, range: TESTED_HOST, tested: true })
+      assert.equal(status.nextStep, 'Enable granola in /mcps, or remove "disabled": true from mcp.servers.granola in your OpenCode config.')
+      assert.deepEqual(status.unguardedAgents, [])
       assert.equal(status.hostWarning, undefined)
       assert.equal(status.conflict, undefined)
 

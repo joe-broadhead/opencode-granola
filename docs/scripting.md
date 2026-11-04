@@ -79,20 +79,22 @@ The tool's input is Granola's: `describe` shows each tool's schema as OpenCode l
 opencode api post /api/rpc/granola.meetings.tools/describe -d '{"input":{}}'
 ```
 
-A result is `{"output": {"output": <the tool's structured content>, "text": <the tool's text>}}`, as plain JSON. When
-a tool returns only text, OpenCode gives that text as `output` too. Meeting content in it is untrusted: notes,
-transcripts and titles hold what other people wrote, and can contain instructions aimed at a model.
+A result is `{"output": {"output": <the tool's structured content, or its text when it has none>, "text": <the
+tool's text>}}`, as plain JSON. Meeting content in it is untrusted: notes, transcripts and titles hold what other
+people wrote, and can contain instructions aimed at a model.
 
 A `get_account_info` call also records the active workspace's name, which `/granola-status` shows, as a model's call
 does.
 
-The calls run on the OpenCode instance of the directory where you run `opencode api`, and its `granola` connection. The
-session may belong to another directory.
+`opencode api` calls run in the OpenCode service's default location, your home directory, whatever directory you run
+them from, and use that location's `granola` connection. To target a project, call the HTTP API with
+`?location[directory]=<dir>`, or create the session with `"location":{"directory":"<dir>"}`. The session may belong to
+another directory.
 
 ## Errors
 
 A refusal or failure is the RPC error `failed`, with a message `CODE: what happened. Next step: what to do.` and
-`data: { code, next }`.
+`data: { code, next }`. `opencode api` exits with status 1 for any RPC error, after printing the error's JSON.
 
 | Code | When |
 | --- | --- |
@@ -100,7 +102,7 @@ A refusal or failure is the RPC error `failed`, with a message `CODE: what happe
 | `SESSION_AGENT_REQUIRED` | The session names no agent, or an agent that does not exist. |
 | `PERMISSION_DENIED` | The agent's or the session's rules deny the tool, or ask for an approval. |
 | `SERVER_CONFLICT` | Your OpenCode config defines its own `granola` server for another URL, which this plugin does not manage. |
-| `AUTH_REQUIRED`, `CONNECTING`, `CONNECTION_FAILED`, `DISABLED`, `NOT_REGISTERED` | The `granola` server needs a sign-in, is still connecting, could not connect, is disabled, or is missing. The next step is the one `/granola-status` gives. |
+| `AUTH_REQUIRED`, `CONNECTING`, `CONNECTION_FAILED`, `DISABLED`, `NOT_REGISTERED` | The `granola` server needs a sign-in, is still connecting (or reconnected while the call ran), could not connect, is disabled, or is missing. The next step is the one `/granola-status` gives, the same as the model gets. |
 | `TOOL_UNAVAILABLE` | The server is connected, but OpenCode does not list the tool, usually because your Granola plan does not include it. |
 | `UPSTREAM_ERROR` | Granola answered with an error, such as a meeting that does not exist or a feature your plan does not include. The message holds the first line of Granola's text, at most 300 characters, with tokens and URL query strings removed. |
 | `CANCELLED` | The request was cancelled. |

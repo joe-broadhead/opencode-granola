@@ -96,18 +96,29 @@ describe("Granola's tools RPC", () => {
     expect(ran).toEqual([])
   })
 
-  it.each([["pending"], ["needs_auth"], ["failed"], ["disabled"], ["absent"]] satisfies [ConnectionState][])(
-    "names a %s server with the model path's code and next step",
-    async (state) => {
+  it.each([
+    ["pending", "CONNECTING"],
+    ["needs_auth", "AUTH_REQUIRED"],
+    ["failed", "CONNECTION_FAILED"],
+    ["disabled", "DISABLED"],
+    ["absent", "NOT_REGISTERED"],
+    // The call found the server not connected, and it reads connected again: it reconnected meanwhile.
+    ["connected", "CONNECTING"],
+  ] satisfies [ConnectionState, string][])(
+    "names a %s server with the model path's code and next step (%s)",
+    async (state, code) => {
       const { host, call } = await started()
       host.listed.servers = state === "absent" ? [] : [{ name: "granola", status: state === "failed" ? { status: state, error: "timeout" } : { status: state } } as FakeServer]
-      const expected = connectionProblem(state)!
-      // The executor is gone while the server is not connected.
-      host.tools.delete("granola_get_meetings")
-      expect(await call("get_meetings")).toMatchObject({ type: "failed", data: { code: expected.code, next: expected.next } })
+      if (state !== "connected") {
+        const expected = connectionProblem(state)!
+        // The executor is gone while the server is not connected.
+        host.tools.delete("granola_get_meetings")
+        expect(await call("get_meetings")).toMatchObject({ type: "failed", data: { code: expected.code, next: expected.next } })
+      }
       // A call that reaches a server that dropped meanwhile gets the same answer as the hook gives the model.
       host.tools.set("granola_get_meetings", { id: "granola_get_meetings", name: "get_meetings", execute: async () => { throw new Error('MCP server "granola" is not available') } })
       const model = await hookError(host, "granola_get_meetings", 'MCP server "granola" is not available')
+      expect(model.code).toBe(code)
       expect(await call("get_meetings")).toMatchObject({ type: "failed", data: model })
     },
   )

@@ -6,7 +6,7 @@ Read [AGENTS.md](AGENTS.md) first: it lists the rules for this repository and th
 ## Set up
 
 You need Node.js 24 or later, npm, and [Bun](https://bun.sh). CI and releases use Node.js 24 and Bun 1.4.4, the Bun inside stock
-OpenCode 2.2.3 and 2.2.4.
+OpenCode 2.2.3, 2.2.4 and 2.2.5.
 
 ```sh
 npm ci --ignore-scripts
@@ -48,7 +48,8 @@ npm run check
 | pack | `npm run test:pack` | `node test/pack-smoke.mjs`: builds, packs and installs the package, then loads it in stock OpenCode |
 
 The host stage runs the same cases in the public `@opencode/sdk` 2.2.3, embedded in the test process, and in stock
-`opencode serve` 2.2.3 and 2.2.4 through `@opencode/client`. It needs Bun and a prior `npm run build`,
+`opencode serve` 2.2.3, 2.2.4 and 2.2.5 (`TESTED_HOSTS` in `src/hosts.ts`, the one list of tested releases) through
+`@opencode/client`. It needs Bun and a prior `npm run build`,
 because OpenCode loads the plugin from `dist/`. It covers registration, the default rules, prompts and saved
 approvals, the per-agent fix, status in each connection state, the export, runs where nobody is present and
 unloading.
@@ -57,26 +58,28 @@ The pack stage builds explicitly, packs the package and installs the tarball alo
 scripts off. It checks that the tarball holds exactly the `files` whitelist, with no source or JSX and under 1 MB, that
 it installs no dependencies, and that `dist/` holds only `index.js` and `tui.js`, with no relative, dynamic or
 `require()` import and nothing but modules OpenCode provides. It then loads the installed
-package in stock `opencode serve` 2.2.3 and 2.2.4, and imports `.` and `./tui` under Bun next to the host
+package in stock `opencode serve` 2.2.3, 2.2.4 and 2.2.5, and imports `.` and `./tui` under Bun next to the host
 packages, which it installs from the npm registry. It needs npm, Bun and network access to the npm registry.
 
 ### Environment variables
 
 | Variable | Effect |
 | --- | --- |
-| `OPENCODE_BIN_2_2_3`, `OPENCODE_BIN_2_2_4` | Paths to stock `opencode` binaries of those versions, used by the host and pack stages. Unset, each stage installs `@opencode/cli@<version>` from npm into a temporary folder. |
+| `OPENCODE_BIN_2_2_3`, `OPENCODE_BIN_2_2_4`, `OPENCODE_BIN_2_2_5` | Paths to stock `opencode` binaries of those versions, used by the host and pack stages. Unset, each stage installs `@opencode/cli@<version>` from npm into a temporary folder, once per version and run. |
 | `VITEST_MAX_WORKERS` | The number of Vitest workers for the unit stage. Use `2` on a busy machine. |
 
 For example:
 
 ```sh
-OPENCODE_BIN_2_2_3=/path/to/opencode-2.2.3 OPENCODE_BIN_2_2_4=/path/to/opencode-2.2.4 VITEST_MAX_WORKERS=2 npm run check
+OPENCODE_BIN_2_2_3=/path/to/opencode-2.2.3 OPENCODE_BIN_2_2_4=/path/to/opencode-2.2.4 \
+  OPENCODE_BIN_2_2_5=/path/to/opencode-2.2.5 VITEST_MAX_WORKERS=2 npm run check
 ```
 
 ### Isolation
 
 The host and pack stages give each OpenCode its own temporary folder, holding `HOME`, `OPENCODE_TEST_HOME`, `TMPDIR`
-and the four XDG folders. Bun ignores a changed `HOME`, so `OPENCODE_TEST_HOME` is what moves OpenCode's home. The
+and the four XDG folders. That folder is a git repository under the system's `/tmp`, never under `TMPDIR` or your
+home, so OpenCode's upward search cannot pick up your own `.opencode` agents or skills. Bun ignores a changed `HOME`, so `OPENCODE_TEST_HOME` is what moves OpenCode's home. The
 embedded host changes into that folder before it starts, because the SDK opens a location at the process working
 directory. Stock loads also set `OPENCODE_DISABLE_MODELS_FETCH`, `OPENCODE_DISABLE_AUTOUPDATE` and
 `OPENCODE_DISABLE_FREE_MODELS`. Each stage fails unless OpenCode reports its global paths inside that folder; a stock
@@ -118,10 +121,11 @@ commands, the skill names, the server name `granola`, the RPC method `granola.me
 known read, and the default rules.
 While the major version is 0, a breaking change raises the minor version, and anything else the patch version.
 
-Each release supports one tested OpenCode line, stated as `opencode.host` in `package.json` and enforced by the host
-check. To change it, update `opencode.host`, `TESTED_HOST` in `scripts/check-forbidden.mjs` and
-`test/pack-smoke.mjs`, and `HOST_VERSIONS` in `test/pack-smoke.mjs` and `test/integration/harness.ts`, and the
-Requirements in `README.md`. Each `CHANGELOG.md` entry follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Each release supports one OpenCode range, stated as `opencode.host` in `package.json` and enforced by the host
+check, and is tested on the releases in `TESTED_HOSTS` (`src/hosts.ts`), which status, the host stage, the pack stage
+and the CI cache key all read. To change the range, update `opencode.host` and `TESTED_HOST` in
+`scripts/check-forbidden.mjs` and `test/pack-smoke.mjs`. To add a tested release, add it to `TESTED_HOSTS`. Update
+the Requirements in `README.md` either way. Each `CHANGELOG.md` entry follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Releasing
 

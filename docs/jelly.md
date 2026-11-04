@@ -23,26 +23,28 @@ changes nothing in Jelly.
 - Off: none.
 - Everything else runs, as the plugin's own rules let it.
 
+The hidden `sign_out` is not declared: the plugin removes it from the agents' tools.
+
 A tool the upstream server adds later is not declared, so in Jelly it is not asked about by
-default. Keep `jelly.tools` in step with the known-tool list; `test/**/jelly.test.ts` checks
-each declared effect against the plugin's own default rules.
+default. Keep `jelly.tools` in step with the known-tool list; `test/jelly.test.ts` checks
+each declared effect against the plugin's own default rules, and the list against the known tools.
 
 ## Skills
 
 Declared: `granola`, `granola-meeting-brief`. Jelly refuses an install whose
 skill ids collide with another plugin's or the agent's own.
 
-## Views
+## Views and scripts
 
-None yet.
+None: `jelly.views` and `jelly.rpc` are empty.
 
 ## Signing in
 
-`jelly.signIns` declares one sign-in, `granola`, for Granola's MCP server `granola`, which signs in with OpenCode's MCP OAuth. When the server needs a new sign-in this plugin marks the connection `needs_auth`, and the row says Sign in again. On OpenCode 2.2.5 a server whose token is turned down mid-session keeps reporting `connected` until it connects again; Jelly has the engine reconnect it when a call fails that way.
+`jelly.signIns` declares one sign-in, `granola`, for Granola's MCP server `granola`, which signs in with OpenCode's MCP OAuth. When the server needs a new sign-in, the row says Sign in again. OpenCode can keep reporting a server whose token was turned down mid-session as connected until it connects again; Jelly has the engine reconnect it when a call fails that way.
 
 Jelly folds the declared sign-ins into this plugin's one card, which shows each as Connected, Not signed in or Sign in again (expired or revoked), and starts, renews and signs out of each. An agent's `jelly_connection_request`, or a tool result that names this plugin's "Run /connect and choose …" next step, opens the same card. The plugin still signs in through OpenCode, as it does without Jelly; the declaration only tells Jelly which of the engine's integrations and servers are this plugin's.
 
 ## Versions
 
-Jelly's curated catalogue pins an exact version. `latest` is `0.0.0`; publish each release
-under a new version so a review in Jelly can tell the two apart.
+Jelly's curated catalogue pins an exact version. Each release is published under a new version, so a review in
+Jelly can tell the two apart.

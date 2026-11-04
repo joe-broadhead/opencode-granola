@@ -140,6 +140,24 @@ describe("unguardedAgents", () => {
     expect(unguardedAgents([withDefaults(), agent("reviewer"), agent("mdagent")])).toEqual(["reviewer", "mdagent"])
   })
 
+  it("does not name an agent whose own rules already ask for every Granola tool", () => {
+    // Like the perf-probe agents in the QA run: a base allow, then a closing ask for everything.
+    const asking = agent("probe", { action: "*", resource: "*", effect: "ask" })
+    // A write allowed by a broad rule of the user's own, while a new Granola tool still asks.
+    const narrow = agent("folders", { action: "granola_*", resource: "*", effect: "ask" }, { action: "*_folder", resource: "*", effect: "allow" })
+    expect(unguardedAgents([asking, narrow])).toEqual([])
+  })
+
+  it("names an agent with no block whose own rules allow every Granola tool, so the fix can add the block before them", () => {
+    const allowed = agent("trusting", { action: "granola_*", resource: "*", effect: "allow" })
+    expect(unguardedAgents([allowed])).toEqual(["trusting"])
+  })
+
+  it("never names an agent without a base allow, which gets no rules", () => {
+    const strict = { id: "strict", permissions: [{ action: "g*", resource: "*", effect: "allow" as const }] }
+    expect(unguardedAgents([strict])).toEqual([])
+  })
+
   it("clears once the user's top-level block or a Granola deny covers the agent", () => {
     const fixed = agent("reviewer", ...DEFAULT_RULES)
     const denied = agent("locked", { action: "granola_*", resource: "*", effect: "deny" })

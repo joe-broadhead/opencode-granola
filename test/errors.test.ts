@@ -25,9 +25,11 @@ describe("connection-state table", () => {
     expect(connectionProblem("connected")).toBeUndefined()
   })
 
-  it("leads with /connect, gives the terminal path, and never echoes the host's needs_auth text", () => {
+  it("leads with /connect, says how the browser opens, gives the terminal path, and never echoes the host's needs_auth text", () => {
     const problem = connectionProblem("needs_auth", "visit https://auth.example/authorize?code=secret to continue")!
-    expect(problem.next).toBe("Run /connect and choose Granola, or run opencode mcp auth granola in a terminal.")
+    expect(problem.next).toBe(
+      "Run /connect and choose Granola, then press o or Enter to open the sign-in page (in a terminal, opencode mcp auth granola opens it automatically).",
+    )
     expect(describeProblem(problem)).not.toMatch(/auth\.example|secret/)
   })
 
@@ -36,6 +38,23 @@ describe("connection-state table", () => {
     expect(problem.message).toBe("Granola connection failed: fetch failed at <url>.")
     expect(shortReason("x".repeat(400))).toHaveLength(160)
     expect(shortReason(undefined)).toBe("no reason given")
+  })
+
+  it("adds no full stop after a reason that already ends a sentence", () => {
+    const refused = "ECONNREFUSED: Unable to connect. Is the computer able to access the url?"
+    expect(connectionProblem("failed", refused)!.message).toBe(`Granola connection failed: ${refused}`)
+    expect(connectionProblem("failed", "Gone!")!.message).toBe("Granola connection failed: Gone!")
+    expect(connectionProblem("failed", "x".repeat(400))!.message).toBe(`Granola connection failed: ${"x".repeat(157)}...`)
+  })
+
+  it("offers /mcps first for a disabled server, which is where it is usually turned off", () => {
+    expect(connectionProblem("disabled")!.next).toBe('Enable granola in /mcps, or remove "disabled": true from mcp.servers.granola in your OpenCode config.')
+  })
+
+  it("points a missing server at what can remove it, not at the plugins list that status itself proves", () => {
+    expect(connectionProblem("absent")!.next).toBe(
+      "Retry in a few seconds; if it persists, check that no organisation policy (mcp.use) or other plugin removes the granola server, then restart OpenCode.",
+    )
   })
 
   it("tells the user what to do when a Granola tool is missing for the account", () => {
@@ -82,7 +101,7 @@ describe("error format", () => {
 
   it("states the tested line, the found version and the override", () => {
     expect(describeProblem(hostUntested(">=2.2.3 <2.3.0", "2.3.0"))).toBe(
-      "HOST_UNTESTED: The Granola plugin is tested with OpenCode >=2.2.3 <2.3.0, found 2.3.0. Next step: Use a tested OpenCode version, or set the plugin option allowUntestedHost to true to run anyway.",
+      "HOST_UNTESTED: The Granola plugin supports OpenCode >=2.2.3 <2.3.0, found 2.3.0. Next step: Use OpenCode >=2.2.3 <2.3.0, or set the plugin option allowUntestedHost to true to run anyway.",
     )
   })
 })

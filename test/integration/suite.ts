@@ -27,7 +27,7 @@ const blocks = (permissions: readonly Rule[]) => permissions.filter((rule) => ru
 const granolaRules = (permissions: readonly Rule[]) => permissions.filter((rule) => rule.action.startsWith("granola"))
 const id = (name: string) => `granola_${name}`
 /** OpenCode has registered the server and finished its first connection attempt. */
-const settled = (current: Status) => current.state !== "pending" && current.state !== "absent"
+const settled = (current: Status) => current.state !== "connecting" && current.state !== "not_configured"
 /** Connected, with Granola's tools in the registry: OpenCode can report connected before it lists them. */
 const connected = (current: Status) => current.state === "connected" && current.tools.visible > 0
 
@@ -146,8 +146,9 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
       test("leaves the user's granola entry for another server alone, and status reports the conflict", async () => {
         expect((await state("conflict")).registered).toMatchObject(OTHER_SERVER)
         const current = await status("conflict")
-        expect(current).toMatchObject({ state: "disabled", problem: { code: "DISABLED" } })
+        expect(current).toMatchObject({ state: "conflict", nextStep: CONFLICT_NEXT })
         expect(current.conflict).toEqual(expect.any(String))
+        expect(Object.hasOwn(current, "problem")).toBe(false)
       })
 
       test("an unsupported option fails activation with OPTIONS_INVALID, and nothing is registered", async () => {
@@ -163,7 +164,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
 
       test("allowUntestedHost changes nothing on a tested OpenCode version", async () => {
         const current = await statusWhen("untested", settled)
-        expect(current).toMatchObject({ state: "connected", hostVersion: host.version })
+        expect(current).toMatchObject({ state: "connected", host: { version: host.version, range: ">=2.2.3 <2.3.0", tested: true } })
         expect(Object.hasOwn(current, "hostWarning")).toBe(false)
       })
 
@@ -271,7 +272,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         const current = await status("main")
         expect(current.unguardedAgents).toEqual(["reviewer"])
         expect(current.permissionsBlock).toEqual(DEFAULT_RULES)
-        expect(current.next).toBe(agentFix(["reviewer"]))
+        expect(current.nextStep).toBe(agentFix(["reviewer"]))
       })
 
       test("with the per-agent fix, that agent asks before writes, the user's own rules still win, and Explore is not loosened", async () => {
@@ -288,10 +289,10 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(await status("main")).toMatchObject({
           state: "connected",
           title: TITLE,
-          tools: { visible: TOOLS.read.length + TOOLS.write.length, hidden: TOOLS.hidden.length, unknown: TOOLS.unknown.length, unknownNames: [...TOOLS.unknown] },
+          tools: { visible: TOOLS.read.length + TOOLS.write.length + TOOLS.unknown.length, hidden: TOOLS.hidden.length, unknown: TOOLS.unknown.length, unknownNames: [...TOOLS.unknown] },
           exportDirectory: host.exports("main"),
-          pluginVersion: VERSION,
-          hostVersion: host.version,
+          version: VERSION,
+          host: { version: host.version, range: ">=2.2.3 <2.3.0", tested: true },
         })
         const current = await status("main")
         expect(["problem", "conflict", "hostWarning"].filter((key) => Object.hasOwn(current, key))).toEqual([])
@@ -304,16 +305,16 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
 
       test("needs_auth: AUTH_REQUIRED, with no Granola tools and nothing echoed from the host's error", async () => {
         const current = await statusWhen("needs-auth", settled)
-        expect(current).toMatchObject({ state: "needs_auth", problem: { code: "AUTH_REQUIRED" }, tools: { visible: 0, unknown: 0 } })
+        expect(current).toMatchObject({ state: "sign_in_required", problem: { code: "AUTH_REQUIRED" }, tools: { visible: 0, unknown: 0 } })
         expect(JSON.stringify(current)).not.toMatch(/https?:\/\//)
         expect((await state("needs-auth")).tools.map((tool) => tool.id).sort()).toEqual([id("export_markdown")])
       })
 
       test("pending: CONNECTING while the server has not answered", async () => {
-        const current = await statusWhen("pending", (value) => value.state !== "absent")
-        expect(current).toMatchObject({ state: "pending", problem: { code: "CONNECTING" }, tools: { visible: 0 } })
+        const current = await statusWhen("pending", (value) => value.state !== "not_configured")
+        expect(current).toMatchObject({ state: "connecting", problem: { code: "CONNECTING" }, tools: { visible: 0 } })
         await sleep(2_000)
-        expect((await status("pending")).state).toBe("pending")
+        expect((await status("pending")).state).toBe("connecting")
       })
     })
 

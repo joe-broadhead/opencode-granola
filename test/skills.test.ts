@@ -17,9 +17,12 @@ function files(directory: string): string[] {
     entry.isDirectory() ? files(`${directory}/${entry.name}`) : [`${directory}/${entry.name}`])
 }
 
-/** Backticked snake_case names, which the skills use only for tool names. */
+/** Parameter names the skills name in backticks, from Granola's live schemas: `folder_id` on search_meetings and list_meetings. */
+const PARAMETERS = ["folder_id"]
+
+/** Backticked snake_case names, which the skills use for tool names and the parameters above. */
 function toolNames(markdown: string): string[] {
-  return [...markdown.matchAll(/`([a-z]+(?:_[a-z]+)+)`/g)].map((match) => match[1]!)
+  return [...markdown.matchAll(/`([a-z]+(?:_[a-z]+)+)`/g)].map((match) => match[1]!).filter((name) => !PARAMETERS.includes(name))
 }
 
 describe("bundled skills", () => {

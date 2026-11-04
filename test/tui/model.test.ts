@@ -4,7 +4,7 @@ import type { Status } from "../../src/rpc/contract.js"
 import { view, type Details } from "../../src/tui/model.js"
 
 const VERSION = (JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string }).version
-const SIGN_IN = "Run /connect and choose Granola, or run opencode mcp auth granola in a terminal."
+const SIGN_IN = "Run /connect and choose Granola, then press o or Enter to open the sign-in page (in a terminal, opencode mcp auth granola opens it automatically)."
 const BLOCK = [
   { action: "granola_*", resource: "*", effect: "ask" as const },
   { action: "granola_get_meetings", resource: "*", effect: "allow" as const },
@@ -17,20 +17,20 @@ function status(overrides: Partial<Status> = {}): Status {
     tools: { visible: 17, hidden: 1, unknown: 0, unknownNames: [] },
     unguardedAgents: [],
     exportDirectory: "/home/someone/Granola",
-    pluginVersion: VERSION,
-    hostVersion: "2.2.3",
-    next: "Nothing to do.",
+    version: VERSION,
+    host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
+    nextStep: "Nothing to do.",
     ...overrides,
   }
 }
 
 const ready = (overrides: Partial<Status> = {}): Details => ({ type: "ready", status: status(overrides) })
 const needsAuth = (overrides: Partial<Status> = {}): Details => ready({
-  state: "needs_auth",
+  state: "sign_in_required",
   title: undefined,
   tools: { visible: 0, hidden: 0, unknown: 0, unknownNames: [] },
-  problem: { code: "AUTH_REQUIRED", message: "Granola needs you to sign in.", next: SIGN_IN },
-  next: SIGN_IN,
+  problem: { code: "AUTH_REQUIRED", message: "Granola needs you to sign in." },
+  nextStep: SIGN_IN,
   ...overrides,
 })
 const labels = (details: Details) => view(details).rows.map((row) => row.label)
@@ -46,7 +46,8 @@ describe("status dialog view", () => {
   })
 
   it("uses the shared row labels in the shared order", () => {
-    expect(labels(ready())).toEqual(["Connection", "Account", "Access", "Export folder", "Tools", "OpenCode"])
+    expect(labels(ready())).toEqual(["Connection", "Account", "Access", "Export folder", "Tools", "Agents without default rules", "OpenCode"])
+    expect(row(ready(), "Agents without default rules")).toEqual({ label: "Agents without default rules", text: "none" })
     expect(labels(ready({ unguardedAgents: ["reviewer"], permissionsBlock: BLOCK }))).toEqual(["Connection", "Account", "Access", "Export folder", "Tools", "Agents without default rules", "OpenCode"])
   })
 
@@ -55,7 +56,7 @@ describe("status dialog view", () => {
     expect(row(details, "Connection")).toEqual({ label: "Connection", text: "connected (Granola)", tone: "ok" })
     expect(row(details, "Account")!.text).toBe("workspace Acme")
     expect(row(details, "Tools")!.text).toBe("17 available, 1 hidden, 2 unknown, asking before they run: brand_new_tool")
-    expect(row(details, "OpenCode")!.text).toBe(`2.2.3 (tested), plugin ${VERSION}`)
+    expect(row(details, "OpenCode")!.text).toBe(`2.2.3 (tested; supported range >=2.2.3 <2.3.0), plugin ${VERSION}`)
     expect(view(details).next).toBe("Nothing to do.")
   })
 
@@ -67,7 +68,7 @@ describe("status dialog view", () => {
 
   it("names agents without the default rules and gives the config to paste", () => {
     const agents = row(needsAuth({ unguardedAgents: ["reviewer", "mdagent"], permissionsBlock: BLOCK }), "Agents without default rules")!
-    expect(agents.text).toBe("reviewer, mdagent: Granola writes run there without asking")
+    expect(agents.text).toBe("reviewer, mdagent: Granola changes and new tools may run there without asking")
     expect(agents.block).toEqual([
       `"agents": {`,
       `  "reviewer": {`,
@@ -83,8 +84,20 @@ describe("status dialog view", () => {
   })
 
   it("labels a conflict and an untested host", () => {
-    const details = ready({ conflict: "your OpenCode config defines mcp.servers.granola for a different server", hostWarning: "outside the tested line" })
+    const details = ready({
+      state: "conflict",
+      title: undefined,
+      conflict: "your OpenCode config defines mcp.servers.granola for a different server",
+      host: { version: "2.3.0", range: ">=2.2.3 <2.3.0", tested: false },
+      hostWarning: "outside the supported range",
+    })
     expect(row(details, "Connection")).toEqual({ label: "Connection", text: "conflict: your OpenCode config defines mcp.servers.granola for a different server", tone: "warning" })
-    expect(row(details, "OpenCode")).toEqual({ label: "OpenCode", text: `2.2.3 (host untested: outside the tested line), plugin ${VERSION}`, tone: "warning" })
+    expect(row(details, "OpenCode")).toEqual({ label: "OpenCode", text: `2.3.0 (host untested: outside the supported range), plugin ${VERSION}`, tone: "warning" })
+    const untested = ready({ host: { version: "2.2.6", range: ">=2.2.3 <2.3.0", tested: false } })
+    expect(row(untested, "OpenCode")).toEqual({ label: "OpenCode", text: `2.2.6 (untested; supported range >=2.2.3 <2.3.0), plugin ${VERSION}`, tone: "info" })
+  })
+
+  it("says when the status method itself could not read the status", () => {
+    expect(view({ type: "unavailable", reason: "Granola status could not be read (STATUS_UNAVAILABLE)", next: "Press r to refresh in a few seconds." }).next).toBe("Press r to refresh in a few seconds.")
   })
 })

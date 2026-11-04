@@ -3,7 +3,7 @@
 // otherwise each release is installed into a temp directory, once per run.
 import { afterAll, beforeAll } from "vitest"
 import { startSyntheticGranola, type SyntheticGranola } from "../synthetic-granola/server.js"
-import { HOST_VERSIONS, startBinary } from "./harness.js"
+import { HOST_VERSIONS, removeInstalls, startBinary } from "./harness.js"
 import { hostSuite } from "./suite.js"
 
 let fake: SyntheticGranola
@@ -12,6 +12,7 @@ beforeAll(async () => {
 })
 afterAll(async () => {
   await fake?.close()
+  removeInstalls()
 })
 
 for (const version of HOST_VERSIONS) hostSuite(`stock opencode ${version}`, (server) => startBinary(version, server), () => fake)

@@ -29,7 +29,10 @@ export const CONFLICT_NEXT = "Remove mcp.servers.granola from your OpenCode conf
 
 export const NOTHING_TO_DO = "Nothing to do."
 
-/** The next step when nothing else is needed but OpenCode is not a tested release. */
+/**
+ * The next step when nothing else is needed but OpenCode is outside the supported range and runs only because of
+ * allowUntestedHost. An untested release inside the range leaves the next step unchanged.
+ */
 export const UNTESTED_HOST_NEXT = `If Granola misbehaves, use OpenCode ${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}.`
 
 /**
@@ -56,7 +59,7 @@ export function buildStatus(inputs: StatusInputs): Status {
   const nextStep = (inputs.conflict ? CONFLICT_NEXT : undefined)
     ?? problem?.next
     ?? (unguarded.length ? agentFix(unguarded) : undefined)
-    ?? (inputs.host.tested ? undefined : UNTESTED_HOST_NEXT)
+    ?? (inputs.host.warning ? UNTESTED_HOST_NEXT : undefined)
     ?? NOTHING_TO_DO
   return {
     version: inputs.version,

@@ -55,7 +55,7 @@ describe("plugin definition", () => {
     expect(host.servers.size).toBe(1)
     host.listed.servers = [{ name: "granola", status: { status: "connected" } }]
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
-    expect(result).toMatchObject({ state: "connected", host: { version: "2.2.6", tested: false }, nextStep: "If Granola misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5." })
+    expect(result).toMatchObject({ state: "connected", host: { version: "2.2.6", tested: false }, nextStep: "Nothing to do." })
     expect(result.hostWarning).toBeUndefined()
   })
 
@@ -73,6 +73,9 @@ describe("plugin definition", () => {
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
     expect(result.hostWarning).toContain("outside the supported range >=2.2.3 <2.3.0")
     expect(result.host).toEqual({ version: "2.3.0", range: ">=2.2.3 <2.3.0", tested: false })
+    host.listed.servers = [{ name: "granola", status: { status: "connected" } }]
+    const connected = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
+    expect(connected).toMatchObject({ state: "connected", nextStep: "If Granola misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5." })
   })
 
   it("fails setup with one error that names a bad option", async () => {

@@ -22,9 +22,11 @@ All notable changes to this project are documented here. The format follows [Kee
     server's connection state, next to `conflict`);
   - `problem` no longer has `next`: the one next step is `nextStep`;
   - `tools.visible` counts every Granola tool the model can call, unknown ones included.
-- On a release inside `>=2.2.3 <2.3.0` other than 2.2.3, 2.2.4 and 2.2.5, Granola still sets everything up; status
-  calls the version untested and, when nothing else is needed, says to use a tested release if Granola misbehaves.
-  The `OpenCode` row reads, for example, `2.2.5 (tested; supported range >=2.2.3 <2.3.0), plugin <version>`.
+- On a release inside `>=2.2.3 <2.3.0` other than 2.2.3, 2.2.4 and 2.2.5, Granola still sets everything up, and only
+  the `OpenCode` row calls the version untested. The row reads, for example,
+  `2.2.5 (tested; supported range >=2.2.3 <2.3.0), plugin <version>`. On a host outside the range that runs because
+  of `allowUntestedHost`, the next step, when nothing else is needed, says to use a tested release if Granola
+  misbehaves.
 - Status always shows the `Agents without default rules` row, with `none` when no agent needs the fix. It lists an
   agent only when its own rules would let a Granola tool this plugin does not know run without asking; an agent
   whose rules already ask or deny for every Granola tool is not listed.

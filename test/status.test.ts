@@ -119,16 +119,19 @@ describe("status model", () => {
     expect(text).toContain(`OpenCode: 2.3.0 (host untested: outside the supported range >=2.2.3 <2.3.0; it runs because allowUntestedHost is true), plugin ${VERSION}`)
   })
 
-  it("calls a tested release tested, and another release in the range untested, with its own next step when nothing else is needed", () => {
+  it("calls a tested release tested, and another release in the range untested without changing the state or next step", () => {
     expect(formatStatus(buildStatus(inputs({ host: { version: "2.2.5", range: RANGE, tested: true } })))).toContain(`OpenCode: 2.2.5 (tested; supported range ${RANGE}), plugin ${VERSION}`)
     const untested = buildStatus(inputs({ host: { version: "2.2.6", range: RANGE, tested: false } }))
-    expect(untested.state).toBe("connected")
-    expect(untested.host.tested).toBe(false)
-    expect(untested.nextStep).toBe(UNTESTED_HOST_NEXT)
-    expect(UNTESTED_HOST_NEXT).toBe("If Granola misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5.")
+    expect(untested).toMatchObject({ state: "connected", host: { version: "2.2.6", range: RANGE, tested: false }, nextStep: "Nothing to do." })
     expect(formatStatus(untested)).toContain(`OpenCode: 2.2.6 (untested; supported range ${RANGE}), plugin ${VERSION}`)
+  })
+
+  it("gives a host outside the range, running because of allowUntestedHost, its own next step when nothing else is needed", () => {
+    const host = { version: "2.3.0", range: RANGE, tested: false, warning: "outside the supported range >=2.2.3 <2.3.0; it runs because allowUntestedHost is true" }
+    expect(buildStatus(inputs({ host })).nextStep).toBe(UNTESTED_HOST_NEXT)
+    expect(UNTESTED_HOST_NEXT).toBe("If Granola misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5.")
     // Anything else to do comes first.
-    expect(buildStatus(inputs({ host: { version: "2.2.6", range: RANGE, tested: false }, agents: [agent("reviewer")] })).nextStep).toBe(agentFix(["reviewer"]))
+    expect(buildStatus(inputs({ host, agents: [agent("reviewer")] })).nextStep).toBe(agentFix(["reviewer"]))
   })
 
   it("gives host.version null when OpenCode reports no version", () => {

@@ -22,7 +22,7 @@ For a brief before a meeting, or a catch-up on a person, company or topic, also 
 - `search_meetings`: by keyword, participant or company, and date. Keywords match titles, summaries and the user's notes, not transcripts, so an empty result does not mean that a topic was never discussed.
 - `list_meetings`: meetings in a date range, newest first (the last 7 days by default), optionally in one folder.
 - `search_transcripts`: by keyword in what was said; it returns matching transcript passages. Not every Granola plan includes transcripts.
-- `list_meeting_folders`: folders and their IDs, for the folder filter of both tools above.
+- `list_meeting_folders`: folders and their IDs, for the `folder_id` filter of `search_meetings` and `list_meetings`.
 - Results come in pages. While a response offers a next cursor, continue with it and the same filters before you say that a meeting does not exist.
 
 ## Read meetings

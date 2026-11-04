@@ -7,7 +7,8 @@ Unofficial; not affiliated with Granola.
 
 ## Requirements
 
-- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3 and 2.2.4. On another version the plugin refuses to start; see
+- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4 and 2.2.5. Another release inside that range runs, and status
+  calls it untested. Outside the range the plugin does not start, unless you set `allowUntestedHost`; see
   [Troubleshooting](#troubleshooting).
 - macOS or Linux.
 - A Granola account. Granola's free plan includes the last 30 days of meeting history; transcripts and folders are
@@ -19,13 +20,19 @@ Unofficial; not affiliated with Granola.
 opencode plugin add @joe-broadhead/opencode-granola
 ```
 
-This adds the plugin to your global OpenCode config. Restart OpenCode afterwards.
+This adds the plugin to your global OpenCode config. Run `opencode reload`, or restart OpenCode. Then run
+`/granola-status`: it shows `sign-in required` until you sign in.
+
+**Update** with `opencode plugin update @joe-broadhead/opencode-granola`, then run `opencode reload`. An entry pinned to
+a version, such as `@joe-broadhead/opencode-granola@0.0.1`, does not update: remove the `@version` from its `plugins`
+entry first.
 
 ## Sign in
 
 1. Run `/connect` and choose **Granola**, listed under MCP.
 2. Press `o` or Enter to open Granola's sign-in page in your browser, then approve there.
-3. Run `/granola-status`. It shows `Granola: connected` and the number of Granola tools available.
+3. Run `/granola-status`. Its `Connection` row shows `connected`, and its `Tools` row shows how many Granola tools
+   are available.
 
 On the CLI, `opencode mcp auth granola` opens the sign-in page automatically. `/mcps` works too. There is
 nothing to configure first: Granola registers OpenCode's sign-in itself.
@@ -84,8 +91,9 @@ See [Scripting](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs
 | Hidden | `sign_out` | removed; use `opencode mcp logout granola` |
 
 The plugin inserts these rules into each agent, directly after the agent's base "allow everything" rule. Your own
-`permissions` and your saved "Always allow" answers override them, and a `deny` you configure always wins. Agents
-without the base rule, such as Explore, are left unchanged, and Plan keeps its restrictions.
+`permissions` and your saved "Always allow" answers override them, and a `deny` you configure always wins. Explore
+and Title also get the block, but their own later deny rules still keep Granola tools out, and Plan keeps its
+restrictions. An agent without a base "allow everything" rule gets no rules.
 
 For example, to let one write run without asking:
 
@@ -99,7 +107,8 @@ For example, to let one write run without asking:
 
 Agents defined only in your own config are created after plugins start, so they miss the default rules, and Granola's
 writes would run there without asking. Status names each such agent and gives the block to paste first in that agent's
-own `permissions`. Do not put the block in the top-level `permissions`, which would loosen Explore.
+own `permissions`. An agent whose own rules already ask or deny for every Granola tool needs nothing and is not named.
+Do not put the block in the top-level `permissions`, which would loosen Explore.
 
 In `opencode run` and other runs where nobody can answer, a call that would ask is refused; reads still work.
 
@@ -132,26 +141,33 @@ Each member then signs in once with `/connect` → Granola. A managed `mcp.serve
 
 ## Troubleshooting
 
-Each connection state, as `/granola-status` shows it:
+Run `/granola-status` (or `/granola` in the terminal UI) first. It shows the rows `Connection`, `Account`, `Access`,
+`Export folder`, `Tools`, `Agents without default rules` (`none` when no agent needs the fix), `OpenCode` and exactly
+one `Next step`. Each connection state:
 
 | Status | Code | What to do |
 | --- | --- | --- |
-| not configured | `NOT_REGISTERED` | Retry in a few seconds; if it persists, check that `plugins` in your OpenCode config lists the Granola plugin and that no `mcp.servers.granola` entry points elsewhere. |
+| not configured | `NOT_REGISTERED` | Retry in a few seconds; if it persists, check that no organisation policy (`mcp.use`) or other plugin removes the `granola` server, then restart OpenCode. |
 | connecting | `CONNECTING` | Retry in a few seconds. |
-| sign-in required | `AUTH_REQUIRED` | Run `/connect` and choose Granola, or run `opencode mcp auth granola` in a terminal. |
+| sign-in required | `AUTH_REQUIRED` | Run `/connect` and choose Granola, then press `o` or Enter to open the sign-in page. In a terminal, `opencode mcp auth granola` opens it automatically. |
 | failed | `CONNECTION_FAILED` | Reconnect Granola from `/mcps`, and if it keeps failing, run `/connect` and choose Granola to sign in again. |
-| disabled | `DISABLED` | Remove `disabled: true` from `mcp.servers.granola` in your OpenCode config. |
+| disabled | `DISABLED` | Enable `granola` in `/mcps`, or remove `"disabled": true` from `mcp.servers.granola` in your OpenCode config. |
 | conflict | none | Remove `mcp.servers.granola` from your OpenCode config to use Granola's official server. |
+| connected | none | Ready. The next step reads `Nothing to do.`, or names agents without default rules. |
 
 **`MCP server not found: granola` from `opencode mcp auth granola`, right after OpenCode starts.** Plugins are still
 loading for a few seconds. Run it again, or use `/connect`, which updates live.
 
-**A tool says your Granola plan does not include it, or `TOOL_UNAVAILABLE`.** Granola's free plan has no
-transcripts or folders, and covers the last 30 days of meetings. Older meetings are not found.
+**Older meetings are missing.** On Granola's free plan, Granola's server returns only the meetings of the last 30 days.
 
-**`HOST_UNTESTED`.** The plugin refuses to start on an OpenCode version outside `>=2.2.3 <2.3.0`, including
-development builds. Use a tested OpenCode version, or set the plugin option `allowUntestedHost: true` to run anyway;
-status then shows `host untested`.
+**A tool says your Granola plan does not include it, or `TOOL_UNAVAILABLE`.** Granola's free plan has no
+transcripts or folders.
+
+**`HOST_UNTESTED`.** The plugin does not start on an OpenCode version outside `>=2.2.3 <2.3.0`, including
+development builds. Use OpenCode `>=2.2.3 <2.3.0`, or set the plugin option `allowUntestedHost: true` to run anyway;
+the `OpenCode` row then says `host untested`, and when nothing else is needed the next step says to use a tested
+release if Granola misbehaves. A release inside the range other than 2.2.3, 2.2.4 and 2.2.5 runs normally: only the
+`OpenCode` row calls it untested.
 
 **`OPTIONS_INVALID`.** A plugin option has an unknown name or a wrong type. The message names the option.
 
@@ -168,12 +184,16 @@ supports one Granola account.
 
 ## Uninstall
 
-```sh
-opencode mcp logout granola
-opencode plugin remove @joe-broadhead/opencode-granola
-```
+Sign out while the plugin is still installed: once it is removed, OpenCode no longer knows the `granola` server, so
+it cannot remove its sign-in, and `opencode auth list` stops showing it.
 
-Restart OpenCode afterwards. Files you exported stay in your export folder.
+1. Sign out of Granola: `opencode mcp logout granola`.
+2. Check: `opencode auth list` no longer lists **Granola**.
+3. Remove the plugin: `opencode plugin remove @joe-broadhead/opencode-granola`, then `opencode reload`.
+   `opencode mcp list` no longer lists `granola`.
+4. Remove any Granola rules you copied into your agents' own `permissions`.
+
+Files you exported stay in your export folder.
 
 ## Links
 

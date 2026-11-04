@@ -6,8 +6,8 @@ export const PLUGIN_ID = "granola.meetings"
 
 export interface PackageInfo {
   readonly version: string
-  /** The OpenCode line this release is tested with, from package.json#opencode.host. */
-  readonly testedHost: string
+  /** The supported OpenCode range, from package.json#opencode.host. */
+  readonly hostRange: string
 }
 
 /** package.json sits next to src/ and dist/ in the repository and in the installed package. */
@@ -17,5 +17,5 @@ export function readPackageInfo(url: URL = new URL("../package.json", import.met
   if (!record(raw) || typeof raw.version !== "string" || !record(raw.opencode) || typeof raw.opencode.host !== "string") {
     throw new GranolaError(packageInvalid("needs a version and an opencode.host range"))
   }
-  return { version: raw.version, testedHost: raw.opencode.host }
+  return { version: raw.version, hostRange: raw.opencode.host }
 }

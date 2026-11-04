@@ -11,17 +11,48 @@ export interface PermissionRule {
   readonly effect: "allow" | "deny" | "ask"
 }
 
-/** One status model behind /granola-status and the TUI dialog's RPC. JSON-safe, no secrets. */
+/**
+ * The status state, in the machine form every plugin of this family shares: OpenCode's connection state for the
+ * granola server, or `conflict` when the user's own granola server, for another URL, holds the name.
+ */
+export type State = "connected" | "sign_in_required" | "connecting" | "disabled" | "failed" | "not_configured" | "conflict"
+
+export const STATES: readonly State[] = ["connected", "sign_in_required", "connecting", "disabled", "failed", "not_configured", "conflict"]
+
+/** The state for OpenCode's connection state; a conflict takes precedence in the status model. */
+export const STATE_OF: Readonly<Record<ConnectionState, State>> = {
+  connected: "connected",
+  pending: "connecting",
+  needs_auth: "sign_in_required",
+  failed: "failed",
+  disabled: "disabled",
+  absent: "not_configured",
+}
+
+/**
+ * One status model behind /granola-status, the TUI dialog and the RPC. JSON-safe, no secrets. `version`, `host`,
+ * `state`, `unguardedAgents` and `nextStep` are the fields every plugin of this family shares.
+ */
 export interface Status {
-  readonly state: ConnectionState
+  /** The plugin's version. */
+  readonly version: string
+  readonly host: {
+    /** OpenCode's version; null when OpenCode reports none. */
+    readonly version: string | null
+    /** The supported range, `opencode.host` in package.json. */
+    readonly range: string
+    /** True only for a release in the tested list. */
+    readonly tested: boolean
+  }
+  readonly state: State
   /** Granola's display title, once connected. */
   readonly title?: string
-  /** Set whenever Granola is not connected. */
-  readonly problem?: { readonly code: string; readonly message: string; readonly next: string }
-  /** Set when the user's config already uses the granola server name for something else. */
+  /** Set whenever Granola is not connected; its next step is `nextStep`. */
+  readonly problem?: { readonly code: string; readonly message: string }
+  /** Set with the state `conflict`: the user's own granola server that holds the name. */
   readonly conflict?: string
   readonly tools: {
-    /** Known Granola tools available now. */
+    /** Granola's own tools available now, unknown ones included; the plugin's export is not counted. */
     readonly visible: number
     /** Granola tools this plugin removed, such as sign_out. */
     readonly hidden: number
@@ -31,7 +62,7 @@ export interface Status {
   }
   /** The active workspace from the most recent account read in this OpenCode run. */
   readonly workspace?: string
-  /** Agents that did not receive the Granola permission defaults, so Granola writes run there without asking. */
+  /** Agents whose own rules would let a Granola tool this plugin does not know run without asking; empty when none. */
   readonly unguardedAgents: readonly string[]
   /**
    * Set with unguardedAgents: the rules to put first in each of those agents' own `permissions`, followed by
@@ -39,26 +70,32 @@ export interface Status {
    */
   readonly permissionsBlock?: readonly PermissionRule[]
   readonly exportDirectory: string
-  readonly pluginVersion: string
-  readonly hostVersion: string
+  /** Set only when allowUntestedHost lets a host outside the supported range run the plugin. */
   readonly hostWarning?: string
-  /** Exactly one step; "Nothing to do." when nothing is needed. */
-  readonly next: string
+  /** Exactly one step, the Next step row; "Nothing to do." when nothing is needed. */
+  readonly nextStep: string
 }
 
 /** JSON Schema for Status: the RPC method's output. */
 export const STATUS_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["state", "tools", "unguardedAgents", "exportDirectory", "pluginVersion", "hostVersion", "next"],
+  required: ["version", "host", "state", "tools", "unguardedAgents", "exportDirectory", "nextStep"],
   properties: {
-    state: { type: "string", enum: ["connected", "pending", "disabled", "failed", "needs_auth", "absent"] },
+    version: { type: "string" },
+    host: {
+      type: "object",
+      additionalProperties: false,
+      required: ["version", "range", "tested"],
+      properties: { version: { type: ["string", "null"] }, range: { type: "string" }, tested: { type: "boolean" } },
+    },
+    state: { type: "string", enum: STATES },
     title: { type: "string" },
     problem: {
       type: "object",
       additionalProperties: false,
-      required: ["code", "message", "next"],
-      properties: { code: { type: "string" }, message: { type: "string" }, next: { type: "string" } },
+      required: ["code", "message"],
+      properties: { code: { type: "string" }, message: { type: "string" } },
     },
     conflict: { type: "string" },
     tools: {
@@ -88,32 +125,40 @@ export const STATUS_SCHEMA = {
       },
     },
     exportDirectory: { type: "string" },
-    pluginVersion: { type: "string" },
-    hostVersion: { type: "string" },
     hostWarning: { type: "string" },
-    next: { type: "string" },
+    nextStep: { type: "string" },
   },
 } as const
 
-/** Labels for the connection states, shared by /granola-status and the TUI dialog. */
-export const STATE_LABELS: Readonly<Record<ConnectionState, string>> = {
+/** The status RPC's one error: status could not be read. Its data is the code and the next step. */
+export const STATUS_ERROR_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["code", "next"],
+  properties: { code: { type: "string" }, next: { type: "string" } },
+} as const
+
+/** The S9 labels for the states, shared by /granola-status and the TUI dialog. */
+export const STATE_LABELS: Readonly<Record<State, string>> = {
   connected: "connected",
-  pending: "connecting",
-  needs_auth: "sign-in required",
+  connecting: "connecting",
+  sign_in_required: "sign-in required",
   failed: "failed",
   disabled: "disabled",
-  absent: "not configured",
+  not_configured: "not configured",
+  conflict: "conflict",
 }
 
 export type Tone = "ok" | "info" | "warning" | "error"
 
-const TONES: Readonly<Record<ConnectionState, Tone>> = {
+const TONES: Readonly<Record<State, Tone>> = {
   connected: "ok",
-  pending: "info",
-  needs_auth: "warning",
+  connecting: "info",
+  sign_in_required: "warning",
   failed: "error",
   disabled: "info",
-  absent: "warning",
+  not_configured: "warning",
+  conflict: "warning",
 }
 
 /** One status row. The block, when set, is config to paste, one line each. */
@@ -124,11 +169,17 @@ export interface StatusRow {
   readonly block?: readonly string[]
 }
 
+function hostRow(status: Status): StatusRow {
+  const { version, range, tested } = status.host
+  const found = version ?? "unknown"
+  if (status.hostWarning) return { label: "OpenCode", text: `${found} (host untested: ${status.hostWarning}), plugin ${status.version}`, tone: "warning" }
+  return { label: "OpenCode", text: `${found} (${tested ? "tested" : "untested"}; supported range ${range}), plugin ${status.version}`, ...(tested ? {} : { tone: "info" as const }) }
+}
+
 /** The rows /granola-status and the dialog show, in order; the Next step line follows them. */
 export function statusRows(status: Status): StatusRow[] {
   const connected = status.state === "connected"
-  // The user's own granola server in place of Granola's is a conflict, whatever its connection state.
-  const connection = status.conflict ? `conflict: ${status.conflict}`
+  const connection = status.state === "conflict" && status.conflict ? `conflict: ${status.conflict}`
     : `${STATE_LABELS[status.state]}${status.title ? ` (${status.title})` : ""}${status.problem ? `: ${status.problem.message} (${status.problem.code})` : ""}`
   const tools = [`${status.tools.visible} available`]
   if (status.tools.hidden) tools.push(`${status.tools.hidden} hidden`)
@@ -138,20 +189,20 @@ export function statusRows(status: Status): StatusRow[] {
   }
   const agents = status.unguardedAgents
   return [
-    { label: "Connection", text: connection, tone: status.conflict ? "warning" : TONES[status.state] },
+    { label: "Connection", text: connection, tone: TONES[status.state] },
     { label: "Account", text: !connected ? "unknown until Granola connects" : status.workspace ? `workspace ${status.workspace}` : "workspace unknown until the agent reads your Granola account" },
     { label: "Access", text: "reads run without asking; changes, new tools and exports ask first" },
     { label: "Export folder", text: status.exportDirectory },
     { label: "Tools", text: connected ? tools.join(", ") : "none until Granola connects" },
-    ...(agents.length ? [{
-      label: "Agents without default rules",
-      text: `${agents.join(", ")}: Granola writes run there without asking`,
-      tone: "warning" as const,
-      block: permissionsSnippet(agents, status.permissionsBlock ?? []),
-    }] : []),
-    status.hostWarning
-      ? { label: "OpenCode", text: `${status.hostVersion} (host untested: ${status.hostWarning}), plugin ${status.pluginVersion}`, tone: "warning" as const }
-      : { label: "OpenCode", text: `${status.hostVersion} (tested), plugin ${status.pluginVersion}` },
+    agents.length
+      ? {
+          label: "Agents without default rules",
+          text: `${agents.join(", ")}: Granola changes and new tools may run there without asking`,
+          tone: "warning" as const,
+          block: permissionsSnippet(agents, status.permissionsBlock ?? []),
+        }
+      : { label: "Agents without default rules", text: "none" },
+    hostRow(status),
   ]
 }
 
@@ -178,6 +229,7 @@ export const Granola = Rpc.define({
     status: {
       input: { type: "object", properties: {}, additionalProperties: false },
       output: STATUS_SCHEMA,
+      errors: { unavailable: STATUS_ERROR_SCHEMA },
     },
   },
   events: {},

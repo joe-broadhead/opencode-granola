@@ -46,7 +46,7 @@ describe("execute.after", () => {
     const event = failure("granola_get_meetings", 'MCP server "granola" needs authentication: go to https://auth.example/x. Sign in from /mcps.')
     await after(event)
     expect(event.error).toBeInstanceOf(ToolError)
-    expect(event.error.message).toBe("AUTH_REQUIRED: Granola needs you to sign in. Next step: Run /connect and choose Granola, or run opencode mcp auth granola in a terminal.")
+    expect(event.error.message).toBe("AUTH_REQUIRED: Granola needs you to sign in. Next step: Run /connect and choose Granola, then press o or Enter to open the sign-in page (in a terminal, opencode mcp auth granola opens it automatically).")
     expect(event.error.metadata).toEqual({ code: "AUTH_REQUIRED", next: expect.any(String) })
   })
 

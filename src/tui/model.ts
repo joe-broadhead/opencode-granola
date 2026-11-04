@@ -6,7 +6,7 @@ export type { Tone } from "../rpc/contract.js"
 export type Details =
   | { readonly type: "loading" }
   | { readonly type: "ready"; readonly status: Status }
-  | { readonly type: "unavailable"; readonly reason: string }
+  | { readonly type: "unavailable"; readonly reason: string; readonly next?: string }
 
 export interface View {
   /** The same rows as /granola-status, in order. */
@@ -25,8 +25,8 @@ export function view(details: Details): View {
   if (details.type === "unavailable") {
     return {
       rows: [{ label: "Connection", text: `unknown: ${details.reason}`, tone: "warning" }],
-      next: "Check that granola.meetings is active in /plugins, then press r to refresh.",
+      next: details.next ?? "Check that granola.meetings is active in /plugins, then press r to refresh.",
     }
   }
-  return { rows: statusRows(details.status), next: details.status.next }
+  return { rows: statusRows(details.status), next: details.status.nextStep }
 }

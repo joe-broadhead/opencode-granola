@@ -8,14 +8,14 @@ import { fakeHost } from "./fakes.js"
 const VERSION = readPackageInfo().version
 
 const status: Status = {
-  state: "needs_auth",
-  problem: { code: "AUTH_REQUIRED", message: "Granola needs you to sign in.", next: "Run `/connect` and choose Granola." },
+  state: "sign_in_required",
+  problem: { code: "AUTH_REQUIRED", message: "Granola needs you to sign in." },
   tools: { visible: 0, hidden: 0, unknown: 0, unknownNames: [] },
   unguardedAgents: [],
   exportDirectory: "/x",
-  pluginVersion: VERSION,
-  hostVersion: "2.2.3",
-  next: "Run `/connect` and choose Granola.",
+  version: VERSION,
+  host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
+  nextStep: "Run `/connect` and choose Granola.",
 }
 
 describe("commands", () => {

@@ -2,6 +2,48 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Status names a skill of yours that takes the place of one of the plugin's own. OpenCode loads one skill per id, so
+  a skill with the id `granola` or `granola-meeting-brief`, for example in `~/.config/opencode/skills/` or a
+  project's `.opencode/skills/`, hides the plugin's. `/granola-status` and the `/granola` dialog have a new `Skills`
+  row, the status RPC a new `shadowedSkills` field (`name` and `path`, empty when none), and the next step says to
+  rename or move that file.
+
+### Changed
+
+- `give_feedback` is now denied by default, which hides it from the model; it used to ask. Granola's own instructions
+  tell the model to send reports unasked, which put an unexplained prompt in front of you. To send reports, add
+  `{ "action": "granola_give_feedback", "resource": "*", "effect": "ask" }` to your `permissions`. The default rule
+  block ends with the deny, the `Access` row says so, and the `jelly` declaration gives `granola.give_feedback` the
+  effect `deny`.
+- The next step for agents without the default rules is now the same in every plugin of this family: "Put the
+  default rules shown by /granola-status first in each listed agent's own permissions, in opencode.json or the
+  agent's Markdown file, followed by your top-level rules for Granola tools." The `Agents without default rules` row
+  lists only the agents' names, followed by the rules to paste.
+- Scripts: when a deny rule refuses a tools RPC call, `PERMISSION_DENIED` names the action it refused, and its next
+  step says to remove or narrow that rule, or to use a session whose agent allows it.
+- `EXPORT_INVALID_INPUT` gives the next step for the part of the request that was wrong: an unknown field, `path`,
+  `overwrite`, or `meeting_ids` and `content`.
+- The `export_markdown` description states the 8 MB limit, that a plan without transcripts gets the notes instead,
+  and that the text result names anything missing.
+- Both skills are rewritten, shorter, around the choices agents got wrong: `search_transcripts` first for what was
+  said, then only the matching transcript chunks; call shapes for the main tools; paraphrasing instead of quoting;
+  labelling Granola's summaries as Granola's; and citing each meeting's note link. The `granola-meeting-brief` skill
+  gets an upcoming meeting from a calendar tool or asks, because Granola holds only past meetings, and builds the
+  brief from the meeting's own record unless you ask for other sources.
+- The Granola namespace description, which the model always sees, now carries those rules too.
+
+### Fixed
+
+- `query_granola_meetings` takes the meetings to search as `document_ids` and ignores `meeting_ids` without an error,
+  so an answer meant for chosen meetings came from all of them. The skills and the namespace description now say
+  to pass `document_ids`.
+- The `granola` skill no longer points at `docs/scripting.md`, which the package does not ship; it links the guide
+  on GitHub.
+
 ## [0.0.4] - 2026-11-04
 
 ### Added

@@ -132,7 +132,7 @@ const FILESYSTEM: Record<string, string> = {
 }
 
 /** Writer and filesystem failures as export problems; cancellation and unexpected errors pass through. */
-function writeProblem(error: unknown, relative: string, maxBytes: number): unknown {
+export function writeProblem(error: unknown, relative: string, maxBytes: number): unknown {
   if (error instanceof MarkdownExportRefusal) {
     switch (error.reason) {
       case "outside":

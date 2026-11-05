@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url"
 import ts from "typescript"
 
 const root = fileURLToPath(new URL("../", import.meta.url))
-const TESTED_HOST = ">=2.2.3 <2.3.0"
+const SUPPORTED_RANGE = ">=2.2.3 <2.3.0"
 const SDK_VERSION = "2.2.3"
 
 /** The first matching rule names the problem. Only @opencode/plugin, sdk, client and theme are public. */
@@ -132,7 +132,7 @@ function checkManifest() {
   }
   for (const name of LIFECYCLE) if (pkg.scripts?.[name] !== undefined) fail(`has a ${name} script; OpenCode installs plugins with scripts off, so ship a built dist/`)
   if (pkg.devDependencies?.["@opencode/plugin"] !== SDK_VERSION) fail(`@opencode/plugin must be a devDependency pinned to exactly ${SDK_VERSION}`)
-  if (pkg.opencode?.host !== TESTED_HOST) fail(`opencode.host must be exactly "${TESTED_HOST}"`)
+  if (pkg.opencode?.host !== SUPPORTED_RANGE) fail(`opencode.host must be exactly "${SUPPORTED_RANGE}"`)
 }
 
 const shipped = walk(`${root}src`)

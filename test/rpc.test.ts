@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs"
 import ts from "typescript"
 import { describe, expect, it } from "vitest"
-import plugin from "../src/index.js"
 import { setup } from "../src/setup.js"
 import { STATUS_UNAVAILABLE } from "../src/errors.js"
 import { Granola, STATUS_ERROR_SCHEMA, STATUS_SCHEMA } from "../src/rpc/contract.js"
 import { registerRpc } from "../src/rpc/register.js"
-import { formatStatus, type Status } from "../src/status.js"
+import type { Status } from "../src/rpc/contract.js"
+import { formatStatus } from "../src/status.js"
 import { fakeHost } from "./fakes.js"
 
 describe("status RPC", () => {

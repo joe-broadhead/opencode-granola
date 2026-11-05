@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
-import { exportError, exists, invalidPath, writeFailed } from "./errors.js"
+import { toolError } from "../errors.js"
+import { exists, invalidPath, writeFailed } from "./errors.js"
 
 const MARKDOWN = /\.(?:md|markdown)$/i
 
@@ -20,7 +21,7 @@ export function defaultName(content: string, now: Date): string {
  * paths, `..`, hidden names, backslashes and control characters are refused before anything is read or asked.
  */
 export function exportPath(raw: string): string[] {
-  const refuse = (problem: string) => exportError(invalidPath(raw, problem))
+  const refuse = (problem: string) => toolError(invalidPath(raw, problem))
   if (/[\u0000-\u001f\u007f]/.test(raw)) throw refuse("contains control characters")
   if (raw.includes("\\")) throw refuse("uses `\\`; separate folders with `/`")
   if (raw.startsWith("/") || raw.startsWith("~") || /^[A-Za-z]:/.test(raw)) throw refuse("is absolute; give a path relative to the export folder")
@@ -36,7 +37,7 @@ export function exportPath(raw: string): string[] {
 
 /** The configured export folder, after following a link, must be a folder. */
 async function folder(root: string, relative: string): Promise<void> {
-  if (!(await fs.stat(root)).isDirectory()) throw exportError(writeFailed(relative, "the export folder is a file, not a folder"))
+  if (!(await fs.stat(root)).isDirectory()) throw toolError(writeFailed(relative, "the export folder is a file, not a folder"))
 }
 
 async function lstat(file: string) {
@@ -61,13 +62,13 @@ export async function preflight(root: string, parts: readonly string[], overwrit
     current = path.join(current, part)
     const stat = await lstat(current)
     if (!stat) return
-    if (stat.isSymbolicLink()) throw exportError(invalidPath(relative, `goes through the link \`${part}\``))
+    if (stat.isSymbolicLink()) throw toolError(invalidPath(relative, `goes through the link \`${part}\``))
     if (index < parts.length - 1) {
-      if (!stat.isDirectory()) throw exportError(invalidPath(relative, `goes through \`${part}\`, which is a file`))
+      if (!stat.isDirectory()) throw toolError(invalidPath(relative, `goes through \`${part}\`, which is a file`))
     } else if (!stat.isFile()) {
-      throw exportError(invalidPath(relative, "names a folder"))
+      throw toolError(invalidPath(relative, "names a folder"))
     } else if (!overwrite) {
-      throw exportError(exists(relative))
+      throw toolError(exists(relative))
     }
   }
 }
@@ -90,7 +91,7 @@ export async function prepare(root: string, parts: readonly string[]): Promise<{
     }
     const stat = await fs.lstat(parent)
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
-      throw exportError(invalidPath(parts.join("/"), `goes through \`${part}\`, which is not a folder`))
+      throw toolError(invalidPath(parts.join("/"), `goes through \`${part}\`, which is not a folder`))
     }
   }
   return { root: canonical, destination: path.join(parent, parts.at(-1)!) }

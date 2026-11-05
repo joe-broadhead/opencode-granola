@@ -1,7 +1,5 @@
 # Scripting
 
-Unofficial plugin. Not affiliated with Granola.
-
 A script can read Granola with no model: a cron job, a shell script, or any program that can reach the OpenCode
 server. It uses the tools RPC, `granola.meetings.tools`, through `opencode api` or an OpenCode client.
 

@@ -28,7 +28,8 @@ import { Rpc } from "@opencode/plugin/rpc"
 
 // >>> PLUGIN-SPECIFIC >>>
 
-import { connectionProblem, toolUnavailable, type ConnectionState } from "../errors.js"
+import { connectionProblem, toolUnavailable } from "../errors.js"
+import type { ConnectionState } from "../rpc/contract.js"
 import { READ_TOOLS } from "../known-tools.js"
 import { PLUGIN_ID as GRANOLA_ID } from "../meta.js"
 import { CONFLICT_NEXT } from "../status.js"

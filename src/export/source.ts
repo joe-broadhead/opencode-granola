@@ -2,8 +2,8 @@ import type { Plugin } from "@opencode/plugin"
 import { Error as ToolError, type ToolContext } from "@opencode/plugin/promise/tool"
 import { connectionProblem, toolError, toolUnavailable } from "../errors.js"
 import { SERVER, toolID } from "../known-tools.js"
-import { unavailableProblem } from "../tools.js"
-import { exportError, readFailed } from "./errors.js"
+import { UNAVAILABLE, unavailableProblem } from "../tools.js"
+import { readFailed } from "./errors.js"
 import { oneLine, readNotes, type Notes, type Transcript, type TranscriptEnd } from "./render.js"
 
 export interface SourceContext {
@@ -22,9 +22,6 @@ export interface Limits {
   /** Characters asked for per transcript page; Granola caps it at 80000. */
   readonly pageChars: number
 }
-
-/** The host's fixed message when a Granola tool runs while the server is unavailable starts with this. */
-const UNAVAILABLE = `MCP server "${SERVER}" `
 
 const TRANSCRIPT_TOOL = "get_meeting_transcript"
 
@@ -149,7 +146,7 @@ export async function connect(ctx: SourceContext, names: readonly string[], cont
       try {
         return readNotes((await call("get_meetings", { meeting_ids: [meetingID] })).output)
       } catch (error) {
-        throw error instanceof GranolaFailure ? exportError(readFailed("notes", meetingID, error.message)) : error
+        throw error instanceof GranolaFailure ? toolError(readFailed("notes", meetingID, error.message)) : error
       }
     },
 
@@ -165,7 +162,7 @@ export async function connect(ctx: SourceContext, names: readonly string[], cont
           return notOnPlan
         }
         if (unknown) return { lines: [], end: { kind: "unavailable", reason: "meeting_not_found" }, bytes: 0 }
-        throw exportError(readFailed("transcript", meetingID, error.message))
+        throw toolError(readFailed("transcript", meetingID, error.message))
       }
     },
 

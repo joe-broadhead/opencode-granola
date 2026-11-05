@@ -2,12 +2,13 @@
 // shared part is tested in tools-rpc.test.ts.
 import { Error as ToolError } from "@opencode/plugin/promise/tool"
 import { describe, expect, it } from "vitest"
-import { connectionProblem, toolUnavailable, type ConnectionState } from "../src/errors.js"
+import { connectionProblem, toolUnavailable } from "../src/errors.js"
 import { KNOWN_READS, NEXT_STEPS, shapeResult, TOOLS_RPC_ID } from "../src/host/tools-rpc.js"
 import { HIDDEN_TOOLS, PLUGIN_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../src/known-tools.js"
 import { Granola } from "../src/rpc/contract.js"
 import { setup } from "../src/setup.js"
-import { CONFLICT_NEXT, type Status } from "../src/status.js"
+import type { ConnectionState, Status } from "../src/rpc/contract.js"
+import { CONFLICT_NEXT } from "../src/status.js"
 import { agent, fakeHost, type FakeHost, type FakeServer } from "./fakes.js"
 
 type Handler = (input: unknown, context: unknown) => Promise<any>

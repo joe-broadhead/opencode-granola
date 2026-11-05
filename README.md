@@ -108,8 +108,9 @@ For example, to let one write run without asking:
 
 Agents defined only in your own config are created after plugins start, so they miss the default rules, and Granola's
 writes would run there without asking. Status names each such agent and gives the block to paste first in each listed
-agent's own `permissions`, in `opencode.json` or the agent's Markdown file. An agent whose own rules already ask or deny for every Granola tool needs nothing and is not named.
-Do not put the block in the top-level `permissions`, which would loosen Explore.
+agent's own `permissions`, in `opencode.json` or the agent's Markdown file. An agent whose own rules already ask or deny
+for every Granola tool needs nothing and is not named. Do not put the block in the top-level `permissions`, which would
+loosen Explore.
 
 In `opencode run` and other runs where nobody can answer, a call that would ask is refused; reads still work.
 
@@ -143,8 +144,8 @@ Each member then signs in once with `/connect` → Granola. A managed `mcp.serve
 ## Troubleshooting
 
 Run `/granola-status` (or `/granola` in the terminal UI) first. It shows the rows `Connection`, `Account`, `Access`,
-`Export folder`, `Skills`, `Tools`, `Agents without default rules` (`none` when no agent needs the fix), `OpenCode` and exactly
-one `Next step`. Each connection state:
+`Export folder`, `Skills`, `Tools`, `Agents without default rules` (`none` when no agent needs the fix), `OpenCode` and
+exactly one `Next step`. Each connection state:
 
 | Status | Code | What to do |
 | --- | --- | --- |

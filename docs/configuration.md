@@ -64,16 +64,20 @@ after that rule:
   { "action": "granola_query_granola_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
   { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
-  { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" }
+  { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_give_feedback", "resource": "*", "effect": "deny" }
 ]
 ```
 
 So:
 
 - Granola's known reads run without a prompt.
+- `give_feedback`, which sends a report to Granola, is off: a deny on `*` hides it from the model. Granola's own
+  instructions tell the model to send it on its own, which would put an unexplained prompt in front of you. To send
+  reports, add `{ "action": "granola_give_feedback", "resource": "*", "effect": "ask" }` to your `permissions`.
 - Everything else under `granola_` asks first: Granola's writes (`create_folder`, `update_folder`,
-  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and `give_feedback`), any Granola tool that this
-  plugin version does not know yet, and `export_markdown`.
+  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes` and `generate_summary`), any Granola tool
+  that this plugin version does not know yet, and `export_markdown`.
 - Explore and Title also get the block, but their own later deny rules still keep Granola's tools out. Plan keeps its
   own restrictions. An agent without the base rule gets no rules.
 
@@ -158,8 +162,7 @@ Tools the plugin does not know yet, and exports, still ask.
     { "action": "granola_add_note_to_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_update_private_notes", "resource": "*", "effect": "deny" },
-    { "action": "granola_generate_summary", "resource": "*", "effect": "deny" },
-    { "action": "granola_give_feedback", "resource": "*", "effect": "deny" }
+    { "action": "granola_generate_summary", "resource": "*", "effect": "deny" }
   ]
 }
 ```
@@ -169,7 +172,7 @@ Refuse one tool:
 ```json
 {
   "permissions": [
-    { "action": "granola_give_feedback", "resource": "*", "effect": "deny" }
+    { "action": "granola_generate_summary", "resource": "*", "effect": "deny" }
   ]
 }
 ```

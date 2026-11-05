@@ -85,7 +85,8 @@ See [Scripting](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs
 | Kind | Tools | Default |
 | --- | --- | --- |
 | Reads | `get_account_info`, `list_meeting_folders`, `list_meetings`, `search_meetings`, `get_meetings`, `get_meeting_transcript`, `search_transcripts`, `query_granola_meetings`, `get_meeting_attachment`, `list_templates` | run without asking |
-| Changes and sends | `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary`, `give_feedback` | ask first |
+| Changes | `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` | ask first |
+| Reports to Granola | `give_feedback` | off; Granola's own instructions tell the model to send it unasked. Add an `ask` rule for `granola_give_feedback` to turn it on |
 | The plugin's export | `export_markdown` | asks first |
 | New tools | any Granola tool this plugin version does not know yet | ask first; status names them |
 | Hidden | `sign_out` | removed; use `opencode mcp logout granola` |

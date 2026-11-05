@@ -42,8 +42,8 @@ What the model can do in Granola is limited by three layers, in this order:
 
 1. **Your Granola account and plan.** Granola decides which tools your account gets and what they can reach.
 2. **Default permission rules.** Granola's known reads run without a prompt. Everything else under `granola_` asks
-   first: Granola's writes and sends, tools this plugin version does not know yet, and `export_markdown`. Granola's
-   `sign_out` tool is hidden.
+   first: Granola's writes, tools this plugin version does not know yet, and `export_markdown`. Granola's `sign_out`
+   tool is hidden, and its `give_feedback`, which sends a report to Granola, is denied.
 3. **Your OpenCode permissions.** Your `permissions` rules and saved "Always allow" answers override the defaults. A
    `deny` you configure always wins.
 

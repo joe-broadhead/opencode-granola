@@ -311,12 +311,14 @@ model. It reads only OpenCode's local state and holds no token and no sign-in li
 | `workspace` | The active workspace from the most recent account read in this OpenCode run |
 | `unguardedAgents` | Agents that would run an unknown Granola tool without asking; empty when there are none |
 | `permissionsBlock` | With `unguardedAgents`: the rules to put first in each of those agents' own `permissions` |
+| `shadowedSkills` | Skills OpenCode loads instead of the plugin's own because they use the same id, each with `name` (the plugin's skill) and `path` (the file that takes its place); empty when there are none |
 | `exportDirectory` | The export folder |
 | `hostWarning` | Only on a host outside the supported range that runs because of `allowUntestedHost` |
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 
-The text surfaces show the rows `Connection`, `Account`, `Access`, `Export folder`, `Tools`,
-`Agents without default rules`, `OpenCode` and `Next step`, in that order, every row always there. The RPC has one
+The text surfaces show the rows `Connection`, `Account`, `Access`, `Export folder`, `Skills`, `Tools`,
+`Agents without default rules`, `OpenCode` and `Next step`, in that order, every row always there. `Skills` reads
+`the plugin's own`, or names each skill that takes the place of one of the plugin's. The RPC has one
 error, `unavailable`, with `data: { code: "STATUS_UNAVAILABLE", next }`.
 
 Scripts have a second RPC, `granola.meetings.tools`, which calls Granola's read tools with no model. It has its own

@@ -29,6 +29,7 @@ function status(overrides: Partial<Status>): Status {
     title: "Granola",
     tools: { visible: 17, hidden: 1, unknown: 0, unknownNames: [] },
     unguardedAgents: [],
+    shadowedSkills: [],
     exportDirectory: "/home/someone/Granola",
     version: VERSION,
     host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },

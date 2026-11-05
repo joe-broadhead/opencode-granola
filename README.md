@@ -142,7 +142,7 @@ Each member then signs in once with `/connect` → Granola. A managed `mcp.serve
 ## Troubleshooting
 
 Run `/granola-status` (or `/granola` in the terminal UI) first. It shows the rows `Connection`, `Account`, `Access`,
-`Export folder`, `Tools`, `Agents without default rules` (`none` when no agent needs the fix), `OpenCode` and exactly
+`Export folder`, `Skills`, `Tools`, `Agents without default rules` (`none` when no agent needs the fix), `OpenCode` and exactly
 one `Next step`. Each connection state:
 
 | Status | Code | What to do |
@@ -175,6 +175,10 @@ release if Granola misbehaves. A release inside the range other than 2.2.3, 2.2.
 overwrites it. An entry for Granola's official URL is used as it is.
 
 **Status lists Agents without default rules.** See [Permissions](#permissions).
+
+**The `Skills` row names a file.** A skill of yours with the id `granola` or `granola-meeting-brief`, for example in
+`~/.config/opencode/skills/` or a project's `.opencode/skills/`, takes the place of the plugin's own, so the model
+never sees the plugin's. Rename its folder and its `name`, or move it, as the next step says.
 
 **A script gets an error.** The tools RPC has its own codes, listed in
 [Scripting](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md#errors).

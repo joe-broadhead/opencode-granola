@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { STATUS_COMMAND, registerCommands } from "../src/commands.js"
 import { STATUS_UNAVAILABLE, describe as describeProblem } from "../src/errors.js"
 import { readPackageInfo } from "../src/meta.js"
-import type { Status } from "../src/status.js"
+import type { Status } from "../src/rpc/contract.js"
 import { fakeHost } from "./fakes.js"
 
 const VERSION = readPackageInfo().version
@@ -12,6 +12,7 @@ const status: Status = {
   problem: { code: "AUTH_REQUIRED", message: "Granola needs you to sign in." },
   tools: { visible: 0, hidden: 0, unknown: 0, unknownNames: [] },
   unguardedAgents: [],
+  shadowedSkills: [],
   exportDirectory: "/x",
   version: VERSION,
   host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },

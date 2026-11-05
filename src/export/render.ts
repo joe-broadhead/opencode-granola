@@ -4,7 +4,7 @@ import { elements, findAll, isMarkup, parse, textContent, type Element } from ".
 export type Content = "notes" | "transcript" | "both"
 
 /** A section of a meeting's notes: Granola's summary, the user's notes, attendees and so on. */
-export interface Block {
+interface Block {
   readonly heading?: string
   readonly body: string
 }

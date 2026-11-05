@@ -26,10 +26,10 @@ export const OFFICIAL_URL = "https://mcp.granola.ai/mcp"
 export const HOST_VERSIONS: readonly string[] = TESTED_HOSTS
 
 /** The system temp directory, resolved (/private/tmp on macOS). Not TMPDIR, which may sit under HOME. */
-export const TEMP = realpathSync("/tmp")
+const TEMP = realpathSync("/tmp")
 
 /** A new directory under TEMP; with `repository`, also a git repository, so OpenCode's upward search stops there. */
-export function tempDirectory(prefix: string, repository = false): string {
+function tempDirectory(prefix: string, repository = false): string {
   const path = realpathSync(mkdtempSync(join(TEMP, prefix)))
   if (repository) {
     const result = spawnSync("git", ["init", "--quiet", path], { encoding: "utf8" })
@@ -43,14 +43,14 @@ export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" |
 /**
  * - main: connected, with the user's own rules and agents, including two for scripts;
  * - needs-auth and pending: the two connection states before Granola's tools are available;
- * - adopted: the user's own `granola` entry for the official URL;
+ * - adopted: the user's own `granola` entry for the official URL, and a project skill with the id `granola`;
  * - conflict: the user's own `granola` entry for another server;
  * - invalid: a plugin option the plugin does not support;
  * - untested: connected, with allowUntestedHost;
  * - automation: connected, with exports allowed for runs where nobody is present;
  * - unload: connected, then the plugin is removed from the config.
  */
-export const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "unload"] as const
+const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "unload"] as const
 export type Project = (typeof PROJECTS)[number]
 
 export interface Host {
@@ -82,6 +82,9 @@ const USER_RULES: readonly Rule[] = [
   // Exports into one folder run without asking.
   allow("granola_export_markdown", "scheduled/*"),
 ]
+
+/** In the adopted project, relative to it: a skill of the user's with the id of the plugin's `granola` skill. */
+export const SHADOWING_SKILL = join(".opencode", "skills", "granola", "SKILL.md")
 
 /** The user's own server entry for the official URL, which the plugin adopts as it is. */
 export const ADOPTED_SERVER = { type: "remote", url: OFFICIAL_URL, timeout: { execution: 120_000 } } as const
@@ -160,6 +163,8 @@ function makeRoot(label: string, plugin: string, fake: SyntheticGranola): Root {
     mkdirSync(directory(project), { recursive: true })
     write(project, projectConfig(project, plugin, fake, exports(project)))
   }
+  mkdirSync(join(directory("adopted"), SHADOWING_SKILL, ".."), { recursive: true })
+  writeFileSync(join(directory("adopted"), SHADOWING_SKILL), "---\nname: granola\ndescription: The user's own Granola notes skill, for the host test.\n---\n\nUse the user's own steps.\n")
   const removePlugin = (project: Project) => {
     const config = projectConfig(project, plugin, fake, exports(project)) as { plugins: { package: string }[] }
     write(project, { ...config, plugins: config.plugins.filter((entry) => entry.package !== plugin) })

@@ -18,9 +18,9 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 - **Two self-contained bundles.** `scripts/build.mjs` (esbuild) writes only `dist/index.js` and `dist/tui.js`. Neither
   imports a sibling file; only `@opencode/plugin`, OpenTUI, Solid and `node:*` stay external. `tsc` only typechecks.
 - **Nothing always visible.** Status lives in `/granola-status` and the `/granola` dialog.
-- **One status model.** `src/status.ts` builds it; the rows are Connection, Account, Access, Export folder, Tools,
-  Agents without default rules (`none` when empty), OpenCode and exactly one Next step. The status RPC carries the
-  shared fields `version`, `host`, `state` (machine form, such as `sign_in_required`), `unguardedAgents` and
+- **One status model.** `src/status.ts` builds it; the rows are Connection, Account, Access, Export folder, Skills,
+  Tools, Agents without default rules (`none` when empty), OpenCode and exactly one Next step. The status RPC carries
+  the shared fields `version`, `host`, `state` (machine form, such as `sign_in_required`), `unguardedAgents` and
   `nextStep`, and maps a failed read to its error `unavailable`.
 - **Default rules, not hooks.** `ctx.agent.transform` inserts the block from `src/permissions.ts` after each agent's
   base allow and never weakens a stricter agent. Agents that miss it, and whose own rules would let an unknown

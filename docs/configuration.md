@@ -64,16 +64,20 @@ after that rule:
   { "action": "granola_query_granola_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
   { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
-  { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" }
+  { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_give_feedback", "resource": "*", "effect": "deny" }
 ]
 ```
 
 So:
 
 - Granola's known reads run without a prompt.
+- `give_feedback`, which sends a report to Granola, is off: a deny on `*` hides it from the model. Granola's own
+  instructions tell the model to send it on its own, which would put an unexplained prompt in front of you. To send
+  reports, add `{ "action": "granola_give_feedback", "resource": "*", "effect": "ask" }` to your `permissions`.
 - Everything else under `granola_` asks first: Granola's writes (`create_folder`, `update_folder`,
-  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and `give_feedback`), any Granola tool that this
-  plugin version does not know yet, and `export_markdown`.
+  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes` and `generate_summary`), any Granola tool
+  that this plugin version does not know yet, and `export_markdown`.
 - Explore and Title also get the block, but their own later deny rules still keep Granola's tools out. Plan keeps its
   own restrictions. An agent without the base rule gets no rules.
 
@@ -92,8 +96,8 @@ has a base allow, lacks the block, and its own rules would let a Granola tool th
 asking. An agent whose rules already ask or deny for every Granola tool needs no fix and is not listed. With no such
 agent, the row reads `none`. The fix:
 
-> Put the Granola block first in that agent's own permissions (agents.<agent>.permissions), followed by your
-> top-level rules for granola_ actions.
+> Put the default rules shown by /granola-status first in each listed agent's own permissions, in opencode.json or
+> the agent's Markdown file, followed by your top-level rules for Granola tools.
 
 For example, for an agent `reviewer`, when your top-level `permissions` allow `granola_create_folder`:
 
@@ -158,8 +162,7 @@ Tools the plugin does not know yet, and exports, still ask.
     { "action": "granola_add_note_to_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_update_private_notes", "resource": "*", "effect": "deny" },
-    { "action": "granola_generate_summary", "resource": "*", "effect": "deny" },
-    { "action": "granola_give_feedback", "resource": "*", "effect": "deny" }
+    { "action": "granola_generate_summary", "resource": "*", "effect": "deny" }
   ]
 }
 ```
@@ -169,7 +172,7 @@ Refuse one tool:
 ```json
 {
   "permissions": [
-    { "action": "granola_give_feedback", "resource": "*", "effect": "deny" }
+    { "action": "granola_generate_summary", "resource": "*", "effect": "deny" }
   ]
 }
 ```
@@ -311,12 +314,14 @@ model. It reads only OpenCode's local state and holds no token and no sign-in li
 | `workspace` | The active workspace from the most recent account read in this OpenCode run |
 | `unguardedAgents` | Agents that would run an unknown Granola tool without asking; empty when there are none |
 | `permissionsBlock` | With `unguardedAgents`: the rules to put first in each of those agents' own `permissions` |
+| `shadowedSkills` | Skills OpenCode loads instead of the plugin's own because they use the same id, each with `name` (the plugin's skill) and `path` (the file that takes its place); empty when there are none |
 | `exportDirectory` | The export folder |
 | `hostWarning` | Only on a host outside the supported range that runs because of `allowUntestedHost` |
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 
-The text surfaces show the rows `Connection`, `Account`, `Access`, `Export folder`, `Tools`,
-`Agents without default rules`, `OpenCode` and `Next step`, in that order, every row always there. The RPC has one
+The text surfaces show the rows `Connection`, `Account`, `Access`, `Export folder`, `Skills`, `Tools`,
+`Agents without default rules`, `OpenCode` and `Next step`, in that order, every row always there. `Skills` reads
+`the plugin's own`, or names each skill that takes the place of one of the plugin's. The RPC has one
 error, `unavailable`, with `data: { code: "STATUS_UNAVAILABLE", next }`.
 
 Scripts have a second RPC, `granola.meetings.tools`, which calls Granola's read tools with no model. It has its own
@@ -352,7 +357,7 @@ replaced by `<url>`. OpenCode's sign-in error is never repeated, because it can 
 
 | Code | Message | Next step |
 | --- | --- | --- |
-| `EXPORT_INVALID_INPUT` | The export request *problem*. | Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both). |
+| `EXPORT_INVALID_INPUT` | The export request *problem*. | For a missing or wrong `meeting_ids` or `content`: Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both). For an unknown field: Pass only meeting_ids, content, path and overwrite. For `path`: Pass path as a relative path of at most 512 characters, or leave it out. For `overwrite`: Pass overwrite as true or false, or leave it out. |
 | `EXPORT_INVALID_PATH` | The export path *path* *problem*. | Use a path inside the export folder, such as `meetings/weekly-sync.md`, without `..`, a leading `/` or links. |
 | `EXPORT_EXISTS` | *path* already exists in the export folder. | Choose another path, or ask the user before you export again with overwrite: true. |
 | `EXPORT_TOO_LARGE` | The export is larger than its 8 MB limit. | Export fewer meetings at a time. |

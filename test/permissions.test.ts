@@ -11,9 +11,19 @@ function effect(rules: readonly Rule[], action: string): Rule["effect"] {
 }
 
 describe("default Granola rules", () => {
-  it("ask for every Granola tool, then allow exactly the known reads", () => {
+  it("ask for every Granola tool, allow exactly the known reads, then deny give_feedback", () => {
     expect(DEFAULT_RULES[0]).toEqual({ action: "granola_*", resource: "*", effect: "ask" })
-    expect(DEFAULT_RULES.slice(1)).toEqual(READ_TOOLS.map((name) => ({ action: `granola_${name}`, resource: "*", effect: "allow" })))
+    expect(DEFAULT_RULES.slice(1, -1)).toEqual(READ_TOOLS.map((name) => ({ action: `granola_${name}`, resource: "*", effect: "allow" })))
+    expect(DEFAULT_RULES.at(-1)).toEqual({ action: "granola_give_feedback", resource: "*", effect: "deny" })
+  })
+
+  it("hide give_feedback, which Granola's own instructions tell the model to send unasked, and ask for every other write", () => {
+    const rules: Rule[] = [base]
+    insertDefaults(rules)
+    expect(effect(rules, toolID("give_feedback"))).toBe("deny")
+    for (const name of WRITE_TOOLS.filter((tool) => tool !== "give_feedback")) expect(effect(rules, toolID(name)), name).toBe("ask")
+    // One rule of the user's, later, turns it back on.
+    expect(effect([...rules, { action: "granola_give_feedback", resource: "*", effect: "ask" }], toolID("give_feedback"))).toBe("ask")
   })
 
   it("match the tools Granola's server lists: ten reads and seven writes", () => {
@@ -87,7 +97,7 @@ describe("default Granola rules", () => {
     const rules: Rule[] = [base]
     insertDefaults(rules)
     for (const name of READ_TOOLS) expect(effect(rules, toolID(name))).toBe("allow")
-    for (const name of WRITE_TOOLS) expect(effect(rules, toolID(name))).toBe("ask")
+    for (const name of WRITE_TOOLS) expect(effect(rules, toolID(name))).toBe(name === "give_feedback" ? "deny" : "ask")
     expect(effect(rules, "granola_brand_new_tool")).toBe("ask")
     expect(effect(rules, "granola_export_markdown")).toBe("ask")
     expect(effect(rules, "shell")).toBe("allow")

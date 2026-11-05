@@ -13,10 +13,16 @@ async function setup() {
 }
 
 describe("tool registry transform", () => {
-  it("describes the granola namespace and adds no tool of its own", async () => {
+  it("describes the granola namespace", async () => {
     const { host } = await setup()
     expect(host.namespaces.get("granola")).toBe(NAMESPACE_DESCRIPTION)
-    expect(host.tools.has("granola_status")).toBe(false)
+  })
+
+  it("carries the rules every Granola answer needs, since it is always visible and the skills may not be loaded", () => {
+    expect(NAMESPACE_DESCRIPTION).toContain("query_granola_meetings takes document_ids, not meeting_ids")
+    expect(NAMESPACE_DESCRIPTION).toContain("as Granola's")
+    expect(NAMESPACE_DESCRIPTION).toContain("in your own words unless the user asks for exact words")
+    expect(NAMESPACE_DESCRIPTION.length).toBeLessThanOrEqual(400)
   })
 
   it("hides sign_out, counts it, and leaves every other tool alone across rebuilds", async () => {

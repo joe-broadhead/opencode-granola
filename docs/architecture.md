@@ -75,12 +75,13 @@ name.
 
 ## Status
 
-One model, built by `buildStatus` in `src/status.ts`, serves `/granola-status`, the RPC method and the TUI
-dialog. It reads only OpenCode's local state: `ctx.mcp.list()` for the connection, `ctx.tool.list()` for tool counts
-and `ctx.agent.list()` for agents that missed the defaults. It never calls Granola. The RPC carries the fields every
-plugin of this family shares (`version`, `host`, `state`, `unguardedAgents`, `nextStep`), and answers a status it
-cannot read with its error `unavailable`. The workspace name comes from the
-last successful `get_account_info` call, seen by the `execute.after` hook or the tools RPC, and is kept in memory only.
+One model, built by `buildStatus` in `src/status.ts`, serves `/granola-status`, the RPC method and the TUI dialog. It
+reads only OpenCode's local state: `ctx.mcp.list()` for the connection, `ctx.tool.list()` for tool counts,
+`ctx.agent.list()` for agents that missed the defaults, and `ctx.skill.list()` for a skill of the user's that uses one
+of the plugin's skill ids and so takes its place. It never calls Granola. The RPC carries the fields every plugin of
+this family shares (`version`, `host`, `state`, `unguardedAgents`, `nextStep`), and answers a status it cannot read with
+its error `unavailable`. The workspace name comes from the last successful `get_account_info` call, seen by the
+`execute.after` hook or the tools RPC, and is kept in memory only.
 
 ## Export
 
@@ -111,7 +112,7 @@ sign-in. A call to a server that is not connected gets the connection codes and 
 and `src/tui/index.tsx` into `dist/tui.js`. Shared code, such as the RPC contract and the status rows, is inlined into
 both. Neither bundle imports a sibling file, so an in-place update cannot pair a new entry with an older cached module.
 Only `@opencode/plugin`, OpenTUI, Solid and `node:*` built-ins stay external, because OpenCode provides them; the
-build fails on any other import. `dist/index.js` finds `package.json` and `skills/` one level up, as before.
+build fails on any other import. `dist/index.js` finds `package.json` and `skills/` one level up.
 
 ## Terminal UI
 

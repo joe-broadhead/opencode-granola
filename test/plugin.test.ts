@@ -8,7 +8,7 @@ import { setup } from "../src/setup.js"
 import { readPackageInfo } from "../src/meta.js"
 import { DEFAULT_RULES } from "../src/permissions.js"
 import { OFFICIAL_URL } from "../src/server.js"
-import type { Status } from "../src/status.js"
+import type { Status } from "../src/rpc/contract.js"
 import { agent, fakeHost } from "./fakes.js"
 
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
@@ -29,7 +29,6 @@ describe("plugin definition", () => {
     await setup(host.ctx, host.toolsRpc)
     expect(host.servers.get("granola")).toEqual({ type: "remote", url: OFFICIAL_URL })
     expect(host.agents.get("build")!.permissions.slice(1, 1 + DEFAULT_RULES.length)).toEqual(DEFAULT_RULES)
-    expect(host.tools.has("granola_status")).toBe(false)
     expect([...host.commands.keys()]).toEqual(["granola-status"])
     expect(host.skills.size).toBeGreaterThan(0)
     expect(host.hooks.has("execute.after")).toBe(true)

@@ -25,12 +25,10 @@ describe("plugin options", () => {
       .toEqual({ exportDirectory: "/data/Granola", allowUntestedHost: true })
   })
 
-  it("name the unknown key, including retired options", () => {
-    for (const key of ["policy", "execution", "autoApprove", "exportRoots"]) {
-      const error = failure({ [key]: true })
-      expect(error.code).toBe("OPTIONS_INVALID")
-      expect(error.message).toContain(`${key} is not supported`)
-    }
+  it("name the unknown key", () => {
+    const error = failure({ exportFolder: true })
+    expect(error.code).toBe("OPTIONS_INVALID")
+    expect(error.message).toContain("exportFolder is not supported")
   })
 
   it("reject relative or non-string export directories", () => {

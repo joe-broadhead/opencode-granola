@@ -67,7 +67,7 @@ describe("prebuilt TUI part", () => {
     // The two-column layout wraps long labels and values, so compare without whitespace. The label column wraps
     // "Agents without default rules" after its value's first line.
     const dialog = squash(results["connected without a workspace"]!.dialog)
-    const order = ["Connection connected (Granola)", "Account workspace unknown until the agent reads your Granola account", "Access reads run", "Export folder /home/someone/Granola", "Tools 17 available, 1 hidden", "Agents without none default rules", "OpenCode 2.2.3 (tested; supported range >=2.2.3 <2.3.0)", "Next step Nothing to do."]
+    const order = ["Connection connected (Granola)", "Account workspace unknown until the agent reads your Granola account", "Access reads run", "Export folder /home/someone/Granola", "Skills the plugin's own", "Tools 17 available, 1 hidden", "Agents without none default rules", "OpenCode 2.2.3 (tested; supported range >=2.2.3 <2.3.0)", "Next step Nothing to do."]
     const positions = order.map((part) => dialog.indexOf(squash(part)))
     expect(positions.every((position) => position >= 0)).toBe(true)
     expect([...positions].sort((a, b) => a - b)).toEqual(positions)
@@ -86,7 +86,8 @@ describe("prebuilt TUI part", () => {
   it("names agents without the default rules and shows the config to paste", () => {
     const dialog = squash(results["agents without the defaults"]!.dialog)
     for (const line of [
-      "reviewer: Granola changes and new tools may run there",
+      // The label wraps around the row's text, the agent names only.
+      "Agents without reviewer default rules",
       `{"action":"granola_*","resource":"*","effect":"ask"},`,
       `{"action":"granola_get_meetings","resource":"*","effect":"allow"},`,
     ]) expect(dialog).toContain(squash(line))

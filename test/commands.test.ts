@@ -12,6 +12,7 @@ const status: Status = {
   problem: { code: "AUTH_REQUIRED", message: "Granola needs you to sign in." },
   tools: { visible: 0, hidden: 0, unknown: 0, unknownNames: [] },
   unguardedAgents: [],
+  shadowedSkills: [],
   exportDirectory: "/x",
   version: VERSION,
   host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },

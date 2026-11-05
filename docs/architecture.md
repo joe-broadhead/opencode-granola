@@ -76,8 +76,9 @@ name.
 ## Status
 
 One model, built by `buildStatus` in `src/status.ts`, serves `/granola-status`, the RPC method and the TUI
-dialog. It reads only OpenCode's local state: `ctx.mcp.list()` for the connection, `ctx.tool.list()` for tool counts
-and `ctx.agent.list()` for agents that missed the defaults. It never calls Granola. The RPC carries the fields every
+dialog. It reads only OpenCode's local state: `ctx.mcp.list()` for the connection, `ctx.tool.list()` for tool counts,
+`ctx.agent.list()` for agents that missed the defaults, and `ctx.skill.list()` for a skill of the user's that uses one of
+the plugin's skill ids and so takes its place. It never calls Granola. The RPC carries the fields every
 plugin of this family shares (`version`, `host`, `state`, `unguardedAgents`, `nextStep`), and answers a status it
 cannot read with its error `unavailable`. The workspace name comes from the
 last successful `get_account_info` call, seen by the `execute.after` hook or the tools RPC, and is kept in memory only.

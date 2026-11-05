@@ -12,9 +12,9 @@ import { KNOWN_READS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { HIDDEN_TOOLS, PLUGIN_TOOLS, WRITE_TOOLS } from "../../src/known-tools.js"
 import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
 import { Granola } from "../../src/rpc/contract.js"
-import { AGENT_FIX, CONFLICT_NEXT, formatStatus, type Status } from "../../src/status.js"
+import { AGENT_FIX, CONFLICT_NEXT, formatStatus, shadowedFix, type Status } from "../../src/status.js"
 import { FAILING, MEETING, PLAN_LIMITED, TITLE, TOOLS, UPSTREAM_FAILURE, WORKSPACE, type SyntheticGranola } from "../synthetic-granola/server.js"
-import { ADOPTED_SERVER, globalPaths, OFFICIAL_URL, OTHER_SERVER, repositoryChanges, REPO, type Host, type Project } from "./harness.js"
+import { ADOPTED_SERVER, globalPaths, OFFICIAL_URL, OTHER_SERVER, repositoryChanges, REPO, SHADOWING_SKILL, type Host, type Project } from "./harness.js"
 import type { CallInput, CallResult, Outcome, ProbeState } from "./probe/index.js"
 
 const VERSION = (JSON.parse(readFileSync(join(REPO, "package.json"), "utf8")) as { version: string }).version
@@ -171,6 +171,16 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
       test("registers the granola and granola-meeting-brief skills", async () => {
         const ids = (await host.client.skill.list(at("main"))).data.map((skill) => skill.id)
         expect(ids.filter((skill) => skill.startsWith("granola")).sort()).toEqual(SKILLS)
+      })
+
+      test("a project skill with the id granola takes the place of the plugin's, and status names it with the fix", async () => {
+        const path = join(host.location("adopted").directory, SHADOWING_SKILL)
+        const listed = (await host.client.skill.list(at("adopted"))).data.filter((skill) => skill.id === "granola")
+        expect(listed.map((skill) => skill.path)).toEqual([path])
+        const current = await statusWhen("adopted", connected)
+        expect(current.shadowedSkills).toEqual([{ name: "granola", path }])
+        expect(current.nextStep).toBe(shadowedFix(current.shadowedSkills))
+        expect((await status("main")).shadowedSkills).toEqual([])
       })
 
       test("Granola's tools sit in the granola namespace next to the plugin's export tool; sign_out is removed", async () => {

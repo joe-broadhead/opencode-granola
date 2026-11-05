@@ -5,6 +5,7 @@ import type { SetupContext, ToolsRpc } from "../src/setup.js"
 type Listed<T extends (...args: never[]) => Promise<{ data: readonly unknown[] }>> = Awaited<ReturnType<T>>["data"][number]
 export type FakeServer = Listed<SetupContext["mcp"]["list"]>
 type AgentInfo = Listed<SetupContext["agent"]["list"]>
+type SkillInfo = Listed<SetupContext["skill"]["list"]>
 type ToolInfo = Awaited<ReturnType<SetupContext["tool"]["list"]>>[number]
 type Registration = Awaited<ReturnType<SetupContext["mcp"]["transform"]>>
 type CommandInput = Parameters<Parameters<Parameters<SetupContext["command"]["transform"]>[0]>[0]["add"]>[0]
@@ -28,8 +29,8 @@ export interface FakeHost {
   hooks: Map<string, (event: unknown) => Promise<void> | void>
   /** RPC handlers by contract id, as registered through ctx.rpc.register. */
   rpc: Map<string, Record<string, (input: unknown, context: unknown) => Promise<unknown>>>
-  /** Mutable inputs for ctx.mcp.list() and ctx.agent.list(). */
-  listed: { servers: FakeServer[]; agents: { id: string; permissions: Rule[] }[] }
+  /** Mutable inputs for ctx.mcp.list(), ctx.agent.list() and ctx.skill.list(). */
+  listed: { servers: FakeServer[]; agents: { id: string; permissions: Rule[] }[]; skills: { id: string; path: string }[] }
   /** Replays every transform from the given base state, like a host rebuild. */
   rebuild(): void
 }
@@ -118,7 +119,10 @@ export function fakeHost(config: Options = {}): FakeHost {
       },
     },
     command: { transform: transform("command") },
-    skill: { transform: transform("skill") },
+    skill: {
+      transform: transform("skill"),
+      list: async () => ({ location, data: host.listed.skills.map((skill) => ({ ...skill, name: skill.id, content: "" })) as unknown as SkillInfo[] }),
+    },
     rpc: {
       register: async (definition: { id: string }, handlers: object) => {
         host.rpc.set(definition.id, handlers as Record<string, (input: unknown, context: unknown) => Promise<unknown>>)
@@ -183,7 +187,7 @@ export function fakeHost(config: Options = {}): FakeHost {
     synthetic: [],
     hooks: new Map(),
     rpc: new Map(),
-    listed: { servers: [], agents: [] },
+    listed: { servers: [], agents: [], skills: [] },
     rebuild() {
       host.agents = new Map((config.baseAgents?.() ?? []).map((agent) => [agent.id, agent]))
       host.servers = new Map(config.baseServers?.() ?? [])

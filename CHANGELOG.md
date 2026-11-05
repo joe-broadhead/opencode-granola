@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.6] - 2026-11-05
+
+### Fixed
+
+- The `granola` skill told the model to return each transcript chunk as its `chunk_id` and text, but a chunk keeps
+  its text in `transcript`. The model read a field that isn't there, got empty chunks and read them again. The skill
+  now names `transcript`, shows it in the call shapes, and says the limit of about 8 chunks counts per Code Mode
+  result, across all its calls.
+- A brief or recap across a period of meetings, such as last month's, didn't load the `granola-meeting-brief` skill,
+  so the brief missed its scope and the export offer. The skill's description and the `granola` skill's pointer now
+  cover it.
+- The model could call the Microphone track "you", or give a 1:1 call's other side the other person's name. The
+  `granola` skill now says neither label identifies a person, names a speaker only when the transcript's label or
+  your notes say who spoke, and has the model check every who-said sentence before it answers.
+- The `granola-meeting-brief` skill now stops and says so when its widened searches find nothing, instead of listing
+  a longer period's meetings, and uses only the calendar event you mean.
+
 ## [0.0.5] - 2026-11-05
 
 ### Added

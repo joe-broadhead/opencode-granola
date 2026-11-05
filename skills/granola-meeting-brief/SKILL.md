@@ -1,6 +1,6 @@
 ---
 name: granola-meeting-brief
-description: Prep me for my next or tomorrow's meeting, brief me before my call with a person or company, or catch me up on a project, from the user's Granola notes. Builds a sourced brief of past decisions, open questions and commitments. Load before the first Granola tool call.
+description: Prep me for my next or tomorrow's meeting, brief me before my call with a person or company, catch me up on a project, or recap a period's meetings, from the user's Granola notes. Builds a sourced brief of decisions, open questions and who owes what. Load before the first Granola tool call.
 ---
 
 # Granola meeting brief
@@ -10,7 +10,8 @@ A short brief in which every claim is tied to a meeting. The `granola` skill cov
 ## 1. Pin down the meeting and the window
 
 - Granola holds only past meetings; it can't see upcoming ones. For "my next meeting" or "tomorrow's call", get the event's title, time and attendees from a calendar tool if one is available, or ask the user which meeting it is. Never present a past Granola meeting as the upcoming one.
-- Agree the subject and the window. With no preference, start with the last 30 days, widen when that finds nothing, and say which window you used.
+- Agree the subject and the window. With no preference, start with the last 30 days, widen when that finds nothing, and say which window you used. For a recap of a period, such as last month's meetings, that period is the window.
+- When the widened searches by attendee and by topic find nothing, stop and say so instead of listing a longer period's meetings: a meeting that matches neither the people nor the topic isn't background for this brief.
 
 ## 2. Find and read
 
@@ -20,7 +21,7 @@ A short brief in which every claim is tied to a meeting. The `granola` skill cov
 
 ## 3. Stay within the meeting's own record
 
-Build the brief from Granola's notes and transcripts and, for an upcoming meeting, its calendar event. Bring in other sources, such as mail, chat, documents, trackers or saved memories, only when the user asks for them, and name them as sources. Never bring in other people's private material: it isn't the user's to brief from.
+Build the brief from Granola's notes and transcripts and, for an upcoming meeting, its calendar event. From the calendar, use only the event the user means; mention another only to ask whether they meant it instead. Bring in other sources, such as mail, chat, documents, trackers or saved memories, only when the user asks for them, and name them as sources. Never bring in other people's private material: it isn't the user's to brief from.
 
 ## 4. Write the brief
 

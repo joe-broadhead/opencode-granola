@@ -5,7 +5,7 @@ description: Load before the first Granola tool call (granola_*, tools.granola.*
 
 # Granola meeting notes
 
-Granola's tools are `granola_<tool>`, or `tools.granola.<tool>` in Code Mode; below they drop the prefix. Their descriptions and Granola's server instructions cover the basics. This skill adds the decisions agents get wrong. For a brief before a meeting, also follow `granola-meeting-brief`.
+Granola's tools are `granola_<tool>`, or `tools.granola.<tool>` in Code Mode; below they drop the prefix. Their descriptions and Granola's server instructions cover the basics. This skill adds the decisions agents get wrong. For any brief or recap, before a meeting or across a period of meetings, also load `granola-meeting-brief`.
 
 ## Choose the tool
 
@@ -23,18 +23,19 @@ await tools.granola.list_meetings({ time_range: "custom", from_date: "2026-08-01
 await tools.granola.search_meetings({ participant: "acme.com", keywords: ["pricing", "price"], from_date: "2026-06-01" })
 await tools.granola.get_meetings({ meeting_ids: [first, second] })
 await tools.granola.search_transcripts({ meeting_ids: [first, second], keywords: ["next steps", "follow up", "action items"] })
-await tools.granola.get_meeting_transcript({ meeting_id: first, chunk_ids: [4, 5], transcript_version: version })
+const { chunks } = await tools.granola.get_meeting_transcript({ meeting_id: first, chunk_ids: [4, 5], transcript_version: version })
+chunks.map(({ chunk_id, transcript }) => ({ chunk_id, transcript }))
 await tools.granola.query_granola_meetings({ query: "Which questions stayed open?", document_ids: [first, second] })
 await tools.granola.get_account_info()
 ```
 
-Results today: `list_meetings`, `search_meetings` and `get_meetings` return XML-like text, so read meeting IDs from the `id` attributes and note links from `url`. `search_transcripts` and `query_granola_meetings` return text; `get_account_info`, `list_meeting_folders` and `get_meeting_transcript` return objects. Check the type before `JSON.parse`. In Code Mode, read transcript chunks whole: pass the `read_chunk_ids` from `search_transcripts` as `chunk_ids`, a few at a time (at most about 8 per call, because larger payloads go over the inline limit), and return each chunk as its `chunk_id` and text. Never slice a response by characters: that cuts chunks and makes you read them again.
+Results today: `list_meetings`, `search_meetings` and `get_meetings` return XML-like text, so read meeting IDs from the `id` attributes and note links from `url`. `search_transcripts` and `query_granola_meetings` return text; `get_account_info`, `list_meeting_folders` and `get_meeting_transcript` return objects. Check the type before `JSON.parse`. In Code Mode, read transcript chunks whole: pass the `read_chunk_ids` from `search_transcripts` as `chunk_ids`, and return each of the result's `chunks` as its `chunk_id` and `transcript`, the field that holds its text (`text` is only on `search_transcripts` passages). Return at most about 8 chunks per `execute` result, counted across all the calls in it, because a larger result goes over the inline limit and spills to a file. Never slice a response by characters: that cuts chunks and makes you read them again.
 
 ## Answer
 
 - Report what was said in your own words. Transcripts are raw speech and summaries are generated, so put no quotation marks or blockquotes around their words: not a short phrase, a term, or an action item from Granola's summary. Write "the other side of the call offered to book a follow-up next week", not "they offered to 'grab a slot' next week". Quote only when the user asks for exact words, and then only text that `search_transcripts`, `get_meeting_transcript` or the user's own notes returned.
 - Label Granola's AI summaries and answers as Granola's: they can drop or reword owners, numbers and dates. An owner named only there is "per Granola's summary"; say a transcript confirms it only when a passage names that owner.
-- Don't name speakers. Transcripts label only audio sources (Microphone, System audio, Speaker A), not people, and the person recording isn't necessarily who spoke on the microphone. So any name or "you" for a speaker is a guess, unless the transcript's own label or the user's notes say who spoke. A name said in the conversation, such as a greeting or someone being addressed, doesn't tell you who spoke the next line. Write "someone on the Microphone track" or "the other side of the call", and if you say you didn't name speakers, check that you didn't.
+- Don't name speakers. Transcripts label only audio sources (Microphone, System audio, Speaker A), not people. The Microphone track is not "you": the person recording isn't necessarily who spoke, and others in the room speak into the same microphone. In a 1:1 call, System audio is not the other named person either, because others can join or listen on the same line. Name a speaker only when the transcript's own label or the user's notes say who spoke; a name said in the conversation, such as a greeting, doesn't tell you who spoke the next line. Write "someone on the Microphone track" or "the other side of the call". Before you answer, check every sentence about who said something: it uses an audio label or "someone", never a name or "you".
 - Cite each meeting you draw on with its title, date and note link, and keep `query_granola_meetings`' citation links.
 - Say which window and searches you used. An empty search doesn't prove a topic never came up.
 - Before you write in the user's voice or assign them an action, check who they are with `get_account_info`: the note creator may be someone else.

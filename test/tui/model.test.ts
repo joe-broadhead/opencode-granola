@@ -68,14 +68,14 @@ describe("status dialog view", () => {
 
   it("names agents without the default rules and gives the config to paste", () => {
     const agents = row(needsAuth({ unguardedAgents: ["reviewer", "mdagent"], permissionsBlock: BLOCK }), "Agents without default rules")!
-    expect(agents.text).toBe("reviewer, mdagent: Granola changes and new tools may run there without asking")
+    expect(agents.text).toBe("reviewer, mdagent")
     expect(agents.block).toEqual([
       `"agents": {`,
       `  "reviewer": {`,
       `    "permissions": [`,
       `      {"action":"granola_*","resource":"*","effect":"ask"},`,
       `      {"action":"granola_get_meetings","resource":"*","effect":"allow"},`,
-      `      ...then your top-level rules for granola_ actions, then the agent's other rules`,
+      `      ...then your top-level rules for Granola tools, then the agent's other rules`,
       `    ]`,
       `  },`,
       `  ...the same for "mdagent"`,

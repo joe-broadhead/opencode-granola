@@ -36,15 +36,13 @@ export const NOTHING_TO_DO = "Nothing to do."
 export const UNTESTED_HOST_NEXT = `If Granola misbehaves, use OpenCode ${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}.`
 
 /**
- * The fix for agents that missed the defaults, such as agents defined only in the user's config: the block goes
- * first in each agent's own permissions, followed by the user's top-level rules for granola_ actions, so those keep
- * winning. Never the top-level permissions: rules there apply to every agent after its base rules, so the block
- * would loosen stricter agents such as Explore.
+ * The fix for agents that missed the defaults, such as agents defined only in the user's config, worded the same in
+ * every plugin of this family: the block goes first in each agent's own permissions, followed by the user's top-level
+ * rules for Granola tools, so those keep winning. Never the top-level permissions: rules there apply to every agent
+ * after its base rules, so the block would loosen stricter agents such as Explore.
  */
-export function agentFix(agents: readonly string[]): string {
-  const where = agents.map((agent) => `agents.${agent}.permissions`).join(", ")
-  return `Put the Granola block first in that agent's own permissions (${where}), followed by your top-level rules for granola_ actions.`
-}
+export const AGENT_FIX =
+  "Put the default rules shown by /granola-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Granola tools."
 
 export function buildStatus(inputs: StatusInputs): Status {
   const server = inputs.servers.find((entry) => entry.name === SERVER)
@@ -58,7 +56,7 @@ export function buildStatus(inputs: StatusInputs): Status {
   const unguarded = unguardedAgents(inputs.agents)
   const nextStep = (inputs.conflict ? CONFLICT_NEXT : undefined)
     ?? problem?.next
-    ?? (unguarded.length ? agentFix(unguarded) : undefined)
+    ?? (unguarded.length ? AGENT_FIX : undefined)
     ?? (inputs.host.warning ? UNTESTED_HOST_NEXT : undefined)
     ?? NOTHING_TO_DO
   return {

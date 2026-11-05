@@ -197,7 +197,7 @@ export function statusRows(status: Status): StatusRow[] {
     agents.length
       ? {
           label: "Agents without default rules",
-          text: `${agents.join(", ")}: Granola changes and new tools may run there without asking`,
+          text: agents.join(", "),
           tone: "warning" as const,
           block: permissionsSnippet(agents, status.permissionsBlock ?? []),
         }
@@ -214,7 +214,7 @@ export function permissionsSnippet(agents: readonly string[], block: readonly Pe
     `  ${JSON.stringify(first)}: {`,
     `    "permissions": [`,
     ...block.map((rule) => `      ${JSON.stringify(rule)},`),
-    `      ...then your top-level rules for granola_ actions, then the agent's other rules`,
+    `      ...then your top-level rules for Granola tools, then the agent's other rules`,
     `    ]`,
     `  }${rest.length ? "," : ""}`,
     ...(rest.length ? [`  ...the same for ${rest.map((agent) => JSON.stringify(agent)).join(", ")}`] : []),

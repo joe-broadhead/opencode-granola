@@ -56,8 +56,9 @@ has the rules and how to change them. Things to know:
   shared `global` project, so an approval saved there applies in every other such folder too.
 - **Some agents get no default rules.** Agents defined only in your own config are created after the plugin inserts
   its rules, so Granola's writes run there without asking. `/granola-status` and the status dialog list them under
-  Agents without default rules with the fix: put the Granola block first in that agent's own `permissions`, followed
-  by your top-level rules for `granola_` actions. Do not put the block in the top-level `permissions`, which would
+  Agents without default rules with the fix: put the default rules shown by `/granola-status` first in each listed
+  agent's own `permissions`, in `opencode.json` or the agent's Markdown file, followed by your top-level rules for
+  Granola tools. Do not put the block in the top-level `permissions`, which would
   loosen Explore.
 - **Code Mode programs can catch a decline.** A declined call does not run, but the program can continue. Use `deny`
   rules for hard stops.

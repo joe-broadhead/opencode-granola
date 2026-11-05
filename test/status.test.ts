@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { connectionProblem, type ConnectionState } from "../src/errors.js"
 import { DEFAULT_RULES, insertDefaults } from "../src/permissions.js"
 import { readPackageInfo } from "../src/meta.js"
-import { CONFLICT_NEXT, STATUS_SCHEMA, UNTESTED_HOST_NEXT, agentFix, buildStatus, createStatus, formatStatus, type StatusInputs } from "../src/status.js"
+import { CONFLICT_NEXT, STATUS_SCHEMA, UNTESTED_HOST_NEXT, AGENT_FIX, buildStatus, createStatus, formatStatus, type StatusInputs } from "../src/status.js"
 import { agent, fakeHost } from "./fakes.js"
 
 const VERSION = readPackageInfo().version
@@ -93,17 +93,19 @@ describe("status model", () => {
     const status = buildStatus(inputs({ agents: [guarded(), agent("reviewer")] }))
     expect(status.unguardedAgents).toEqual(["reviewer"])
     expect(status.permissionsBlock).toEqual(DEFAULT_RULES)
-    expect(status.nextStep).toBe(agentFix(["reviewer"]))
-    expect(status.nextStep).toBe("Put the Granola block first in that agent's own permissions (agents.reviewer.permissions), followed by your top-level rules for granola_ actions.")
+    expect(status.nextStep).toBe(AGENT_FIX)
+    expect(status.nextStep).toBe("Put the default rules shown by /granola-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Granola tools.")
     const text = formatStatus(status)
-    expect(text).toContain("Agents without default rules: reviewer: Granola changes and new tools may run there without asking")
+    expect(text).toContain("Agents without default rules: reviewer\n")
     expect(text).toContain(`  "agents": {\n    "reviewer": {\n      "permissions": [\n        ${JSON.stringify(DEFAULT_RULES[0])},`)
     expect(text).not.toMatch(/^"permissions": \[/m)
   })
 
   it("lists every agent that missed the defaults in the fix", () => {
     const status = buildStatus(inputs({ agents: [agent("reviewer"), agent("mdagent")] }))
-    expect(status.nextStep).toContain("(agents.reviewer.permissions, agents.mdagent.permissions)")
+    expect(status.unguardedAgents).toEqual(["reviewer", "mdagent"])
+    expect(status.nextStep).toBe(AGENT_FIX)
+    expect(formatStatus(status)).toContain("Agents without default rules: reviewer, mdagent\n")
     expect(formatStatus(status)).toContain('...the same for "mdagent"')
   })
 
@@ -131,7 +133,7 @@ describe("status model", () => {
     expect(buildStatus(inputs({ host })).nextStep).toBe(UNTESTED_HOST_NEXT)
     expect(UNTESTED_HOST_NEXT).toBe("If Granola misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5.")
     // Anything else to do comes first.
-    expect(buildStatus(inputs({ host, agents: [agent("reviewer")] })).nextStep).toBe(agentFix(["reviewer"]))
+    expect(buildStatus(inputs({ host, agents: [agent("reviewer")] })).nextStep).toBe(AGENT_FIX)
   })
 
   it("gives host.version null when OpenCode reports no version", () => {

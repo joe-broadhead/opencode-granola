@@ -45,10 +45,13 @@ const RESULT_FIELDS = ["next_cursor", "next_offset", "read_chunk_ids", "sign_out
 
 const PARAMETERS = new Set(Object.values(LIVE_PARAMETERS).flat())
 
-/** Backticked snake_case names that are not parameters or result fields: the skills use them for tool names. */
+/**
+ * Backticked snake_case names that are not parameters or result fields: the skills use them for tool names, and for
+ * permission actions such as `granola_give_feedback`, checked as the tool they name.
+ */
 function toolNames(markdown: string): string[] {
   return [...markdown.matchAll(/`([a-z]+(?:_[a-z]+)+)`/g)]
-    .map((match) => match[1]!)
+    .map((match) => match[1]!.replace(/^granola_/, ""))
     .filter((name) => !PARAMETERS.has(name) && !RESULT_FIELDS.includes(name))
 }
 

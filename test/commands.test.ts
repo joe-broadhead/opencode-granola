@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { STATUS_COMMAND, registerCommands } from "../src/commands.js"
 import { STATUS_UNAVAILABLE, describe as describeProblem } from "../src/errors.js"
 import { readPackageInfo } from "../src/meta.js"
-import type { Status } from "../src/status.js"
+import type { Status } from "../src/rpc/contract.js"
 import { fakeHost } from "./fakes.js"
 
 const VERSION = readPackageInfo().version

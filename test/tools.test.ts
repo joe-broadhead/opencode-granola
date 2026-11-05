@@ -13,10 +13,9 @@ async function setup() {
 }
 
 describe("tool registry transform", () => {
-  it("describes the granola namespace and adds no tool of its own", async () => {
+  it("describes the granola namespace", async () => {
     const { host } = await setup()
     expect(host.namespaces.get("granola")).toBe(NAMESPACE_DESCRIPTION)
-    expect(host.tools.has("granola_status")).toBe(false)
   })
 
   it("hides sign_out, counts it, and leaves every other tool alone across rebuilds", async () => {

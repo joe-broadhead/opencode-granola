@@ -22,7 +22,7 @@ export interface ToolsContext {
 }
 
 /** The host's fixed messages when a Granola tool runs while the server is unavailable start with this. */
-const UNAVAILABLE = `MCP server "${SERVER}" `
+export const UNAVAILABLE = `MCP server "${SERVER}" `
 
 /** Maps the live connection state to the table row; a server that just reconnected only needs a retry. */
 export async function unavailableProblem(ctx: { readonly mcp: Pick<Plugin.Context["mcp"], "list"> }): Promise<Problem> {

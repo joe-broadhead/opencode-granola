@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { connectionProblem, type ConnectionState } from "../src/errors.js"
+import { connectionProblem } from "../src/errors.js"
 import { DEFAULT_RULES, insertDefaults } from "../src/permissions.js"
 import { readPackageInfo } from "../src/meta.js"
-import { CONFLICT_NEXT, STATUS_SCHEMA, UNTESTED_HOST_NEXT, AGENT_FIX, buildStatus, createStatus, formatStatus, type StatusInputs } from "../src/status.js"
+import { STATUS_SCHEMA, type ConnectionState } from "../src/rpc/contract.js"
+import { AGENT_FIX, CONFLICT_NEXT, UNTESTED_HOST_NEXT, buildStatus, createStatus, formatStatus, type StatusInputs } from "../src/status.js"
 import { agent, fakeHost } from "./fakes.js"
 
 const VERSION = readPackageInfo().version

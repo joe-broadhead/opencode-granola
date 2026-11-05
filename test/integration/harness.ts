@@ -26,10 +26,10 @@ export const OFFICIAL_URL = "https://mcp.granola.ai/mcp"
 export const HOST_VERSIONS: readonly string[] = TESTED_HOSTS
 
 /** The system temp directory, resolved (/private/tmp on macOS). Not TMPDIR, which may sit under HOME. */
-export const TEMP = realpathSync("/tmp")
+const TEMP = realpathSync("/tmp")
 
 /** A new directory under TEMP; with `repository`, also a git repository, so OpenCode's upward search stops there. */
-export function tempDirectory(prefix: string, repository = false): string {
+function tempDirectory(prefix: string, repository = false): string {
   const path = realpathSync(mkdtempSync(join(TEMP, prefix)))
   if (repository) {
     const result = spawnSync("git", ["init", "--quiet", path], { encoding: "utf8" })
@@ -50,7 +50,7 @@ export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" |
  * - automation: connected, with exports allowed for runs where nobody is present;
  * - unload: connected, then the plugin is removed from the config.
  */
-export const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "unload"] as const
+const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "unload"] as const
 export type Project = (typeof PROJECTS)[number]
 
 export interface Host {

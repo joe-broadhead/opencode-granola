@@ -1,13 +1,10 @@
 import type { Plugin } from "@opencode/plugin"
-import { connectionProblem, type ConnectionState } from "./errors.js"
+import { connectionProblem } from "./errors.js"
 import type { HostCheck } from "./host-check.js"
 import { SERVER, classify } from "./known-tools.js"
 import { DEFAULT_RULES, unguardedAgents, type Rule } from "./permissions.js"
-import { STATE_OF, statusRows, type ShadowedSkill, type Status } from "./rpc/contract.js"
+import { STATE_OF, statusRows, type ConnectionState, type ShadowedSkill, type Status } from "./rpc/contract.js"
 import { TESTED_HOSTS } from "./hosts.js"
-
-// The status model's wire shape lives in the RPC contract, so clients load it without the server code.
-export { STATUS_SCHEMA, type Status } from "./rpc/contract.js"
 
 export interface StatusInputs {
   readonly servers: readonly { readonly name: string; readonly title?: string; readonly status: { readonly status: Exclude<ConnectionState, "absent">; readonly error?: string } }[]
@@ -31,7 +28,7 @@ const SAFE_NAME = /^[a-z][a-z0-9_]{0,63}$/
 /** The next step when the user's own granola server entry takes the place of Granola's. */
 export const CONFLICT_NEXT = "Remove mcp.servers.granola from your OpenCode config to use Granola's official server."
 
-export const NOTHING_TO_DO = "Nothing to do."
+const NOTHING_TO_DO = "Nothing to do."
 
 /**
  * The next step when nothing else is needed but OpenCode is outside the supported range and runs only because of

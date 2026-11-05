@@ -56,7 +56,7 @@ export function matches(input: string, pattern: string): boolean {
 }
 
 /** The effect of `rules` for a Granola tool call (resource `*`): the last matching rule wins, and no match asks. */
-export function evaluate(rules: readonly Readonly<Rule>[], action: string): Rule["effect"] {
+function evaluate(rules: readonly Readonly<Rule>[], action: string): Rule["effect"] {
   return rules.findLast((rule) => matches(action, rule.action) && matches("*", rule.resource))?.effect ?? "ask"
 }
 

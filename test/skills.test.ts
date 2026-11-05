@@ -115,7 +115,7 @@ describe("bundled skills", () => {
     }
   })
 
-  it("list every known write and both plugin tools in the granola skill", () => {
+  it("list every known write and the plugin's export in the granola skill", () => {
     for (const tool of [...WRITE_TOOLS, ...PLUGIN_TOOLS]) expect(text("granola")).toContain(`\`${tool}\``)
   })
 

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { DISPLAY_NAME, SIGN_IN_MESSAGE, registerIntegration, type IntegrationContext } from "../src/integration.js"
 
 type State = "connected" | "needs_auth" | "pending"
@@ -130,6 +130,40 @@ describe("Granola's integration in /connect", () => {
     await new Promise((resolve) => setTimeout(resolve, 50))
     expect(fake.integration.name).toBe("granola")
     expect(fake.reported).toEqual([])
+  })
+
+  it("runs exactly one more check for the events that arrive during a check", async () => {
+    // Fake timers hold the startup poll's next check back, so every check here comes from an event.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    try {
+      const fake = fakeOpenCode()
+      const list = fake.ctx.mcp.list.bind(fake.ctx.mcp)
+      let release = () => {}
+      let gate: Promise<void> | undefined = new Promise((resolve) => (release = resolve))
+      let checks = 0
+      fake.ctx.mcp.list = (async (...args: Parameters<typeof list>) => {
+        checks++
+        if (gate) await gate
+        return list(...args)
+      }) as typeof list
+      const settle = () => vi.advanceTimersByTimeAsync(0)
+      await start(fake)
+      await settle()
+      expect(checks).toBe(1)
+      for (const state of ["connected", "needs_auth", "connected"] as const) {
+        fake.setState(state)
+        await settle()
+      }
+      expect(checks).toBe(1)
+      gate = undefined
+      release()
+      await settle()
+      expect(checks).toBe(2)
+      await settle()
+      expect(checks).toBe(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("removes its rename on dispose", async () => {

@@ -123,7 +123,7 @@ While the major version is 0, a breaking change raises the minor version, and an
 
 Each release supports one OpenCode range, stated as `opencode.host` in `package.json` and enforced by the host
 check, and is tested on the releases in `TESTED_HOSTS` (`src/hosts.ts`), which status, the host stage, the pack stage
-and the CI cache key all read. To change the range, update `opencode.host` and `TESTED_HOST` in
+and the CI cache key all read. To change the range, update `opencode.host` and `SUPPORTED_RANGE` in
 `scripts/check-forbidden.mjs` and `test/pack-smoke.mjs`. To add a tested release, add it to `TESTED_HOSTS`. Update
 the Requirements in `README.md` either way. Each `CHANGELOG.md` entry follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 

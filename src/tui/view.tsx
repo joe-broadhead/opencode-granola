@@ -34,27 +34,25 @@ export function StatusDialog(props: { readonly context: Plugin.Context; readonly
       <text fg={theme().text.base}>
         <b>Granola status</b>
       </text>
-      <Show when={props.view.rows.length}>
-        <box flexDirection="column">
-          <For each={props.view.rows}>
-            {(row) => (
-              <box flexDirection="column">
-                <box flexDirection="row" gap={1}>
-                  <text fg={theme().text.muted} width={14} flexShrink={0}>{row.label}</text>
-                  <text fg={color(theme(), row.tone)} flexGrow={1} wrapMode="word">{row.text}</text>
-                </box>
-                <Show when={row.block}>
-                  {(block: () => readonly string[]) => (
-                    <box flexDirection="column" paddingLeft={15}>
-                      <For each={block()}>{(line) => <text fg={theme().text.muted}>{line}</text>}</For>
-                    </box>
-                  )}
-                </Show>
+      <box flexDirection="column">
+        <For each={props.view.rows}>
+          {(row) => (
+            <box flexDirection="column">
+              <box flexDirection="row" gap={1}>
+                <text fg={theme().text.muted} width={14} flexShrink={0}>{row.label}</text>
+                <text fg={color(theme(), row.tone)} flexGrow={1} wrapMode="word">{row.text}</text>
               </box>
-            )}
-          </For>
-        </box>
-      </Show>
+              <Show when={row.block}>
+                {(block: () => readonly string[]) => (
+                  <box flexDirection="column" paddingLeft={15}>
+                    <For each={block()}>{(line) => <text fg={theme().text.muted}>{line}</text>}</For>
+                  </box>
+                )}
+              </Show>
+            </box>
+          )}
+        </For>
+      </box>
       <box flexDirection="row" gap={1}>
         <text fg={theme().text.muted} width={14} flexShrink={0}>Next step</text>
         <text fg={theme().text.base} flexGrow={1} wrapMode="word">{props.view.next}</text>

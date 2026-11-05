@@ -1,7 +1,5 @@
 # Scripting
 
-Unofficial plugin. Not affiliated with Granola.
-
 A script can read Granola with no model: a cron job, a shell script, or any program that can reach the OpenCode
 server. It uses the tools RPC, `granola.meetings.tools`, through `opencode api` or an OpenCode client.
 
@@ -100,7 +98,7 @@ A refusal or failure is the RPC error `failed`, with a message `CODE: what happe
 | --- | --- |
 | `SESSION_UNKNOWN` | OpenCode says the session does not exist. Any other failure to look the session up is OpenCode's own error. |
 | `SESSION_AGENT_REQUIRED` | The session names no agent, or an agent that does not exist. |
-| `PERMISSION_DENIED` | The agent's or the session's rules deny the tool, or ask for an approval. |
+| `PERMISSION_DENIED` | The agent's or the session's rules ask for an approval, or deny the tool. A deny names the action it refused and says to remove or narrow that rule, or to use a session whose agent allows it. |
 | `SERVER_CONFLICT` | Your OpenCode config defines its own `granola` server for another URL, which this plugin does not manage. |
 | `AUTH_REQUIRED`, `CONNECTING`, `CONNECTION_FAILED`, `DISABLED`, `NOT_REGISTERED` | The `granola` server needs a sign-in, is still connecting (or reconnected while the call ran), could not connect, is disabled, or is missing. The next step is the one `/granola-status` gives, the same as the model gets. |
 | `TOOL_UNAVAILABLE` | The server is connected, but OpenCode does not list the tool, usually because your Granola plan does not include it. |

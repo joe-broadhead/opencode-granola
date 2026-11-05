@@ -4,7 +4,8 @@ import os from "node:os"
 import path from "node:path"
 import { Error as ToolError, type ToolContext } from "@opencode/plugin/promise/tool"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { EXPORT_INPUT, EXPORT_OUTPUT, exportMarkdown, parseRequest, registerExport, type ExportContext } from "../src/export/index.js"
+import { EXPORT_INPUT, EXPORT_OUTPUT, exportMarkdown, parseRequest, registerExport, writeProblem, type ExportContext } from "../src/export/index.js"
+import { MarkdownExportRefusal } from "../src/io/markdown-export.js"
 import type { Limits } from "../src/export/source.js"
 
 type Run = (input: Record<string, unknown>) => Promise<unknown> | unknown
@@ -114,17 +115,21 @@ describe("export_markdown", () => {
       expect(EXPORT_OUTPUT.required).toEqual(["path", "bytes", "sha256"])
     })
 
+    const REQUIRED = "Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both)."
+    const ONLY = "Pass only meeting_ids, content, path and overwrite."
+    const PATH = "Pass path as a relative path of at most 512 characters, or leave it out."
+    const OVERWRITE = "Pass overwrite as true or false, or leave it out."
     it.each([
-      [{ meetingIds: ["m-1"], content: "notes" }, "unsupported field meetingIds"],
-      [{ meeting_ids: ["m-1"], content: "notes", toString: "x" }, "unsupported field toString"],
-      [{ meeting_ids: [], content: "notes" }, "needs 1 to 20 meeting_ids"],
-      [{ meeting_ids: Array.from({ length: 21 }, (_, i) => `m-${i}`), content: "notes" }, "needs 1 to 20 meeting_ids"],
-      [{ meeting_ids: [" "], content: "notes" }, "meeting ID that is empty"],
-      [{ meeting_ids: ["m-1"], content: "summary" }, "needs content"],
-      [{ meeting_ids: ["m-1"], content: "notes", overwrite: "yes" }, "overwrite to be true or false"],
-      [{ meeting_ids: ["m-1"], content: "notes", path: "" }, "path that is empty"],
-    ])("refuses %j", (input, reason) => {
-      let error: (Error & { metadata?: { code?: string } }) | undefined
+      [{ meetingIds: ["m-1"], content: "notes" }, "unsupported field meetingIds", ONLY],
+      [{ meeting_ids: ["m-1"], content: "notes", toString: "x" }, "unsupported field toString", ONLY],
+      [{ meeting_ids: [], content: "notes" }, "needs 1 to 20 meeting_ids", REQUIRED],
+      [{ meeting_ids: Array.from({ length: 21 }, (_, i) => `m-${i}`), content: "notes" }, "needs 1 to 20 meeting_ids", REQUIRED],
+      [{ meeting_ids: [" "], content: "notes" }, "meeting ID that is empty", REQUIRED],
+      [{ meeting_ids: ["m-1"], content: "summary" }, "needs content", REQUIRED],
+      [{ meeting_ids: ["m-1"], content: "notes", overwrite: "yes" }, "overwrite to be true or false", OVERWRITE],
+      [{ meeting_ids: ["m-1"], content: "notes", path: "" }, "path that is empty", PATH],
+    ])("refuses %j with the next step for that problem", (input, reason, next) => {
+      let error: (Error & { metadata?: { code?: string; next?: string } }) | undefined
       try {
         parseRequest(input)
       } catch (caught) {
@@ -132,6 +137,7 @@ describe("export_markdown", () => {
       }
       expect(error?.metadata?.code).toBe("EXPORT_INVALID_INPUT")
       expect(error?.message).toContain(reason)
+      expect(error?.metadata?.next).toBe(next)
     })
 
     it("keeps the meeting order and drops repeated IDs", () => {
@@ -246,7 +252,34 @@ describe("export_markdown", () => {
     })
   })
 
+  describe("writer failures", () => {
+    it.each([
+      ["outside", "EXPORT_INVALID_PATH", "leaves the export folder"],
+      ["link", "EXPORT_INVALID_PATH", "goes through a link"],
+      ["not-a-file", "EXPORT_INVALID_PATH", "is not a regular file or folder"],
+      ["changed", "EXPORT_WRITE_FAILED", "the export folder changed during the write"],
+      ["too-large", "EXPORT_TOO_LARGE", "larger than its 8 MB limit"],
+    ] as const)("maps the writer's %s refusal to %s", (reason, code, message) => {
+      const error = writeProblem(new MarkdownExportRefusal(reason, "refused"), "notes.md", 8 * 1024 * 1024) as ToolError
+      expect(error).toBeInstanceOf(ToolError)
+      expect(error.metadata).toMatchObject({ code })
+      expect(error.message).toContain(message)
+    })
+
+    it("passes a cancellation and an unexpected error through unchanged", () => {
+      for (const error of [Object.assign(new Error("aborted"), { code: "ABORT_ERR" }), new TypeError("bug")]) {
+        expect(writeProblem(error, "notes.md", 1024)).toBe(error)
+      }
+    })
+  })
+
   describe("transcript paging", () => {
+    it("takes text that starts with { but is not JSON as the whole transcript", async () => {
+      const host = fake({ tools: { get_meeting_transcript: () => ({ content: [{ type: "text", text: "{Ada}: Hello, not JSON." }] }) } })
+      const result = await run(host, { meeting_ids: ["m-1"], content: "transcript", path: "t.md" }, limits())
+      expect(await fs.readFile(result.output.path, "utf8")).toContain("{Ada}: Hello, not JSON.")
+    })
+
     const limits = (overrides: Partial<Limits> = {}): Limits => ({ maxBytes: 1024 * 1024, maxPages: 50, pageChars: 1000, ...overrides })
     const lines = Array.from({ length: 30 }, (_, i) => `Speaker ${i % 2}: line ${i + 1}.`)
 

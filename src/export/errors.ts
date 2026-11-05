@@ -1,37 +1,20 @@
-import { Error as ToolError } from "@opencode/plugin/promise/tool"
-import { shortReason } from "../errors.js"
+import { shortReason, type Problem } from "../errors.js"
 
-export type ExportCode =
-  | "EXPORT_INVALID_INPUT"
-  | "EXPORT_INVALID_PATH"
-  | "EXPORT_EXISTS"
-  | "EXPORT_TOO_LARGE"
-  | "EXPORT_READ_FAILED"
-  | "EXPORT_WRITE_FAILED"
+// The export's failures, in the same code, message and next-step form as the connection errors.
 
-/** The export's failures, in the same code, message and next-step form as the connection errors. */
-export interface ExportProblem {
-  readonly code: ExportCode
-  readonly message: string
-  readonly next: string
+/** The fix for each part of a request that parseRequest refuses. */
+const INPUT_NEXT = {
+  required: "Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both).",
+  field: "Pass only meeting_ids, content, path and overwrite.",
+  path: "Pass path as a relative path of at most 512 characters, or leave it out.",
+  overwrite: "Pass overwrite as true or false, or leave it out.",
+} as const
+
+export function invalidInput(problem: string, part: keyof typeof INPUT_NEXT = "required"): Problem {
+  return { code: "EXPORT_INVALID_INPUT", message: `The export request ${problem}.`, next: INPUT_NEXT[part] }
 }
 
-export function exportError(problem: ExportProblem): ToolError {
-  return new ToolError({
-    message: `${problem.code}: ${problem.message} Next step: ${problem.next}`,
-    metadata: { code: problem.code, next: problem.next },
-  })
-}
-
-export function invalidInput(problem: string): ExportProblem {
-  return {
-    code: "EXPORT_INVALID_INPUT",
-    message: `The export request ${problem}.`,
-    next: "Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both).",
-  }
-}
-
-export function invalidPath(path: string, problem: string): ExportProblem {
+export function invalidPath(path: string, problem: string): Problem {
   return {
     code: "EXPORT_INVALID_PATH",
     message: `The export path \`${shortReason(path)}\` ${problem}.`,
@@ -39,7 +22,7 @@ export function invalidPath(path: string, problem: string): ExportProblem {
   }
 }
 
-export function exists(path: string): ExportProblem {
+export function exists(path: string): Problem {
   return {
     code: "EXPORT_EXISTS",
     message: `\`${path}\` already exists in the export folder.`,
@@ -47,7 +30,7 @@ export function exists(path: string): ExportProblem {
   }
 }
 
-export function tooLarge(maxBytes: number): ExportProblem {
+export function tooLarge(maxBytes: number): Problem {
   return {
     code: "EXPORT_TOO_LARGE",
     message: `The export is larger than its ${size(maxBytes)} limit.`,
@@ -55,7 +38,7 @@ export function tooLarge(maxBytes: number): ExportProblem {
   }
 }
 
-export function readFailed(what: "notes" | "transcript", meetingID: string, reason: string): ExportProblem {
+export function readFailed(what: "notes" | "transcript", meetingID: string, reason: string): Problem {
   return {
     code: "EXPORT_READ_FAILED",
     message: `Granola could not return the ${what} of meeting \`${shortReason(meetingID)}\`: ${shortReason(reason)}. Nothing was written.`,
@@ -63,7 +46,7 @@ export function readFailed(what: "notes" | "transcript", meetingID: string, reas
   }
 }
 
-export function writeFailed(path: string, reason: string): ExportProblem {
+export function writeFailed(path: string, reason: string): Problem {
   return {
     code: "EXPORT_WRITE_FAILED",
     message: `Could not write \`${path}\` in the export folder: ${reason}.`,

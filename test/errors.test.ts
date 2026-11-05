@@ -2,8 +2,8 @@ import { Error as ToolError } from "@opencode/plugin/promise/tool"
 import { describe, expect, it } from "vitest"
 import {
   GranolaError, STATUS_UNAVAILABLE, connectionProblem, packageInvalid, skillsInvalid, describe as describeProblem, hostUntested, invalidOption, shortReason, toolError, toolUnavailable,
-  type ConnectionState,
 } from "../src/errors.js"
+import type { ConnectionState } from "../src/rpc/contract.js"
 
 describe("connection-state table", () => {
   const rows: [ConnectionState, string][] = [

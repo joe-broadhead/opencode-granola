@@ -1,9 +1,10 @@
 import type { Plugin } from "@opencode/plugin"
 import type { ToolContext } from "@opencode/plugin/promise/tool"
+import { toolError } from "../errors.js"
 import { SERVER, toolID } from "../known-tools.js"
 import type { Options } from "../options.js"
 import { MarkdownExportRefusal, writeMarkdownExport } from "../io/markdown-export.js"
-import { exportError, exists, invalidInput, invalidPath, size, tooLarge, writeFailed } from "./errors.js"
+import { exists, invalidInput, invalidPath, size, tooLarge, writeFailed } from "./errors.js"
 import { defaultName, errorCode, exportPath, preflight, prepare } from "./paths.js"
 import { renderDocument, type Content, type Meeting, type Notes, type Transcript, type TranscriptEnd } from "./render.js"
 import { NOT_ON_PLAN, connect, type Limits, type SourceContext } from "./source.js"
@@ -11,7 +12,7 @@ import { NOT_ON_PLAN, connect, type Limits, type SourceContext } from "./source.
 const EXPORT_TOOL = "export_markdown"
 
 const EXPORT_DESCRIPTION =
-  "Save Granola meeting notes, transcripts or both, for 1 to 20 meetings, to one readable Markdown file in the user's export folder. The text goes straight to the file instead of through the conversation. Unless the user's permissions already allow exports, OpenCode asks before the file is written. Returns the file's path, its size in bytes and its SHA-256 checksum."
+  "Save Granola meeting notes, transcripts or both, for 1 to 20 meetings, to one readable Markdown file in the user's export folder. The text goes straight to the file instead of through the conversation. Unless the user's permissions already allow exports, OpenCode asks before the file is written. At most 8 MB; a transcript that does not fit is cut with a note. Without transcripts on the user's plan, the file holds the notes and says so. Returns the file's path, its size in bytes and its SHA-256 checksum; the text result also names anything missing."
 
 const CONTENT = ["notes", "transcript", "both"] as const
 const MAX_MEETINGS = 20
@@ -95,20 +96,20 @@ export interface ExportDependencies {
 
 /** The host checks input against EXPORT_INPUT for model calls; this repeats it for every other caller. */
 export function parseRequest(raw: unknown): ExportRequest {
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw exportError(invalidInput("must be an object"))
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw toolError(invalidInput("must be an object"))
   const input = raw as Record<string, unknown>
   const unknown = Object.keys(input).find((key) => !Object.hasOwn(EXPORT_INPUT.properties, key))
-  if (unknown !== undefined) throw exportError(invalidInput(`has the unsupported field ${unknown}`))
+  if (unknown !== undefined) throw toolError(invalidInput(`has the unsupported field ${unknown}`, "field"))
   const ids = input.meeting_ids
-  if (!Array.isArray(ids) || ids.length < 1 || ids.length > MAX_MEETINGS) throw exportError(invalidInput(`needs 1 to ${MAX_MEETINGS} meeting_ids`))
+  if (!Array.isArray(ids) || ids.length < 1 || ids.length > MAX_MEETINGS) throw toolError(invalidInput(`needs 1 to ${MAX_MEETINGS} meeting_ids`))
   if (ids.some((id) => typeof id !== "string" || !id.trim() || id.length > 200 || /[\u0000-\u001f\u007f]/.test(id))) {
-    throw exportError(invalidInput("has a meeting ID that is empty, too long or not text"))
+    throw toolError(invalidInput("has a meeting ID that is empty, too long or not text"))
   }
-  if (!CONTENT.includes(input.content as Content)) throw exportError(invalidInput("needs content: notes, transcript or both"))
+  if (!CONTENT.includes(input.content as Content)) throw toolError(invalidInput("needs content: notes, transcript or both"))
   if (input.path !== undefined && (typeof input.path !== "string" || !input.path || input.path.length > 512)) {
-    throw exportError(invalidInput("has a path that is empty, too long or not text"))
+    throw toolError(invalidInput("has a path that is empty, too long or not text", "path"))
   }
-  if (input.overwrite !== undefined && typeof input.overwrite !== "boolean") throw exportError(invalidInput("needs overwrite to be true or false"))
+  if (input.overwrite !== undefined && typeof input.overwrite !== "boolean") throw toolError(invalidInput("needs overwrite to be true or false", "overwrite"))
   return {
     meetingIDs: [...new Set(ids as string[])],
     content: input.content as Content,
@@ -131,24 +132,24 @@ const FILESYSTEM: Record<string, string> = {
 }
 
 /** Writer and filesystem failures as export problems; cancellation and unexpected errors pass through. */
-function writeProblem(error: unknown, relative: string, maxBytes: number): unknown {
+export function writeProblem(error: unknown, relative: string, maxBytes: number): unknown {
   if (error instanceof MarkdownExportRefusal) {
     switch (error.reason) {
       case "outside":
-        return exportError(invalidPath(relative, "leaves the export folder"))
+        return toolError(invalidPath(relative, "leaves the export folder"))
       case "link":
-        return exportError(invalidPath(relative, "goes through a link"))
+        return toolError(invalidPath(relative, "goes through a link"))
       case "not-a-file":
-        return exportError(invalidPath(relative, "goes through or names something that is not a regular file or folder"))
+        return toolError(invalidPath(relative, "goes through or names something that is not a regular file or folder"))
       case "changed":
-        return exportError(writeFailed(relative, "the export folder changed during the write"))
+        return toolError(writeFailed(relative, "the export folder changed during the write"))
       case "too-large":
-        return exportError(tooLarge(maxBytes))
+        return toolError(tooLarge(maxBytes))
     }
   }
   const code = errorCode(error)
-  if (code === "EEXIST") return exportError(exists(relative))
-  if (code && code !== "ABORT_ERR") return exportError(writeFailed(relative, FILESYSTEM[code] ?? `the system reported ${code}`))
+  if (code === "EEXIST") return toolError(exists(relative))
+  if (code && code !== "ABORT_ERR") return toolError(writeFailed(relative, FILESYSTEM[code] ?? `the system reported ${code}`))
   return error
 }
 
@@ -224,7 +225,7 @@ export async function exportMarkdown(dependencies: ExportDependencies, raw: unkn
   // Everything but the transcript lines, measured as rendered; the lines then share what is left.
   const scaffold = Buffer.byteLength(document(request.meetingIDs.map((id) => meeting(id, transcripts ? CUT : undefined))))
   let remaining = limits.maxBytes - scaffold - (transcripts ? TRANSCRIPT_SLACK * request.meetingIDs.length : 0)
-  if (remaining < 0) throw exportError(tooLarge(limits.maxBytes))
+  if (remaining < 0) throw toolError(tooLarge(limits.maxBytes))
   const meetings: Meeting[] = []
   for (const id of request.meetingIDs) {
     if (!transcripts) {

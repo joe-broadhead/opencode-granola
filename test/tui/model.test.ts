@@ -16,6 +16,7 @@ function status(overrides: Partial<Status> = {}): Status {
     title: "Granola",
     tools: { visible: 17, hidden: 1, unknown: 0, unknownNames: [] },
     unguardedAgents: [],
+    shadowedSkills: [],
     exportDirectory: "/home/someone/Granola",
     version: VERSION,
     host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
@@ -46,9 +47,9 @@ describe("status dialog view", () => {
   })
 
   it("uses the shared row labels in the shared order", () => {
-    expect(labels(ready())).toEqual(["Connection", "Account", "Access", "Export folder", "Tools", "Agents without default rules", "OpenCode"])
+    expect(labels(ready())).toEqual(["Connection", "Account", "Access", "Export folder", "Skills", "Tools", "Agents without default rules", "OpenCode"])
     expect(row(ready(), "Agents without default rules")).toEqual({ label: "Agents without default rules", text: "none" })
-    expect(labels(ready({ unguardedAgents: ["reviewer"], permissionsBlock: BLOCK }))).toEqual(["Connection", "Account", "Access", "Export folder", "Tools", "Agents without default rules", "OpenCode"])
+    expect(labels(ready({ unguardedAgents: ["reviewer"], permissionsBlock: BLOCK }))).toEqual(["Connection", "Account", "Access", "Export folder", "Skills", "Tools", "Agents without default rules", "OpenCode"])
   })
 
   it("connected: the server, workspace, tool counts, host and Nothing to do", () => {
@@ -68,14 +69,14 @@ describe("status dialog view", () => {
 
   it("names agents without the default rules and gives the config to paste", () => {
     const agents = row(needsAuth({ unguardedAgents: ["reviewer", "mdagent"], permissionsBlock: BLOCK }), "Agents without default rules")!
-    expect(agents.text).toBe("reviewer, mdagent: Granola changes and new tools may run there without asking")
+    expect(agents.text).toBe("reviewer, mdagent")
     expect(agents.block).toEqual([
       `"agents": {`,
       `  "reviewer": {`,
       `    "permissions": [`,
       `      {"action":"granola_*","resource":"*","effect":"ask"},`,
       `      {"action":"granola_get_meetings","resource":"*","effect":"allow"},`,
-      `      ...then your top-level rules for granola_ actions, then the agent's other rules`,
+      `      ...then your top-level rules for Granola tools, then the agent's other rules`,
       `    ]`,
       `  },`,
       `  ...the same for "mdagent"`,

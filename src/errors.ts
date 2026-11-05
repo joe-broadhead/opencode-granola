@@ -1,4 +1,5 @@
 import { Error as ToolError } from "@opencode/plugin/promise/tool"
+import type { ConnectionState } from "./rpc/contract.js"
 
 export type Code =
   | "NOT_REGISTERED"
@@ -12,6 +13,12 @@ export type Code =
   | "STATUS_UNAVAILABLE"
   | "SKILLS_INVALID"
   | "PACKAGE_INVALID"
+  | "EXPORT_INVALID_INPUT"
+  | "EXPORT_INVALID_PATH"
+  | "EXPORT_EXISTS"
+  | "EXPORT_TOO_LARGE"
+  | "EXPORT_READ_FAILED"
+  | "EXPORT_WRITE_FAILED"
 
 /** Every user-facing failure: a stable code, what happened, and what to do next, in plain text. */
 export interface Problem {
@@ -20,9 +27,7 @@ export interface Problem {
   readonly next: string
 }
 
-export type ConnectionState = "connected" | "pending" | "disabled" | "failed" | "needs_auth" | "absent"
-
-export const SIGN_IN_STEPS =
+const SIGN_IN_STEPS =
   "Run /connect and choose Granola, then press o or Enter to open the sign-in page (in a terminal, opencode mcp auth granola opens it automatically)."
 
 export function describe(problem: Problem): string {

@@ -85,7 +85,8 @@ See [Scripting](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs
 | Kind | Tools | Default |
 | --- | --- | --- |
 | Reads | `get_account_info`, `list_meeting_folders`, `list_meetings`, `search_meetings`, `get_meetings`, `get_meeting_transcript`, `search_transcripts`, `query_granola_meetings`, `get_meeting_attachment`, `list_templates` | run without asking |
-| Changes and sends | `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary`, `give_feedback` | ask first |
+| Changes | `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` | ask first |
+| Reports to Granola | `give_feedback` | off; Granola's own instructions tell the model to send it unasked. Add an `ask` rule for `granola_give_feedback` to turn it on |
 | The plugin's export | `export_markdown` | asks first |
 | New tools | any Granola tool this plugin version does not know yet | ask first; status names them |
 | Hidden | `sign_out` | removed; use `opencode mcp logout granola` |
@@ -106,9 +107,10 @@ For example, to let one write run without asking:
 ```
 
 Agents defined only in your own config are created after plugins start, so they miss the default rules, and Granola's
-writes would run there without asking. Status names each such agent and gives the block to paste first in that agent's
-own `permissions`. An agent whose own rules already ask or deny for every Granola tool needs nothing and is not named.
-Do not put the block in the top-level `permissions`, which would loosen Explore.
+writes would run there without asking. Status names each such agent and gives the block to paste first in each listed
+agent's own `permissions`, in `opencode.json` or the agent's Markdown file. An agent whose own rules already ask or deny
+for every Granola tool needs nothing and is not named. Do not put the block in the top-level `permissions`, which would
+loosen Explore.
 
 In `opencode run` and other runs where nobody can answer, a call that would ask is refused; reads still work.
 
@@ -142,8 +144,8 @@ Each member then signs in once with `/connect` → Granola. A managed `mcp.serve
 ## Troubleshooting
 
 Run `/granola-status` (or `/granola` in the terminal UI) first. It shows the rows `Connection`, `Account`, `Access`,
-`Export folder`, `Tools`, `Agents without default rules` (`none` when no agent needs the fix), `OpenCode` and exactly
-one `Next step`. Each connection state:
+`Export folder`, `Skills`, `Tools`, `Agents without default rules` (`none` when no agent needs the fix), `OpenCode` and
+exactly one `Next step`. Each connection state:
 
 | Status | Code | What to do |
 | --- | --- | --- |
@@ -175,6 +177,10 @@ release if Granola misbehaves. A release inside the range other than 2.2.3, 2.2.
 overwrites it. An entry for Granola's official URL is used as it is.
 
 **Status lists Agents without default rules.** See [Permissions](#permissions).
+
+**The `Skills` row names a file.** A skill of yours with the id `granola` or `granola-meeting-brief`, for example in
+`~/.config/opencode/skills/` or a project's `.opencode/skills/`, takes the place of the plugin's own, so the model
+never sees the plugin's. Rename its folder and its `name`, or move it, as the next step says.
 
 **A script gets an error.** The tools RPC has its own codes, listed in
 [Scripting](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md#errors).

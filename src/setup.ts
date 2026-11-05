@@ -10,7 +10,7 @@ import { parseOptions } from "./options.js"
 import { registerPermissions } from "./permissions.js"
 import { registerRpc } from "./rpc/register.js"
 import { registerServer } from "./server.js"
-import { registerSkills } from "./skills.js"
+import { readSkills, registerSkills } from "./skills.js"
 import { createStatus, type StatusContext } from "./status.js"
 import { registerTools, type ToolsContext, type ToolsState } from "./tools.js"
 
@@ -21,7 +21,7 @@ export type SetupContext = {
   readonly mcp: Pick<Plugin.Context["mcp"], "transform" | "list">
   readonly agent: Pick<Plugin.Context["agent"], "transform" | "list">
   readonly tool: Pick<Plugin.Context["tool"], "transform" | "list" | "hook">
-  readonly skill: Pick<Plugin.Context["skill"], "transform">
+  readonly skill: Pick<Plugin.Context["skill"], "transform" | "list">
   readonly rpc: Pick<Plugin.Context["rpc"], "register">
 } & IntegrationContext & StatusContext & ToolsContext & CommandsContext & ExportContext
 
@@ -35,6 +35,7 @@ export async function setup(ctx: SetupContext, toolsRpc: ToolsRpc): Promise<() =
   const info = readPackageInfo()
   const options = parseOptions(ctx.options)
   const host = checkHost(ctx.app.version, info.hostRange, options.allowUntestedHost)
+  const skills = readSkills()
 
   const server = await registerServer(ctx)
   const integration = await registerIntegration(ctx, server.conflict)
@@ -47,10 +48,11 @@ export async function setup(ctx: SetupContext, toolsRpc: ToolsRpc): Promise<() =
     exportDirectory: options.exportDirectory,
     version: info.version,
     host,
+    bundledSkills: skills.map(({ name, path }) => ({ name, path })),
   }))
   tools = await registerTools(ctx)
   await registerCommands(ctx, status)
-  await registerSkills(ctx)
+  await registerSkills(ctx, skills)
   await registerExport(ctx, options)
   await registerRpc(ctx, status)
   // Scripts call Granola's reads with no model, as a session and its agent; a user's own granola server is not ours.

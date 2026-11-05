@@ -26,7 +26,7 @@ const pkg = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8"))
 
 /** The stock OpenCode releases the package is tested on: the one list in src/hosts.ts. */
 const HOST_VERSIONS = TESTED_HOSTS
-const TESTED_HOST = ">=2.2.3 <2.3.0"
+const SUPPORTED_RANGE = ">=2.2.3 <2.3.0"
 const MAX_BYTES = 1024 * 1024
 const OFFICIAL_URL = "https://mcp.granola.ai/mcp"
 const SKILLS = ["granola", "granola-meeting-brief"]
@@ -145,7 +145,7 @@ test("the tarball holds exactly the files whitelist, with no source or JSX, unde
 // The private flag is not checked here: release.yml checks it itself.
 test("its package.json states the tested OpenCode line, and has no dependencies, peers or install scripts", () => {
   const manifest = JSON.parse(readFileSync(join(alone.installed, "package.json"), "utf8"))
-  assert.deepEqual(manifest.opencode, { host: TESTED_HOST })
+  assert.deepEqual(manifest.opencode, { host: SUPPORTED_RANGE })
   for (const field of UNDECLARED) assert.equal(manifest[field], undefined, field)
   assert.deepEqual(Object.keys(manifest.scripts ?? {}).filter((name) => INSTALL_SCRIPTS.includes(name)), [])
 })
@@ -324,7 +324,7 @@ for (const version of HOST_VERSIONS) {
       const { output: status } = await host.api("POST", "/api/rpc/granola.meetings/status", { input: {} })
       assert.equal(status.state, "disabled")
       assert.equal(status.version, pkg.version)
-      assert.deepEqual(status.host, { version, range: TESTED_HOST, tested: true })
+      assert.deepEqual(status.host, { version, range: SUPPORTED_RANGE, tested: true })
       assert.equal(status.nextStep, 'Enable granola in /mcps, or remove "disabled": true from mcp.servers.granola in your OpenCode config.')
       assert.deepEqual(status.unguardedAgents, [])
       assert.equal(status.hostWarning, undefined)

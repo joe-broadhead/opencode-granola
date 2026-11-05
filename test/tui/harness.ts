@@ -29,6 +29,7 @@ function status(overrides: Partial<Status>): Status {
     title: "Granola",
     tools: { visible: 17, hidden: 1, unknown: 0, unknownNames: [] },
     unguardedAgents: [],
+    shadowedSkills: [],
     exportDirectory: "/home/someone/Granola",
     version: VERSION,
     host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
@@ -65,7 +66,7 @@ const SCENARIOS: Record<string, Scenario> = {
       status: status({
         unguardedAgents: ["reviewer"],
         permissionsBlock: [{ action: "granola_*", resource: "*", effect: "ask" }, { action: "granola_get_meetings", resource: "*", effect: "allow" }],
-        nextStep: "Put the Granola block first in that agent's own permissions (agents.reviewer.permissions), followed by your top-level rules for granola_ actions.",
+        nextStep: "Put the default rules shown by /granola-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Granola tools.",
       }),
     },
   },

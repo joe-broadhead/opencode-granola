@@ -5,6 +5,12 @@ import { Rpc } from "@opencode/plugin/rpc"
 /** OpenCode's state for the granola MCP server; absent means no server of that name is registered. */
 export type ConnectionState = "connected" | "pending" | "disabled" | "failed" | "needs_auth" | "absent"
 
+/** A skill OpenCode loads under one of the plugin's skill ids, from another file, instead of the plugin's own. */
+export interface ShadowedSkill {
+  readonly name: string
+  readonly path: string
+}
+
 export interface PermissionRule {
   readonly action: string
   readonly resource: string
@@ -69,6 +75,8 @@ export interface Status {
    * the user's top-level rules for Granola tools.
    */
   readonly permissionsBlock?: readonly PermissionRule[]
+  /** Skills that take the place of the plugin's own because they use the same id; empty when none. */
+  readonly shadowedSkills: readonly ShadowedSkill[]
   readonly exportDirectory: string
   /** Set only when allowUntestedHost lets a host outside the supported range run the plugin. */
   readonly hostWarning?: string
@@ -80,7 +88,7 @@ export interface Status {
 export const STATUS_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["version", "host", "state", "tools", "unguardedAgents", "exportDirectory", "nextStep"],
+  required: ["version", "host", "state", "tools", "unguardedAgents", "shadowedSkills", "exportDirectory", "nextStep"],
   properties: {
     version: { type: "string" },
     host: {
@@ -122,6 +130,15 @@ export const STATUS_SCHEMA = {
           resource: { type: "string" },
           effect: { type: "string", enum: ["allow", "deny", "ask"] },
         },
+      },
+    },
+    shadowedSkills: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "path"],
+        properties: { name: { type: "string" }, path: { type: "string" } },
       },
     },
     exportDirectory: { type: "string" },
@@ -191,13 +208,16 @@ export function statusRows(status: Status): StatusRow[] {
   return [
     { label: "Connection", text: connection, tone: TONES[status.state] },
     { label: "Account", text: !connected ? "unknown until Granola connects" : status.workspace ? `workspace ${status.workspace}` : "workspace unknown until the agent reads your Granola account" },
-    { label: "Access", text: "reads run without asking; changes, new tools and exports ask first" },
+    { label: "Access", text: "reads run without asking; changes, new tools and exports ask first; give_feedback is off" },
     { label: "Export folder", text: status.exportDirectory },
+    status.shadowedSkills.length
+      ? { label: "Skills", text: status.shadowedSkills.map((skill) => `${skill.name} is replaced by ${skill.path}`).join("; "), tone: "warning" as const }
+      : { label: "Skills", text: "the plugin's own" },
     { label: "Tools", text: connected ? tools.join(", ") : "none until Granola connects" },
     agents.length
       ? {
           label: "Agents without default rules",
-          text: `${agents.join(", ")}: Granola changes and new tools may run there without asking`,
+          text: agents.join(", "),
           tone: "warning" as const,
           block: permissionsSnippet(agents, status.permissionsBlock ?? []),
         }
@@ -214,7 +234,7 @@ export function permissionsSnippet(agents: readonly string[], block: readonly Pe
     `  ${JSON.stringify(first)}: {`,
     `    "permissions": [`,
     ...block.map((rule) => `      ${JSON.stringify(rule)},`),
-    `      ...then your top-level rules for granola_ actions, then the agent's other rules`,
+    `      ...then your top-level rules for Granola tools, then the agent's other rules`,
     `    ]`,
     `  }${rest.length ? "," : ""}`,
     ...(rest.length ? [`  ...the same for ${rest.map((agent) => JSON.stringify(agent)).join(", ")}`] : []),

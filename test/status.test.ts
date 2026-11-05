@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest"
-import { connectionProblem, type ConnectionState } from "../src/errors.js"
+import { connectionProblem } from "../src/errors.js"
 import { DEFAULT_RULES, insertDefaults } from "../src/permissions.js"
 import { readPackageInfo } from "../src/meta.js"
-import { CONFLICT_NEXT, STATUS_SCHEMA, UNTESTED_HOST_NEXT, agentFix, buildStatus, createStatus, formatStatus, type StatusInputs } from "../src/status.js"
+import { STATUS_SCHEMA, type ConnectionState } from "../src/rpc/contract.js"
+import { AGENT_FIX, CONFLICT_NEXT, UNTESTED_HOST_NEXT, buildStatus, createStatus, formatStatus, type StatusInputs } from "../src/status.js"
 import { agent, fakeHost } from "./fakes.js"
 
 const VERSION = readPackageInfo().version
 const RANGE = ">=2.2.3 <2.3.0"
+
+const BUNDLED = [
+  { name: "granola", path: "/plugin/skills/granola/SKILL.md" },
+  { name: "granola-meeting-brief", path: "/plugin/skills/granola-meeting-brief/SKILL.md" },
+]
+const USER_SKILL = "/home/someone/.config/opencode/skills/granola/SKILL.md"
 
 const guarded = () => {
   const built = agent("build")
@@ -23,6 +30,8 @@ function inputs(overrides: Partial<StatusInputs> = {}): StatusInputs {
     exportDirectory: "/home/someone/Granola",
     version: VERSION,
     host: { version: "2.2.3", range: RANGE, tested: true },
+    bundledSkills: BUNDLED,
+    skills: BUNDLED.map((skill) => ({ id: skill.name, path: skill.path })),
     ...overrides,
   }
 }
@@ -38,6 +47,7 @@ describe("status model", () => {
       tools: { visible: 3, hidden: 1, unknown: 0, unknownNames: [] },
       workspace: "Acme",
       unguardedAgents: [],
+      shadowedSkills: [],
       exportDirectory: "/home/someone/Granola",
       nextStep: "Nothing to do.",
     })
@@ -93,17 +103,40 @@ describe("status model", () => {
     const status = buildStatus(inputs({ agents: [guarded(), agent("reviewer")] }))
     expect(status.unguardedAgents).toEqual(["reviewer"])
     expect(status.permissionsBlock).toEqual(DEFAULT_RULES)
-    expect(status.nextStep).toBe(agentFix(["reviewer"]))
-    expect(status.nextStep).toBe("Put the Granola block first in that agent's own permissions (agents.reviewer.permissions), followed by your top-level rules for granola_ actions.")
+    expect(status.nextStep).toBe(AGENT_FIX)
+    expect(status.nextStep).toBe("Put the default rules shown by /granola-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Granola tools.")
     const text = formatStatus(status)
-    expect(text).toContain("Agents without default rules: reviewer: Granola changes and new tools may run there without asking")
+    expect(text).toContain("Agents without default rules: reviewer\n")
     expect(text).toContain(`  "agents": {\n    "reviewer": {\n      "permissions": [\n        ${JSON.stringify(DEFAULT_RULES[0])},`)
     expect(text).not.toMatch(/^"permissions": \[/m)
   })
 
+  it("names a skill that takes the place of the plugin's own, shows it, and says to rename or move it", () => {
+    const skills = [{ id: "granola", path: USER_SKILL }, { id: "granola-meeting-brief", path: BUNDLED[1]!.path }, { id: "other", path: "/x/SKILL.md" }]
+    const status = buildStatus(inputs({ skills }))
+    expect(status.shadowedSkills).toEqual([{ name: "granola", path: USER_SKILL }])
+    expect(status.nextStep).toBe(`Rename or move the skill at ${USER_SKILL}, which uses the id of the plugin's granola skill, so OpenCode loads it instead of the plugin's own.`)
+    expect(formatStatus(status)).toContain(`Skills: granola is replaced by ${USER_SKILL}\n`)
+    // The agent fix comes first: it keeps writes from running without asking.
+    expect(buildStatus(inputs({ skills, agents: [agent("reviewer")] })).nextStep).toBe(AGENT_FIX)
+  })
+
+  it("names every shadowed skill in one next step", () => {
+    const other = "/project/.opencode/skills/granola-meeting-brief/SKILL.md"
+    const status = buildStatus(inputs({ skills: [{ id: "granola", path: USER_SKILL }, { id: "granola-meeting-brief", path: other }] }))
+    expect(status.shadowedSkills.map((skill) => skill.name)).toEqual(["granola", "granola-meeting-brief"])
+    expect(status.nextStep).toBe(`Rename or move the skills at ${USER_SKILL} and ${other}, which use the ids of the plugin's granola and granola-meeting-brief skills, so OpenCode loads them instead of the plugin's own.`)
+  })
+
+  it("shows the plugin's own skills when nothing takes their place", () => {
+    expect(formatStatus(buildStatus(inputs()))).toContain("Skills: the plugin's own\n")
+  })
+
   it("lists every agent that missed the defaults in the fix", () => {
     const status = buildStatus(inputs({ agents: [agent("reviewer"), agent("mdagent")] }))
-    expect(status.nextStep).toContain("(agents.reviewer.permissions, agents.mdagent.permissions)")
+    expect(status.unguardedAgents).toEqual(["reviewer", "mdagent"])
+    expect(status.nextStep).toBe(AGENT_FIX)
+    expect(formatStatus(status)).toContain("Agents without default rules: reviewer, mdagent\n")
     expect(formatStatus(status)).toContain('...the same for "mdagent"')
   })
 
@@ -131,7 +164,7 @@ describe("status model", () => {
     expect(buildStatus(inputs({ host })).nextStep).toBe(UNTESTED_HOST_NEXT)
     expect(UNTESTED_HOST_NEXT).toBe("If Granola misbehaves, use OpenCode 2.2.3, 2.2.4 or 2.2.5.")
     // Anything else to do comes first.
-    expect(buildStatus(inputs({ host, agents: [agent("reviewer")] })).nextStep).toBe(agentFix(["reviewer"]))
+    expect(buildStatus(inputs({ host, agents: [agent("reviewer")] })).nextStep).toBe(AGENT_FIX)
   })
 
   it("gives host.version null when OpenCode reports no version", () => {
@@ -144,7 +177,7 @@ describe("status model", () => {
     const text = formatStatus(buildStatus(inputs({ workspace: "Acme", agents: [agent("reviewer")] })))
     const labels = text.split("\n").filter((line) => /^[A-Z][A-Za-z ]+: /.test(line)).map((line) => line.slice(0, line.indexOf(":")))
     expect(text.split("\n")[0]).toBe("Granola status")
-    expect(labels).toEqual(["Connection", "Account", "Access", "Export folder", "Tools", "Agents without default rules", "OpenCode", "Next step"])
+    expect(labels).toEqual(["Connection", "Account", "Access", "Export folder", "Skills", "Tools", "Agents without default rules", "OpenCode", "Next step"])
     expect(text).toContain("Account: workspace Acme")
     expect(text).toContain(`OpenCode: 2.2.3 (tested; supported range ${RANGE}), plugin ${VERSION}`)
     expect(text).not.toContain("`")
@@ -153,7 +186,7 @@ describe("status model", () => {
   it("always prints the agents row, with none when every agent has the defaults", () => {
     const text = formatStatus(buildStatus(inputs({ servers: [], tools: [] })))
     const labels = text.split("\n").filter((line) => /^[A-Z][A-Za-z ]+: /.test(line)).map((line) => line.slice(0, line.indexOf(":")))
-    expect(labels).toEqual(["Connection", "Account", "Access", "Export folder", "Tools", "Agents without default rules", "OpenCode", "Next step"])
+    expect(labels).toEqual(["Connection", "Account", "Access", "Export folder", "Skills", "Tools", "Agents without default rules", "OpenCode", "Next step"])
     expect(text).toContain("\nAgents without default rules: none\n")
   })
 
@@ -184,16 +217,26 @@ describe("status model", () => {
 })
 
 describe("createStatus", () => {
-  it("reads servers, tools and agents from OpenCode without calling Granola", async () => {
+  const fixed = () => ({ hidden: 0, exportDirectory: "/x", version: VERSION, host: { version: "2.2.3", range: RANGE, tested: true }, bundledSkills: BUNDLED })
+
+  it("reads servers, tools, agents and skills from OpenCode without calling Granola", async () => {
     const host = fakeHost({ baseTools: () => [{ id: "granola_get_meetings", name: "get_meetings" }] })
     host.rebuild()
     host.listed.servers = [{ name: "granola", status: { status: "connected" } }]
     host.listed.agents = [guarded()]
-    const source = createStatus(host.ctx, () => ({
-      hidden: 0, exportDirectory: "/x", version: VERSION, host: { version: "2.2.3", range: RANGE, tested: true },
-    }))
-    const status = await source.read()
+    host.listed.skills = [{ id: "granola", path: USER_SKILL }]
+    const status = await createStatus(host.ctx, fixed).read()
     expect(status.state).toBe("connected")
     expect(status.tools.visible).toBe(1)
+    expect(status.shadowedSkills).toEqual([{ name: "granola", path: USER_SKILL }])
+  })
+
+  it("still reads status when OpenCode cannot list skills", async () => {
+    const host = fakeHost()
+    host.listed.servers = [{ name: "granola", status: { status: "connected" } }]
+    host.ctx.skill.list = async () => { throw new Error("no skills") }
+    const status = await createStatus(host.ctx, fixed).read()
+    expect(status.state).toBe("connected")
+    expect(status.shadowedSkills).toEqual([])
   })
 })

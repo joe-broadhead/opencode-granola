@@ -41,7 +41,7 @@ const LIVE_PARAMETERS: Readonly<Record<string, readonly string[]>> = {
 }
 
 /** Result fields the skills may name, from Granola's live results. */
-const RESULT_FIELDS = ["next_cursor", "next_offset", "read_chunk_ids", "sign_out_url"]
+const RESULT_FIELDS = ["next_cursor", "next_offset", "read_chunk_ids", "chunk_id", "sign_out_url"]
 
 const PARAMETERS = new Set(Object.values(LIVE_PARAMETERS).flat())
 

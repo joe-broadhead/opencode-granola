@@ -118,6 +118,18 @@ describe("bundled skills", () => {
     }
   })
 
+  it("name transcript as the field that holds a transcript chunk's text, as Granola's live result does", () => {
+    const granola = text("granola")
+    expect(granola).toContain("chunks.map(({ chunk_id, transcript }) => ({ chunk_id, transcript }))")
+    expect(granola).toContain("`chunk_id` and `transcript`")
+    expect(granola).not.toMatch(/`chunk_id` and text\b/)
+  })
+
+  it("load the brief skill for a recap across a period of meetings, not only before one", () => {
+    expect(skills.find((skill) => skill.name === "granola-meeting-brief")!.description).toMatch(/recap a period's meetings/)
+    expect(text("granola")).toContain("For any brief or recap, before a meeting or across a period of meetings, also load `granola-meeting-brief`.")
+  })
+
   it("list every known write and the plugin's export in the granola skill", () => {
     for (const tool of [...WRITE_TOOLS, ...PLUGIN_TOOLS]) expect(text("granola")).toContain(`\`${tool}\``)
   })

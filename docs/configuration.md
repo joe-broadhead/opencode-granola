@@ -92,8 +92,8 @@ has a base allow, lacks the block, and its own rules would let a Granola tool th
 asking. An agent whose rules already ask or deny for every Granola tool needs no fix and is not listed. With no such
 agent, the row reads `none`. The fix:
 
-> Put the Granola block first in that agent's own permissions (agents.<agent>.permissions), followed by your
-> top-level rules for granola_ actions.
+> Put the default rules shown by /granola-status first in each listed agent's own permissions, in opencode.json or
+> the agent's Markdown file, followed by your top-level rules for Granola tools.
 
 For example, for an agent `reviewer`, when your top-level `permissions` allow `granola_create_folder`:
 

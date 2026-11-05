@@ -12,7 +12,7 @@ import { KNOWN_READS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { HIDDEN_TOOLS, PLUGIN_TOOLS, WRITE_TOOLS } from "../../src/known-tools.js"
 import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
 import { Granola } from "../../src/rpc/contract.js"
-import { agentFix, CONFLICT_NEXT, formatStatus, type Status } from "../../src/status.js"
+import { AGENT_FIX, CONFLICT_NEXT, formatStatus, type Status } from "../../src/status.js"
 import { FAILING, MEETING, PLAN_LIMITED, TITLE, TOOLS, UPSTREAM_FAILURE, WORKSPACE, type SyntheticGranola } from "../synthetic-granola/server.js"
 import { ADOPTED_SERVER, globalPaths, OFFICIAL_URL, OTHER_SERVER, repositoryChanges, REPO, type Host, type Project } from "./harness.js"
 import type { CallInput, CallResult, Outcome, ProbeState } from "./probe/index.js"
@@ -272,7 +272,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         const current = await status("main")
         expect(current.unguardedAgents).toEqual(["reviewer"])
         expect(current.permissionsBlock).toEqual(DEFAULT_RULES)
-        expect(current.nextStep).toBe(agentFix(["reviewer"]))
+        expect(current.nextStep).toBe(AGENT_FIX)
       })
 
       test("with the per-agent fix, that agent asks before writes, the user's own rules still win, and Explore is not loosened", async () => {

@@ -65,7 +65,7 @@ const SCENARIOS: Record<string, Scenario> = {
       status: status({
         unguardedAgents: ["reviewer"],
         permissionsBlock: [{ action: "granola_*", resource: "*", effect: "ask" }, { action: "granola_get_meetings", resource: "*", effect: "allow" }],
-        nextStep: "Put the Granola block first in that agent's own permissions (agents.reviewer.permissions), followed by your top-level rules for granola_ actions.",
+        nextStep: "Put the default rules shown by /granola-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Granola tools.",
       }),
     },
   },

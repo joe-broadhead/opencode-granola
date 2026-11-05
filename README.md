@@ -106,8 +106,8 @@ For example, to let one write run without asking:
 ```
 
 Agents defined only in your own config are created after plugins start, so they miss the default rules, and Granola's
-writes would run there without asking. Status names each such agent and gives the block to paste first in that agent's
-own `permissions`. An agent whose own rules already ask or deny for every Granola tool needs nothing and is not named.
+writes would run there without asking. Status names each such agent and gives the block to paste first in each listed
+agent's own `permissions`, in `opencode.json` or the agent's Markdown file. An agent whose own rules already ask or deny for every Granola tool needs nothing and is not named.
 Do not put the block in the top-level `permissions`, which would loosen Explore.
 
 In `opencode run` and other runs where nobody can answer, a call that would ask is refused; reads still work.

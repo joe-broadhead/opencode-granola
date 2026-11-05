@@ -357,7 +357,7 @@ replaced by `<url>`. OpenCode's sign-in error is never repeated, because it can 
 
 | Code | Message | Next step |
 | --- | --- | --- |
-| `EXPORT_INVALID_INPUT` | The export request *problem*. | Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both). |
+| `EXPORT_INVALID_INPUT` | The export request *problem*. | For a missing or wrong `meeting_ids` or `content`: Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both). For an unknown field: Pass only meeting_ids, content, path and overwrite. For `path`: Pass path as a relative path of at most 512 characters, or leave it out. For `overwrite`: Pass overwrite as true or false, or leave it out. |
 | `EXPORT_INVALID_PATH` | The export path *path* *problem*. | Use a path inside the export folder, such as `meetings/weekly-sync.md`, without `..`, a leading `/` or links. |
 | `EXPORT_EXISTS` | *path* already exists in the export folder. | Choose another path, or ask the user before you export again with overwrite: true. |
 | `EXPORT_TOO_LARGE` | The export is larger than its 8 MB limit. | Export fewer meetings at a time. |

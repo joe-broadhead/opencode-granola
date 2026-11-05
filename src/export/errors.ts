@@ -2,12 +2,16 @@ import { shortReason, type Problem } from "../errors.js"
 
 // The export's failures, in the same code, message and next-step form as the connection errors.
 
-export function invalidInput(problem: string): Problem {
-  return {
-    code: "EXPORT_INVALID_INPUT",
-    message: `The export request ${problem}.`,
-    next: "Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both).",
-  }
+/** The fix for each part of a request that parseRequest refuses. */
+const INPUT_NEXT = {
+  required: "Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both).",
+  field: "Pass only meeting_ids, content, path and overwrite.",
+  path: "Pass path as a relative path of at most 512 characters, or leave it out.",
+  overwrite: "Pass overwrite as true or false, or leave it out.",
+} as const
+
+export function invalidInput(problem: string, part: keyof typeof INPUT_NEXT = "required"): Problem {
+  return { code: "EXPORT_INVALID_INPUT", message: `The export request ${problem}.`, next: INPUT_NEXT[part] }
 }
 
 export function invalidPath(path: string, problem: string): Problem {

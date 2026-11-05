@@ -12,7 +12,7 @@ import { NOT_ON_PLAN, connect, type Limits, type SourceContext } from "./source.
 const EXPORT_TOOL = "export_markdown"
 
 const EXPORT_DESCRIPTION =
-  "Save Granola meeting notes, transcripts or both, for 1 to 20 meetings, to one readable Markdown file in the user's export folder. The text goes straight to the file instead of through the conversation. Unless the user's permissions already allow exports, OpenCode asks before the file is written. Returns the file's path, its size in bytes and its SHA-256 checksum."
+  "Save Granola meeting notes, transcripts or both, for 1 to 20 meetings, to one readable Markdown file in the user's export folder. The text goes straight to the file instead of through the conversation. Unless the user's permissions already allow exports, OpenCode asks before the file is written. At most 8 MB; a transcript that does not fit is cut with a note. Without transcripts on the user's plan, the file holds the notes and says so. Returns the file's path, its size in bytes and its SHA-256 checksum; the text result also names anything missing."
 
 const CONTENT = ["notes", "transcript", "both"] as const
 const MAX_MEETINGS = 20
@@ -99,7 +99,7 @@ export function parseRequest(raw: unknown): ExportRequest {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) throw toolError(invalidInput("must be an object"))
   const input = raw as Record<string, unknown>
   const unknown = Object.keys(input).find((key) => !Object.hasOwn(EXPORT_INPUT.properties, key))
-  if (unknown !== undefined) throw toolError(invalidInput(`has the unsupported field ${unknown}`))
+  if (unknown !== undefined) throw toolError(invalidInput(`has the unsupported field ${unknown}`, "field"))
   const ids = input.meeting_ids
   if (!Array.isArray(ids) || ids.length < 1 || ids.length > MAX_MEETINGS) throw toolError(invalidInput(`needs 1 to ${MAX_MEETINGS} meeting_ids`))
   if (ids.some((id) => typeof id !== "string" || !id.trim() || id.length > 200 || /[\u0000-\u001f\u007f]/.test(id))) {
@@ -107,9 +107,9 @@ export function parseRequest(raw: unknown): ExportRequest {
   }
   if (!CONTENT.includes(input.content as Content)) throw toolError(invalidInput("needs content: notes, transcript or both"))
   if (input.path !== undefined && (typeof input.path !== "string" || !input.path || input.path.length > 512)) {
-    throw toolError(invalidInput("has a path that is empty, too long or not text"))
+    throw toolError(invalidInput("has a path that is empty, too long or not text", "path"))
   }
-  if (input.overwrite !== undefined && typeof input.overwrite !== "boolean") throw toolError(invalidInput("needs overwrite to be true or false"))
+  if (input.overwrite !== undefined && typeof input.overwrite !== "boolean") throw toolError(invalidInput("needs overwrite to be true or false", "overwrite"))
   return {
     meetingIDs: [...new Set(ids as string[])],
     content: input.content as Content,

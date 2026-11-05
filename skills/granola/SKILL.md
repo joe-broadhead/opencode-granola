@@ -34,7 +34,7 @@ For a brief before a meeting, or a catch-up on a person, company or topic, also 
 
 ## Ask across meetings
 
-- `query_granola_meetings` answers a natural-language question from the user's notes, with citation links. It is slow, so use search and read when they can answer. Give it meeting IDs to limit it to selected meetings.
+- `query_granola_meetings` answers a natural-language question from the user's notes, with citation links. It is slow, so use search and read when they can answer. To limit it to selected meetings, pass their IDs as `document_ids`, not `meeting_ids`: it ignores `meeting_ids` without an error and answers from all meetings.
 - Keep its citation links in your answer. When the question needs owners, numbers, dates or exact wording, read the cited meetings with `get_meetings` first.
 
 ## Generated answers are not quotes

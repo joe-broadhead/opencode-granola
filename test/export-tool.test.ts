@@ -115,17 +115,21 @@ describe("export_markdown", () => {
       expect(EXPORT_OUTPUT.required).toEqual(["path", "bytes", "sha256"])
     })
 
+    const REQUIRED = "Pass meeting_ids (1 to 20 meeting IDs) and content (notes, transcript or both)."
+    const ONLY = "Pass only meeting_ids, content, path and overwrite."
+    const PATH = "Pass path as a relative path of at most 512 characters, or leave it out."
+    const OVERWRITE = "Pass overwrite as true or false, or leave it out."
     it.each([
-      [{ meetingIds: ["m-1"], content: "notes" }, "unsupported field meetingIds"],
-      [{ meeting_ids: ["m-1"], content: "notes", toString: "x" }, "unsupported field toString"],
-      [{ meeting_ids: [], content: "notes" }, "needs 1 to 20 meeting_ids"],
-      [{ meeting_ids: Array.from({ length: 21 }, (_, i) => `m-${i}`), content: "notes" }, "needs 1 to 20 meeting_ids"],
-      [{ meeting_ids: [" "], content: "notes" }, "meeting ID that is empty"],
-      [{ meeting_ids: ["m-1"], content: "summary" }, "needs content"],
-      [{ meeting_ids: ["m-1"], content: "notes", overwrite: "yes" }, "overwrite to be true or false"],
-      [{ meeting_ids: ["m-1"], content: "notes", path: "" }, "path that is empty"],
-    ])("refuses %j", (input, reason) => {
-      let error: (Error & { metadata?: { code?: string } }) | undefined
+      [{ meetingIds: ["m-1"], content: "notes" }, "unsupported field meetingIds", ONLY],
+      [{ meeting_ids: ["m-1"], content: "notes", toString: "x" }, "unsupported field toString", ONLY],
+      [{ meeting_ids: [], content: "notes" }, "needs 1 to 20 meeting_ids", REQUIRED],
+      [{ meeting_ids: Array.from({ length: 21 }, (_, i) => `m-${i}`), content: "notes" }, "needs 1 to 20 meeting_ids", REQUIRED],
+      [{ meeting_ids: [" "], content: "notes" }, "meeting ID that is empty", REQUIRED],
+      [{ meeting_ids: ["m-1"], content: "summary" }, "needs content", REQUIRED],
+      [{ meeting_ids: ["m-1"], content: "notes", overwrite: "yes" }, "overwrite to be true or false", OVERWRITE],
+      [{ meeting_ids: ["m-1"], content: "notes", path: "" }, "path that is empty", PATH],
+    ])("refuses %j with the next step for that problem", (input, reason, next) => {
+      let error: (Error & { metadata?: { code?: string; next?: string } }) | undefined
       try {
         parseRequest(input)
       } catch (caught) {
@@ -133,6 +137,7 @@ describe("export_markdown", () => {
       }
       expect(error?.metadata?.code).toBe("EXPORT_INVALID_INPUT")
       expect(error?.message).toContain(reason)
+      expect(error?.metadata?.next).toBe(next)
     })
 
     it("keeps the meeting order and drops repeated IDs", () => {

@@ -22,7 +22,7 @@ Confirm the subject (a person, company, project or decision), the time window an
 ## 3. Read them
 
 - Read the chosen meetings with `get_meetings`, up to 10 IDs per call.
-- For questions across them, such as which decisions are still open, use `query_granola_meetings` with those meeting IDs, then check its claims against the notes.
+- For questions across them, such as which decisions are still open, use `query_granola_meetings` with those meeting IDs as `document_ids` (it ignores `meeting_ids` without an error), then check its claims against the notes.
 - Read `get_meeting_transcript` only when exact wording matters and the user's plan includes transcripts.
 - Check `get_account_info` before you treat the note creator as the user.
 

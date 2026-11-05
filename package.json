@@ -161,7 +161,7 @@
       {
         "name": "granola.give_feedback",
         "permission": "granola_give_feedback",
-        "effect": "ask",
+        "effect": "deny",
         "readOnly": false
       },
       {

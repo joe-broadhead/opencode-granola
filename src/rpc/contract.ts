@@ -208,7 +208,7 @@ export function statusRows(status: Status): StatusRow[] {
   return [
     { label: "Connection", text: connection, tone: TONES[status.state] },
     { label: "Account", text: !connected ? "unknown until Granola connects" : status.workspace ? `workspace ${status.workspace}` : "workspace unknown until the agent reads your Granola account" },
-    { label: "Access", text: "reads run without asking; changes, new tools and exports ask first" },
+    { label: "Access", text: "reads run without asking; changes, new tools and exports ask first; give_feedback is off" },
     { label: "Export folder", text: status.exportDirectory },
     status.shadowedSkills.length
       ? { label: "Skills", text: status.shadowedSkills.map((skill) => `${skill.name} is replaced by ${skill.path}`).join("; "), tone: "warning" as const }

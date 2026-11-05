@@ -8,12 +8,15 @@ export interface Rule {
 }
 
 /**
- * Inserted right after an agent's base `* * allow`: every Granola tool asks, then the known reads are allowed.
- * Rules are last-match-wins, so the user's own rules and saved "Always allow" approvals, which come later, win.
+ * Inserted right after an agent's base `* * allow`: every Granola tool asks, the known reads are allowed, and
+ * give_feedback is denied. Granola's server instructions tell the model to send give_feedback on its own, which would
+ * put an unexplained prompt in front of the user; a deny on `*` hides the tool instead. Rules are last-match-wins, so
+ * the user's own rules and saved "Always allow" approvals, which come later, win.
  */
 export const DEFAULT_RULES: readonly Readonly<Rule>[] = [
   { action: "granola_*", resource: "*", effect: "ask" },
   ...READ_TOOLS.map((name) => ({ action: toolID(name), resource: "*", effect: "allow" as const })),
+  { action: toolID("give_feedback"), resource: "*", effect: "deny" },
 ]
 
 const same = (left: Readonly<Rule> | undefined, right: Readonly<Rule>) =>

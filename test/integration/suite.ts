@@ -239,6 +239,11 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(calls()).toEqual([])
       })
 
+      test("give_feedback is denied by default, and in an agent given the block by hand", async () => {
+        expect(await check("main", "build", id("give_feedback"))).toEqual({ outcome: "deny" })
+        expect(await check("main", "fixed", id("give_feedback"))).toEqual({ outcome: "deny" })
+      })
+
       test("a write runs once approved", async () => {
         const calls = received()
         const result = await run("main", { agent: "build", tool: id("update_folder"), input: { folder_id: "f-1" }, replies: ["once"] })

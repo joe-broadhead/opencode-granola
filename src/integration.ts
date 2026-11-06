@@ -61,10 +61,14 @@ export async function registerIntegration(ctx: IntegrationContext, conflict: () 
 
     const connection = await ctx.integration.connection.active(id)
     if (connection?.type !== "credential") return
+    // `active` returns the credential alone; the status the plugin sets is projected by `get`. Read it there, so the
+    // mark it wrote is the one it clears, and another plugin's or the host's message is left alone.
+    const shown = (await ctx.integration.get({ integrationID: id })).data.connections?.find((item) => item.type === "credential" && item.id === connection.id)
+    const status = shown?.type === "credential" ? shown.status : undefined
     const state = server.status.status
-    if (state === "needs_auth" && connection.status?.status !== "needs_auth") {
+    if (state === "needs_auth" && status?.status !== "needs_auth") {
       await ctx.integration.connection.status({ integrationID: id, connection, status: { status: "needs_auth", message: SIGN_IN_MESSAGE } })
-    } else if (state === "connected" && connection.status) {
+    } else if (state === "connected" && status?.message === SIGN_IN_MESSAGE) {
       await ctx.integration.connection.status({ integrationID: id, connection, status: undefined })
     }
   }

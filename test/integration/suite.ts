@@ -8,6 +8,7 @@ import { join } from "node:path"
 import { setTimeout as sleep } from "node:timers/promises"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { connectionProblem, toolUnavailable } from "../../src/errors.js"
+import { SIGN_IN_MESSAGE } from "../../src/integration.js"
 import { KNOWN_READS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { HIDDEN_TOOLS, PLUGIN_TOOLS, WRITE_TOOLS } from "../../src/known-tools.js"
 import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
@@ -591,6 +592,75 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect((await host.client.command.list(at("unload"))).data.map((command) => command.name).filter((command) => command.startsWith("granola"))).toEqual([])
         expect((await host.client.skill.list(at("unload"))).data.map((skill) => skill.id).filter((skill) => skill.startsWith("granola"))).toEqual([])
         await expect(status("unload")).rejects.toThrow()
+      })
+    })
+
+    // The /connect mark is only observable while a credential remains, so this signs in through the fake's own
+    // authorization and token endpoints with a token that has no refresh token: a 401 then needs a new sign-in rather
+    // than a refresh, and the account stays. The plugin reads its mark back from the projected connection, so the mark
+    // it sets is the one it clears.
+    describe("the /connect sign-in mark", () => {
+      /** The sign-in project's /connect connections, with the status a credential shows there. */
+      const connections = async () => {
+        const integrationID = (await host.client.mcp.list(at("sign-in"))).data.find((entry) => entry.name === "granola")?.integrationID
+        if (!integrationID) return []
+        const { data } = await host.client.integration.get({ integrationID, ...at("sign-in") })
+        return (data as unknown as { connections?: { type?: string; status?: { status: string; message?: string } }[] }).connections ?? []
+      }
+
+      /** Signs in through OpenCode's own flow: the authorization endpoint redirects the loopback callback, which exchanges its code. */
+      const signIn = async () => {
+        const integrationID = (await host.client.mcp.list(at("sign-in"))).data.find((entry) => entry.name === "granola")!.integrationID!
+        const { data: integration } = await host.client.integration.get({ integrationID, ...at("sign-in") })
+        const oauth = (host.client.integration as unknown as { oauth: { connect: (input: object) => Promise<{ data: { attemptID: string; url: string } }> } }).oauth
+        const { methods } = integration as unknown as { methods: { id: string }[] }
+        const { data: attempt } = await oauth.connect({ integrationID, methodID: methods[0]!.id, ...at("sign-in") })
+        const redirect = await fetch(attempt.url, { redirect: "manual" })
+        const callback = redirect.headers.get("location")
+        expect(callback).toMatch(/^http:\/\/127\.0\.0\.1:\d+\//)
+        await fetch(callback!)
+      }
+
+      /** Polls `check` until it returns a value. */
+      const waitFor = async <T>(what: string, check: () => Promise<T | false | undefined>): Promise<T> => {
+        for (const deadline = Date.now() + 60_000; ; await sleep(250)) {
+          const value = await check()
+          if (value) return value
+          if (Date.now() > deadline) throw new Error(`timed out waiting until ${what}`)
+        }
+      }
+
+      test("is set while the server needs a sign-in, and cleared once the same account connects again", async () => {
+        // The fake is shared by every host's suite: start from a connected server, then challenge it, and ask for no
+        // refresh token.
+        await statusWhen("sign-in", settled)
+        fake().challenge = true
+        fake().issueRefreshToken = false
+        const mcp = host.client.mcp as unknown as Record<"connect" | "disconnect", (input: object) => Promise<unknown>>
+        await mcp.disconnect({ server: "granola", ...at("sign-in") }).catch(() => undefined)
+        await mcp.connect({ server: "granola", ...at("sign-in") }).catch(() => undefined)
+        await statusWhen("sign-in", (current) => current.state === "sign_in_required")
+        const stored = fake().tokens.length
+        await signIn()
+        await waitFor("the sign-in stores a token without a refresh token", async () => fake().tokens.length > stored)
+        expect(fake().tokens.at(-1)).toMatchObject({ grant_type: "authorization_code" })
+        expect(fake().tokens.at(-1)).not.toHaveProperty("refresh_token")
+        fake().challenge = false
+        await statusWhen("sign-in", connected)
+        expect(await waitFor("/connect shows the account", async () => (await connections()).find((item) => item.type === "credential" && item.status?.message === undefined))).toBeDefined()
+
+        // The token stops working, and there is no refresh token: a new sign-in, with the credential kept.
+        fake().challenge = true
+        await mcp.disconnect({ server: "granola", ...at("sign-in") })
+        await mcp.connect({ server: "granola", ...at("sign-in") }).catch(() => undefined)
+        await statusWhen("sign-in", (current) => current.state === "sign_in_required")
+        expect(await waitFor("/connect shows the new sign-in on the account", async () => (await connections()).find((item) => item.status?.message === SIGN_IN_MESSAGE))).toBeDefined()
+
+        // The same account connects again: the plugin clears its own mark.
+        fake().challenge = false
+        await mcp.connect({ server: "granola", ...at("sign-in") })
+        await statusWhen("sign-in", connected)
+        expect(await waitFor("/connect clears the sign-in mark", async () => ((await connections()).some((item) => item.status?.message) ? undefined : true))).toBe(true)
       })
     })
 

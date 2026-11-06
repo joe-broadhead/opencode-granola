@@ -3,11 +3,13 @@
 // Granola. The routes give the connection states:
 // - /connected/mcp serves Granola's tools;
 // - /needs-auth/mcp answers 401 with OAuth metadata, so OpenCode reports that sign-in is needed;
+// - /sign-in/mcp answers 401 while `challenge` is set, and serves Granola's tools once it is not, so a host test can
+//   complete OpenCode's own sign-in through the fake's `/oauth` authorization server and then abandon the token;
 // - /pending/mcp never answers, so the connection stays pending.
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import type { AddressInfo } from "node:net"
 
-export type Route = "connected" | "needs-auth" | "pending"
+export type Route = "connected" | "needs-auth" | "sign-in" | "pending"
 
 /** Tool names by how the plugin treats them. `brand_new_tool` stands in for a tool this plugin version does not know. */
 export const TOOLS = {
@@ -37,6 +39,18 @@ export interface Call {
 export interface SyntheticGranola {
   /** The MCP endpoint of a route, on 127.0.0.1. */
   url(route: Route): string
+  /**
+   * While true, the `/sign-in/mcp` route answers 401 with a bearer challenge, as Granola's server does before a sign-in
+   * or after its tokens are revoked. The other routes and the sign-in server keep answering.
+   */
+  challenge: boolean
+  /**
+   * Whether the token endpoint issues a refresh token. The sign-in project turns this off: a 401 then needs a new
+   * sign-in rather than a refresh, and leaves the credential in place, which is the account `/connect` marks.
+   */
+  issueRefreshToken: boolean
+  /** Every token request's form, in order. */
+  readonly tokens: Record<string, string>[]
   /** Every tools/call the connected route received, in order. */
   readonly calls: Call[]
   close(): Promise<void>
@@ -137,9 +151,16 @@ async function read(request: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString("utf8")
 }
 
+/** The scopes Granola's challenge and metadata name. */
+export const SCOPES = "openid offline_access"
+
 export async function startSyntheticGranola(): Promise<SyntheticGranola> {
   const calls: Call[] = []
   const held = new Set<ServerResponse>()
+  const tokens: Record<string, string>[] = []
+  let challenge = false
+  let issueRefreshToken = true
+  let codes = 0
   let base = ""
 
   const json = (response: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) =>
@@ -150,9 +171,25 @@ export async function startSyntheticGranola(): Promise<SyntheticGranola> {
     response.setHeader("connection", "close")
     const path = new URL(request.url ?? "/", base).pathname
     if (path.startsWith("/.well-known/oauth-protected-resource")) {
-      return json(response, 200, { resource: `${base}/needs-auth/mcp`, authorization_servers: [`${base}/needs-auth`] })
+      // The resource is the server path the challenge came from; the sign-in route names its own authorization server.
+      const resource = `${base}${path.slice("/.well-known/oauth-protected-resource".length) || "/needs-auth/mcp"}`
+      return json(response, 200, { resource, authorization_servers: [resource.includes("/sign-in/") ? `${base}/oauth` : `${base}/needs-auth`] })
     }
     if (path.startsWith("/.well-known/oauth-authorization-server") || path.startsWith("/.well-known/openid-configuration")) {
+      // The sign-in route's authorization server takes a client metadata document; the needs-auth one registers clients.
+      if (path.endsWith("/oauth")) {
+        return json(response, 200, {
+          issuer: `${base}/oauth`,
+          authorization_endpoint: `${base}/oauth/authorize`,
+          token_endpoint: `${base}/oauth/token`,
+          response_types_supported: ["code"],
+          grant_types_supported: ["authorization_code", "refresh_token"],
+          code_challenge_methods_supported: ["S256"],
+          token_endpoint_auth_methods_supported: ["none"],
+          scopes_supported: SCOPES.split(" "),
+          client_id_metadata_document_supported: true,
+        })
+      }
       return json(response, 200, {
         issuer: `${base}/needs-auth`,
         authorization_endpoint: `${base}/needs-auth/authorize`,
@@ -164,15 +201,40 @@ export async function startSyntheticGranola(): Promise<SyntheticGranola> {
         token_endpoint_auth_methods_supported: ["none"],
       })
     }
+    // Like a signed-in browser: the authorization endpoint sends the loopback callback a code, and the token endpoint
+    // exchanges it for an access token.
+    if (path === "/oauth/authorize") {
+      const query = new URL(request.url ?? "/", base).searchParams
+      const target = new URL(query.get("redirect_uri") ?? "/")
+      target.searchParams.set("code", `fake-code-${++codes}`)
+      if (query.get("state")) target.searchParams.set("state", query.get("state")!)
+      return void response.writeHead(302, { location: target.toString() }).end()
+    }
+    if (path === "/oauth/token" && request.method === "POST") {
+      const form = Object.fromEntries(new URLSearchParams(await read(request)))
+      tokens.push(form)
+      // While the server challenges, a refresh is refused like a revoked token: the person must sign in again.
+      if (challenge && form.grant_type === "refresh_token") return json(response, 400, { error: "invalid_grant" })
+      return json(response, 200, {
+        access_token: `fake-access-${tokens.length}`,
+        token_type: "Bearer",
+        expires_in: 3600,
+        ...(issueRefreshToken ? { refresh_token: `fake-refresh-${tokens.length}` } : {}),
+        scope: SCOPES,
+      })
+    }
     if (path.startsWith("/needs-auth/")) {
       return json(response, 401, { error: "invalid_token" }, { "www-authenticate": `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource/needs-auth/mcp"` })
+    }
+    if (path === "/sign-in/mcp" && challenge) {
+      return json(response, 401, { error: "invalid_token" }, { "www-authenticate": `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource/sign-in/mcp"` })
     }
     if (path === "/pending/mcp") {
       held.add(response)
       response.once("close", () => held.delete(response))
       return
     }
-    if (path !== "/connected/mcp") return void response.writeHead(404).end()
+    if (path !== "/connected/mcp" && path !== "/sign-in/mcp") return void response.writeHead(404).end()
     if (request.method === "DELETE") return void response.writeHead(200).end()
     if (request.method !== "POST") return void response.writeHead(405, { allow: "POST, DELETE" }).end()
     const message = JSON.parse(await read(request)) as Message
@@ -187,6 +249,20 @@ export async function startSyntheticGranola(): Promise<SyntheticGranola> {
 
   return {
     url: (route) => `${base}/${route}/mcp`,
+    // Mutable: a host test signs in, then revokes the token and signs in again on the same account.
+    get challenge() {
+      return challenge
+    },
+    set challenge(value: boolean) {
+      challenge = value
+    },
+    get issueRefreshToken() {
+      return issueRefreshToken
+    },
+    set issueRefreshToken(value: boolean) {
+      issueRefreshToken = value
+    },
+    tokens,
     calls,
     close: () => new Promise<void>((resolve) => {
       for (const response of held) response.destroy()

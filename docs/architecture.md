@@ -106,6 +106,14 @@ The executor skips `execute.after`, so the RPC does the hook's work itself. An a
 the hook's own function; the RPC tells every running instance of the plugin, which share OpenCode's one Granola
 sign-in. A call to a server that is not connected gets the connection codes and next steps of `src/errors.ts`.
 
+## Platform facts
+
+These hold on OpenCode 2.2.3, 2.2.4 and 2.2.5, the releases in `TESTED_HOSTS`.
+
+| Topic | Fact | Source |
+| --- | --- | --- |
+| Credential status | A status set with `integration.connection.status` is not on what `connection.active` returns; `integration.get` projects it as `connections[].status`, so the plugin reads its own mark back from there and clears only its own message. A 401 whose token refresh fails with no refresh token leaves the credential in place, so the `/connect` mark is only observable then. The host test signs in through the loopback callback and the token endpoint, then challenges, and asserts the mark is set and cleared. | The host test, on 2.2.3, 2.2.4 and 2.2.5 |
+
 ## Build
 
 `scripts/build.mjs` bundles each part OpenCode loads into one file with esbuild: `src/index.ts` into `dist/index.js`

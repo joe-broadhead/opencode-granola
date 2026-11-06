@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2026-11-06
+
+### Fixed
+
+- `/connect` now clears the "Sign in required" mark on the account after you sign in again.
+
 ## [0.0.6] - 2026-11-05
 
 ### Fixed

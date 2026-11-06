@@ -49,8 +49,9 @@ export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" |
  * - untested: connected, with allowUntestedHost;
  * - automation: connected, with exports allowed for runs where nobody is present;
  * - unload: connected, then the plugin is removed from the config.
+ * - sign-in: needs a sign-in, then signs in through the fake's own flow, so `/connect`'s mark can be checked.
  */
-const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "unload"] as const
+const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "unload", "sign-in"] as const
 export type Project = (typeof PROJECTS)[number]
 
 export interface Host {
@@ -130,6 +131,8 @@ function projectConfig(project: Project, plugin: string, fake: SyntheticGranola,
       return { plugins: [granola(), probe()], permissions: [allow("granola_export_markdown")], experimental: { schedules: true } }
     case "unload":
       return { plugins: [granola(), probe()], experimental: { schedules: true } }
+    case "sign-in":
+      return { plugins: [granola(), probe("sign-in")] }
   }
 }
 

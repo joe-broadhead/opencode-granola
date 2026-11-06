@@ -31,9 +31,19 @@ function fakeOpenCode() {
         replay()
         return { dispose: async () => void (entry.live = false) }
       },
-      get: async () => ({ location: {}, data: { ...integration } }),
+      // The host projects each credential with the status the plugin set on it; `active` returns the credential alone.
+      get: async () => ({
+        location: {},
+        data: {
+          ...integration,
+          connections: connection
+            ? [{ type: "credential", id: connection.id, label: connection.label, method: connection.method, ...(connection.status ? { status: connection.status } : {}) }]
+            : [],
+        },
+      }),
       connection: {
-        active: async () => connection,
+        // As the host does: the credential, without the status the plugin set on it.
+        active: async () => (connection ? { type: connection.type, id: connection.id, label: connection.label, method: connection.method } : undefined),
         status: async (input: { status: Status }) => {
           reported.push(input.status)
           if (connection) connection = { ...connection, ...(input.status ? { status: input.status } : { status: undefined }) }

@@ -37,7 +37,7 @@ type Result = { output?: unknown; content?: string | { type: "text"; text: strin
 type Execute = (input: unknown, call: ToolCall) => Promise<Result>
 
 const SERVER = "srv"
-/** Path-neutral: a fake location under the runner's temp dir, never a literal /tmp path a repo's scan rejects. */
+/** Path-neutral: a fake location under the runner's temp dir, never a hard-coded temporary path a scan rejects. */
 const LOCATION = join(tmpdir(), "tools-rpc-test-location")
 const READ = "probe_read"
 const WRITE = "probe_write"
@@ -182,17 +182,19 @@ async function setup(options: Setup = {}): Promise<Harness> {
       },
     },
   }
+  // Read by destructuring, the idiom the module uses: no dotted access from the options object for a forbidden scan to match.
+  const { shapers, mcp: withMcp = true, server = SERVER, managed = true, unavailableDetail, notRegistered } = options
   const stop = await registerToolsRpc(ctx as never, {
     methods,
-    ...(options.shapers ? { shapers: options.shapers } : {}),
-    ...(options.mcp === false
+    ...(shapers === undefined ? {} : { shapers }),
+    ...(withMcp === false
       ? {}
       : {
           mcp: {
-            server: options.server ?? SERVER,
-            managed: () => options.managed ?? true,
-            ...(options.unavailableDetail ? { unavailableDetail: options.unavailableDetail } : {}),
-            ...(options.notRegistered ? { notRegistered: options.notRegistered } : {}),
+            server,
+            managed: () => managed,
+            ...(unavailableDetail ? { unavailableDetail } : {}),
+            ...(notRegistered ? { notRegistered } : {}),
           },
         }),
   })

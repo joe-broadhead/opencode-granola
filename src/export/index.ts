@@ -11,7 +11,7 @@ import { NOT_ON_PLAN, connect, type Limits, type SourceContext } from "./source.
 
 const EXPORT_TOOL = "export_markdown"
 
-const EXPORT_DESCRIPTION =
+export const EXPORT_DESCRIPTION =
   "Save Granola meeting notes, transcripts or both, for 1 to 20 meetings, to one readable Markdown file in the user's export folder. The text goes straight to the file instead of through the conversation. Unless the user's permissions already allow exports, OpenCode asks before the file is written. At most 8 MB; a transcript that does not fit is cut with a note. Without transcripts on the user's plan, the file holds the notes and says so. Returns the file's path, its size in bytes and its SHA-256 checksum; the text result also names anything missing."
 
 const CONTENT = ["notes", "transcript", "both"] as const

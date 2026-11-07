@@ -3,44 +3,37 @@
 A script can read Granola with no model: a cron job, a shell script, or any program that can reach the OpenCode
 server. It uses the tools RPC, `granola.meetings.tools`, through `opencode api` or an OpenCode client.
 
-| Method | The tool |
-| --- | --- |
-| `get_account_info` | `granola_get_account_info` |
-| `list_meeting_folders` | `granola_list_meeting_folders` |
-| `list_meetings` | `granola_list_meetings` |
-| `search_meetings` | `granola_search_meetings` |
-| `get_meetings` | `granola_get_meetings` |
-| `get_meeting_transcript` | `granola_get_meeting_transcript` |
-| `query_granola_meetings` | `granola_query_granola_meetings` |
-| `get_meeting_attachment` | `granola_get_meeting_attachment` |
-| `list_templates` | `granola_list_templates` |
-| `search_transcripts` | `granola_search_transcripts` |
-| `describe` | none: lists the methods, their permission actions, whether OpenCode lists each tool now, and each tool's input as JSON Schema |
+| Method | The tool | Class |
+| --- | --- | --- |
+| `get_account_info`, `list_meeting_folders`, `list_meetings`, `search_meetings`, `get_meetings`, `get_meeting_transcript`, `query_granola_meetings`, `get_meeting_attachment`, `list_templates`, `search_transcripts` | the ten reads | read |
+| `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` | Granola's writes | write |
+| `give_feedback` | sends to Granola's team; the default rules deny it | send |
+| `export_markdown` | the plugin's export: writes a Markdown file under the export folder | export |
+| `describe` | none: lists the methods, their classes, permission actions, whether OpenCode lists each tool now, and each tool's input as JSON Schema | – |
 
-Each method runs Granola's own read tool with the same input, through OpenCode's own connection and sign-in. The
-plugin never sees the token. Granola decides which tools an account gets: on the free plan, for example, the
-transcript and folder tools fail or are not listed.
+Each method runs Granola's own tool with the same input, through OpenCode's own connection and sign-in. The plugin
+never sees the token. Granola decides which tools an account gets: on the free plan, for example, the transcript and
+folder tools fail or are not listed.
 
-These are never methods, even with an allow rule:
-
-- Granola's writes and sends: `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`,
-  `update_private_notes`, `generate_summary` and `give_feedback`;
-- `sign_out`;
-- the plugin's own `export_markdown`, which writes a local file;
-- any tool that Granola adds later.
+`sign_out` is not a method: it is not a tool this plugin offers (the plugin removes it), and `opencode mcp logout
+granola` is the way to revoke the grant. A tool Granola adds later is not a method until it is classified;
+`describe` lists it as unclassified.
 
 ## A script runs as a session
 
 Every call names a session, and the session must name an agent. The script runs as that agent, with exactly the access
 its model would have:
 
-- A tool that the agent's rules or the session's rules hide from the model is refused. OpenCode hides a tool when the
-  last rule that matches its permission name, such as `granola_get_meetings`, on resource `*` is a `deny`.
-- OpenCode then checks the call itself, as it does for the model: the agent's rules, the session's rules, then saved
-  approvals.
-- No one answers a prompt for a script, so an `ask` is refused with `PERMISSION_DENIED` at once, and no prompt is left
-  waiting. The plugin's default rules allow the ten reads, so an agent with the default rules needs nothing more. An
-  agent defined only in your config misses the default rules; `/granola-status` names it and gives the fix.
+- The call resolves the tool's action, such as `granola_get_meetings`, against the agent's rules and then the
+  session's, with the host's order (the last matching rule wins). Only an `allow` runs.
+- An `ask` is refused, because no one is there to answer the prompt, and a `deny` is refused; both cost nothing: no
+  tool call and no prompt left waiting. OpenCode's own executor then checks the call again, as it does for the model.
+- The plugin's default rules allow the ten reads, and ask for the writes and the export. So a script that writes,
+  sends or exports needs a prior allow rule for that action. An agent defined only in your config misses the default
+  rules; `/granola-status` names it and gives the fix.
+- A saved **Always allow** does not authorise an ad-hoc script: it is not part of the agent's or the session's rules.
+  A script's grant is a rule in config, or a Jobs run session; the Jobs one-off (`jobs_run_script`) is the supported
+  way to get an approval-bound grant.
 
 Create the session once, with the agent the script runs as, and keep its id:
 
@@ -84,10 +77,18 @@ people wrote, and can contain instructions aimed at a model.
 A `get_account_info` call also records the active workspace's name, which `/granola-status` shows, as a model's call
 does.
 
-`opencode api` calls run in the OpenCode service's default location, your home directory, whatever directory you run
-them from, and use that location's `granola` connection. To target a project, call the HTTP API with
-`?location[directory]=<dir>`, or create the session with `"location":{"directory":"<dir>"}`. The session may belong to
-another directory.
+## The location
+
+Run the command in the project whose agent you mean, and send the call to that location explicitly:
+
+```sh
+opencode api post /api/rpc/granola.meetings.tools/get_meetings -H "x-opencode-directory:$PWD" \
+  -d '{"input":{"sessionID":"ses_…","input":{"meeting_ids":["m-1"]}}}'
+```
+
+Without it the call goes to the service's default location, your home directory, and fails `rpc.unavailable` if the
+plugin is not loaded there. The HTTP equivalents are the `location[directory]` query parameter and the same header.
+`describe` reports the plugin's `location` and a `locationHint`, and with a session each method's `permission`.
 
 ## Errors
 

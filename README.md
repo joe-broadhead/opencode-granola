@@ -69,14 +69,19 @@ only. Until then, status says the workspace is unknown; ask the agent to check y
 
 ### Scripts
 
-A script or a cron job can call Granola's ten read tools with no model, through `opencode api`. It runs as a session
-and its agent, under that agent's permission rules and the session's own. Writes, `sign_out` and `export_markdown` are
-never available to scripts:
+A script or a cron job can call Granola's tools with no model, through `opencode api`. It runs as a session and its
+agent, under that agent's permission rules and the session's own. Every known tool is a method; a write, a send or an
+export needs a prior explicit `allow` in the session's or the agent's rules, because an `ask` is refused when no one can
+answer it. `sign_out` is not a method: the plugin removes it, and `opencode mcp logout granola` revokes the grant.
 
 ```sh
 opencode api post /api/rpc/granola.meetings.tools/list_meetings \
+  -H "x-opencode-directory:$PWD" \
   -d '{"input":{"sessionID":"ses_…","input":{"limit":10}}}'
 ```
+
+The header names the location whose plugin and session you mean; without it the call goes to your home directory and
+fails `rpc.unavailable` when the plugin is not loaded there.
 
 See [Scripting](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md).
 

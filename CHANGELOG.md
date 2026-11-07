@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- tools RPC v2: every known tool is scriptable under a prior explicit allow. Granola's writes, `give_feedback` (a send)
+  and the plugin's `export_markdown` (an export, confined to the export folder) are methods now, so a script can write,
+  send or export with the session's allow; `sign_out` stays outside, since the plugin removes it. The shared tools RPC
+  module is updated in place and `scripts/check-copies.mjs` pins its v2 hash. Every method carries a class, and
+  `describe` reports it, plus each method's resolved `permission` when given a session.
+- A call resolves the rule before dispatch: only an `allow` runs, an `ask` is refused, and a `deny` is refused, with no
+  tool call and no prompt. A saved "Always allow" no longer authorises an ad-hoc script; its grant is a rule in config,
+  or a Jobs run session.
+
 ## [0.0.8] - 2026-11-06
 
 ### Changed

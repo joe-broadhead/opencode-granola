@@ -2,7 +2,7 @@ import type { Plugin } from "@opencode/plugin"
 import { registerCommands, type CommandsContext } from "./commands.js"
 import { registerExport, type ExportContext } from "./export/index.js"
 import { checkHost } from "./host-check.js"
-import type { ToolsRpcOptions } from "./host/tools-rpc.js"
+import { METHODS, exportMethod, type ToolsRpcOptions } from "./host/tools-rpc.js"
 import { registerIntegration, type IntegrationContext } from "./integration.js"
 import { SERVER } from "./known-tools.js"
 import { readPackageInfo } from "./meta.js"
@@ -55,8 +55,11 @@ export async function setup(ctx: SetupContext, toolsRpc: ToolsRpc): Promise<() =
   await registerSkills(ctx, skills)
   await registerExport(ctx, options)
   await registerRpc(ctx, status)
-  // Scripts call Granola's reads with no model, as a session and its agent; a user's own granola server is not ours.
-  const stopTools = await toolsRpc({ mcp: { server: SERVER, managed: () => server.conflict() === undefined } })
+  // Scripts call every Granola tool with no model, as a session and its agent; a user's own granola server is not ours.
+  const stopTools = await toolsRpc({
+    methods: [...METHODS, exportMethod(ctx as never, options.exportDirectory)],
+    mcp: { server: SERVER, managed: () => server.conflict() === undefined },
+  })
   return async () => {
     tools?.dispose()
     await stopTools()

@@ -3,7 +3,7 @@
 import { Error as ToolError } from "@opencode/plugin/promise/tool"
 import { describe, expect, it } from "vitest"
 import { connectionProblem, toolUnavailable } from "../src/errors.js"
-import { KNOWN_READS, NEXT_STEPS, shapeResult, TOOLS_RPC_ID } from "../src/host/tools-rpc.js"
+import { METHODS, NEXT_STEPS, shapeResult, TOOLS_RPC_ID } from "../src/host/tools-rpc.js"
 import { HIDDEN_TOOLS, PLUGIN_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../src/known-tools.js"
 import { Granola } from "../src/rpc/contract.js"
 import { setup } from "../src/setup.js"
@@ -49,16 +49,33 @@ async function hookError(host: FakeHost, tool: string, message: string) {
 }
 
 describe("Granola's tools RPC", () => {
-  it("is granola.meetings.tools, with exactly the ten known reads as methods", () => {
+  it("is granola.meetings.tools, with every known tool a method and its class", async () => {
     expect(TOOLS_RPC_ID).toBe("granola.meetings.tools")
-    expect([...KNOWN_READS]).toEqual([...READ_TOOLS])
-    expect(KNOWN_READS).toHaveLength(10)
+    expect(METHODS.map(method => [method.name, method.class])).toEqual([
+      ...READ_TOOLS.map(name => [name, "read"]),
+      ...WRITE_TOOLS.map(name => [name, name === "give_feedback" ? "send" : "write"]),
+    ])
+    const { handlers } = await started()
+    expect(Object.keys(handlers).sort()).toEqual(["describe", "export_markdown", ...READ_TOOLS, ...WRITE_TOOLS].sort())
+    // sign_out is not a tool this plugin offers (it removes it), so it is not a method; an unknown tool never is.
+    for (const name of [...HIDDEN_TOOLS, "brand_new_tool"]) expect({ name, method: handlers[name] }).toEqual({ name, method: undefined })
   })
 
-  it("never makes a write, sign_out, export_markdown or an unknown tool a method", async () => {
-    const { handlers } = await started()
-    expect(Object.keys(handlers).sort()).toEqual(["describe", ...READ_TOOLS].sort())
-    for (const name of [...WRITE_TOOLS, ...HIDDEN_TOOLS, ...PLUGIN_TOOLS, "brand_new_tool"]) expect({ name, method: handlers[name] }).toEqual({ name, method: undefined })
+  it("reports each method's class, and an export that writes a local file", async () => {
+    const { call } = await started()
+    const description = (await call("describe", {})) as { methods: { name: string; class: string }[] }
+    const classes = Object.fromEntries(description.methods.map((method) => [method.name, method.class]))
+    expect(classes).toMatchObject({ get_meetings: "read", create_folder: "write", give_feedback: "send", export_markdown: "export" })
+    const exported = description.methods.find((method) => method.name === "export_markdown") as unknown as { action: string; output: { properties: Record<string, object> } }
+    expect(exported).toMatchObject({ action: "granola_export_markdown" })
+    // OpenCode's RPC output validation refuses a pattern, so the method's schema has none; the tool still checks its own.
+    for (const property of Object.values(exported.output.properties)) expect(property).not.toHaveProperty("pattern")
+  })
+
+  it("refuses a write that would ask before Granola runs, and runs it when the session allows it", async () => {
+    const { call, ran } = await started()
+    expect(await call("create_folder", { title: "New" })).toMatchObject({ type: "failed", data: { code: "PERMISSION_DENIED" } })
+    expect(ran).toEqual([])
   })
 
   it("runs a read as the session's agent and returns its structured content and text", async () => {
@@ -76,8 +93,8 @@ describe("Granola's tools RPC", () => {
 
   it("leaves results unchanged, and reads the workspace only from get_account_info", () => {
     const result = { output: { active_workspace: { display_name: "Other" } }, text: "" }
-    expect(shapeResult("list_meetings", result)).toBe(result)
-    expect(shapeResult("get_account_info", result)).toBe(result)
+    expect(shapeResult("list_meetings", result, { sessionID: "s", agent: "a", action: "x" })).toBe(result)
+    expect(shapeResult("get_account_info", result, { sessionID: "s", agent: "a", action: "x" })).toBe(result)
   })
 
   it("stops recording the workspace once the plugin is cleaned up, and disposes the RPC and its hook", async () => {

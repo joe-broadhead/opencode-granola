@@ -251,7 +251,9 @@ async function serve(version) {
   assert.ok(listed.length >= 8, `opencode ${version} debug paths returned ${listed.length} entries`)
   assert.deepEqual(listed.filter((path) => !path.startsWith(root + sep)), [], `opencode ${version} debug paths`)
   let output = ""
-  const server = spawn(binary, ["serve", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: project, env: full, stdio: ["ignore", "pipe", "pipe"] })
+  // The server's default location is its working directory, which is not the project: a call without a location then
+  // proves rpc.unavailable, as `opencode api` run from elsewhere gets it.
+  const server = spawn(binary, ["serve", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: root, env: full, stdio: ["ignore", "pipe", "pipe"] })
   server.stdout.on("data", (chunk) => void (output += chunk))
   server.stderr.on("data", (chunk) => void (output += chunk))
   const exited = new Promise((done) => server.once("exit", done))
@@ -264,6 +266,13 @@ async function serve(version) {
     const text = await response.text()
     if (!response.ok) throw new Error(`${method} ${path}: ${response.status} ${text.slice(0, 500)}`)
     return JSON.parse(text)
+  }
+  /** A request that may carry no location, or a header instead of the query, and whose error body the test reads. */
+  async function raw(method, path, body, options = {}) {
+    const url = new URL(path, `http://127.0.0.1:${port}`)
+    if (options.location !== false) url.searchParams.set("location[directory]", project)
+    const response = await fetch(url, { method, headers: { authorization, "content-type": "application/json", ...options.headers }, body: body && JSON.stringify(body) })
+    return { status: response.status, text: await response.text() }
   }
   async function close() {
     if (server.exitCode === null && server.signalCode === null) {
@@ -294,7 +303,7 @@ async function serve(version) {
     const inside = (path) => path !== undefined && path.startsWith(root + sep)
     assert.ok(inside(paths.home) && inside(paths.tmp), `opencode ${version} resolved its paths outside ${root}: ${JSON.stringify(paths)}`)
   }
-  return { api, close, until, isolated, log: () => output }
+  return { api, raw, project, close, until, isolated, log: () => output }
 }
 
 for (const version of HOST_VERSIONS) {
@@ -329,6 +338,13 @@ for (const version of HOST_VERSIONS) {
       assert.deepEqual(status.unguardedAgents, [])
       assert.equal(status.hostWarning, undefined)
       assert.equal(status.conflict, undefined)
+
+      // The location: a call without one reaches the server's default location, where this project's plugin is not loaded.
+      const missing = await host.raw("POST", "/api/rpc/granola.meetings.tools/describe", { input: {} }, { location: false })
+      assert.equal(missing.status, 400)
+      assert.ok(missing.text.includes("rpc.unavailable"), missing.text.slice(0, 300))
+      const withHeader = await host.raw("POST", "/api/rpc/granola.meetings.tools/describe", { input: {} }, { location: false, headers: { "x-opencode-directory": host.project } })
+      assert.equal(withHeader.status, 200)
 
       const skills = await host.until("skill registration", async () => {
         const ids = (await host.api("GET", "/api/skill")).data.map((skill) => skill.id)

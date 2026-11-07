@@ -9,7 +9,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { connectionProblem, toolUnavailable } from "../../src/errors.js"
 import { SIGN_IN_MESSAGE } from "../../src/integration.js"
-import { KNOWN_READS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { HIDDEN_TOOLS, PLUGIN_TOOLS, WRITE_TOOLS } from "../../src/known-tools.js"
 import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
 import { Granola, type Status } from "../../src/rpc/contract.js"
@@ -472,27 +472,51 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         sessions.reopen = await create({ agent: "locked", permissions: [scriptRule(id("get_meetings"), "allow")] })
       }, 60_000)
 
-      test("describe lists exactly the ten known reads, with the live schemas of those Granola offers", async () => {
+      test("describe lists every known tool with its class, and the live schemas of those Granola offers", async () => {
         const { value } = await script("main", "describe", {})
         expect(value.id).toBe(TOOLS_RPC_ID)
-        expect(value.methods.map((method: { name: string }) => method.name)).toEqual([...KNOWN_READS])
-        const offered = value.methods.filter((method: { available: boolean }) => method.available).map((method: { name: string }) => method.name)
-        expect(offered.sort()).toEqual([...TOOLS.read].sort())
-        for (const method of value.methods) {
-          expect(structuredClone(method)).toMatchObject({ kind: "mcp", tool: id(method.name), action: id(method.name) })
-          if (!method.available) expect(method.reason).toBe("TOOL_UNAVAILABLE")
+        expect(Object.fromEntries(value.methods.map((method: { name: string; class: string }) => [method.name, method.class]))).toEqual(
+          Object.fromEntries([...METHODS.map(method => [method.name, method.class]), ["export_markdown", "export"]]),
+        )
+        // An MCP method is available exactly when the connected server lists it.
+        for (const method of value.methods.filter((entry: { kind: string }) => entry.kind === "mcp")) {
+          const listed = [...TOOLS.read, ...TOOLS.write].includes(method.name)
+          expect({ name: method.name, available: method.available }).toEqual({ name: method.name, available: listed })
+          if (!listed) expect(method.reason).toBe("TOOL_UNAVAILABLE")
         }
         const listed = value.methods.find((method: { name: string }) => method.name === "get_meetings")
         expect(listed.input).toMatchObject({ type: "object", properties: { meeting_ids: { type: "array" } } })
+        expect(value.methods.find((method: { name: string }) => method.name === "export_markdown")).toMatchObject({ kind: "plugin", class: "export", action: id("export_markdown") })
       })
 
-      test("a write, sign_out, export_markdown or an unknown tool is no method, even where a rule allows it", async () => {
+      test("a write is a method, refused before Granola runs until the session allows it", async () => {
         const calls = received()
-        for (const name of [...WRITE_TOOLS, ...HIDDEN_TOOLS, ...PLUGIN_TOOLS, ...TOOLS.unknown]) {
+        // The project's own rules allow create_folder and deny remove_note_from_folder; update_folder still asks.
+        expect(await call("build", "update_folder", { folder_id: "f-1", title: "Scripted" })).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(JSON.stringify(await call("build", "update_folder", { folder_id: "f-1", title: "Scripted" }))).toContain("would ask")
+        expect(calls()).toEqual([])
+        const allowed = await host.client.session.create({ title: "Write script", ...at("main"), agent: "build", permissions: [scriptRule(id("update_folder"), "allow")] })
+        expect(await call(allowed.id, "update_folder", { folder_id: "f-1", title: "Scripted" })).toMatchObject({ value: expect.anything() })
+        expect(calls()).toEqual(["update_folder"])
+      })
+
+      test("the export is a method that writes a file only under an allow", async () => {
+        const calls = received()
+        const refused = await call("build", "export_markdown", { meeting_ids: [MEETING], content: "notes" })
+        expect(refused).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(calls()).toEqual([])
+        const allowed = await host.client.session.create({ title: "Export script", ...at("main"), agent: "build", permissions: [scriptRule(id("export_markdown"), "allow")] })
+        const written = await call(allowed.id, "export_markdown", { meeting_ids: [MEETING], content: "notes" })
+        expect(written, JSON.stringify(written)).toMatchObject({ value: { path: expect.stringMatching(/\.md$/), bytes: expect.any(Number), sha256: expect.stringMatching(/^[0-9a-f]{64}$/) } })
+      })
+
+      test("an unknown tool is no method, and a session rule can narrow a write", async () => {
+        for (const name of ["brand_new_tool"]) {
           const result = await call("build", name, {})
           expect({ name, failed: result.type === "failed", missing: /not.?found|unknown/i.test(result.message ?? "") }).toEqual({ name, failed: false, missing: true })
         }
-        expect(calls()).toEqual([])
+        const narrowed = await host.client.session.create({ title: "Narrow", ...at("main"), agent: "build", permissions: [scriptRule(id("create_folder"), "allow"), { ...scriptRule(id("create_folder"), "deny") }] })
+        expect(await call(narrowed.id, "create_folder", { title: "No" })).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
       })
 
       test("runs a known read as a session whose agent allows it, with no model turn", async () => {
@@ -526,7 +550,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         const started = Date.now()
         const result = await call("careful", "get_meetings", { meeting_ids: [MEETING] })
         expect(result).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
-        expect(result.message).toMatch(/cannot answer an approval prompt/)
+        expect(result.message).toMatch(/cannot answer/)
         expect(Date.now() - started).toBeLessThan(5_000)
         const { data: pending } = await host.client.permission.request.list(at("main"))
         expect(pending.filter((request) => JSON.stringify(request).includes(sessions.careful!))).toEqual([])

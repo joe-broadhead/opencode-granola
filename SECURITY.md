@@ -70,16 +70,18 @@ has the rules and how to change them. Things to know:
 ## Scripts
 
 The tools RPC (`granola.meetings.tools`, see
-[docs/scripting.md](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md)) runs Granola's ten
-read tools for a script, with no model. It adds no authority:
+[docs/scripting.md](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md)) runs Granola's
+tools for a script, with no model. It adds no authority:
 
-- A script names a session that names an agent, and runs as them. A tool that the agent's or the session's rules hide
-  from the model is refused. OpenCode's own executor then checks the call against the agent's rules, the session's
-  rules and saved approvals, as it does for the model.
-- An ask on a script's call is denied, not prompted: no one is there to answer it. The plugin's permission hook changes
-  only an ask on one of its own script calls in flight, only to a deny, and leaves every other call alone.
-- Only the ten known reads are methods. Granola's writes and sends, `sign_out`, `export_markdown` and any tool Granola
-  adds later never are, even with an allow rule.
+- A script names a session that names an agent, and runs as them. A call resolves the tool's action against that
+  agent's rules and then the session's before anything runs; OpenCode's own executor then checks it again, as it does
+  for the model.
+- Only a resolved `allow` runs. An `ask` is refused, because no one is there to answer it, and a `deny` is refused;
+  both cost no tool call and no prompt. The default rules allow the ten reads and ask for the writes, `give_feedback`
+  (which they deny) and the export, so a script that writes, sends or exports needs a prior allow rule.
+- Every known tool is a method, with a class; `sign_out` is not a tool this plugin offers, and a tool Granola adds
+  later is not a method until it is classified. A saved **Always allow** does not authorise an ad-hoc script; its
+  grant is a rule in config, or a Jobs run session.
 - The call goes through OpenCode's own MCP connection and sign-in. The plugin never sees the token, and returns none.
 - Meeting content in a result is untrusted, as it is for the model.
 - Granola's error text reaches the script only as the first line, at most 300 characters, with tokens and URL query

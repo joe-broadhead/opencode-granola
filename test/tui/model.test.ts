@@ -94,8 +94,8 @@ describe("status dialog view", () => {
     })
     expect(row(details, "Connection")).toEqual({ label: "Connection", text: "conflict: your OpenCode config defines mcp.servers.granola for a different server", tone: "warning" })
     expect(row(details, "OpenCode")).toEqual({ label: "OpenCode", text: `2.3.0 (host untested: outside the supported range), plugin ${VERSION}`, tone: "warning" })
-    const untested = ready({ host: { version: "2.2.6", range: ">=2.2.3 <2.3.0", tested: false } })
-    expect(row(untested, "OpenCode")).toEqual({ label: "OpenCode", text: `2.2.6 (untested; supported range >=2.2.3 <2.3.0), plugin ${VERSION}`, tone: "info" })
+    const untested = ready({ host: { version: "2.2.99", range: ">=2.2.3 <2.3.0", tested: false } })
+    expect(row(untested, "OpenCode")).toEqual({ label: "OpenCode", text: `2.2.99 (untested; supported range >=2.2.3 <2.3.0), plugin ${VERSION}`, tone: "info" })
   })
 
   it("says when the status method itself could not read the status", () => {

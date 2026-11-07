@@ -7,7 +7,7 @@ Unofficial; not affiliated with Granola.
 
 ## Requirements
 
-- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4 and 2.2.5. Another release inside that range runs, and status
+- OpenCode `>=2.2.3 <2.3.0`, tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6. Another release inside that range runs, and status
   calls it untested. Outside the range the plugin does not start, unless you set `allowUntestedHost`; see
   [Troubleshooting](#troubleshooting).
 - macOS or Linux.
@@ -173,7 +173,7 @@ transcripts or folders.
 **`HOST_UNTESTED`.** The plugin does not start on an OpenCode version outside `>=2.2.3 <2.3.0`, including
 development builds. Use OpenCode `>=2.2.3 <2.3.0`, or set the plugin option `allowUntestedHost: true` to run anyway;
 the `OpenCode` row then says `host untested`, and when nothing else is needed the next step says to use a tested
-release if Granola misbehaves. A release inside the range other than 2.2.3, 2.2.4 and 2.2.5 runs normally: only the
+release if Granola misbehaves. A release inside the range other than 2.2.3, 2.2.4, 2.2.5 and 2.2.6 runs normally: only the
 `OpenCode` row calls it untested.
 
 **`OPTIONS_INVALID`.** A plugin option has an unknown name or a wrong type. The message names the option.

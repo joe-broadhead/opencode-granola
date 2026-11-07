@@ -7,7 +7,7 @@ const tested = ">=2.2.3 <2.3.0"
 
 describe("supported OpenCode range", () => {
   it("accepts releases inside the line", () => {
-    for (const version of ["2.2.3", "2.2.4", "2.2.99"]) expect(satisfies(version, tested), version).toBe(true)
+    for (const version of ["2.2.3", "2.2.4", "2.2.6"]) expect(satisfies(version, tested), version).toBe(true)
   })
 
   it("rejects releases outside the line", () => {
@@ -26,17 +26,17 @@ describe("supported OpenCode range", () => {
 })
 
 describe("checkHost", () => {
-  it("names 2.2.3, 2.2.4 and 2.2.5 as the tested releases, all inside the range", () => {
-    expect(TESTED_HOSTS).toEqual(["2.2.3", "2.2.4", "2.2.5"])
+  it("names 2.2.3, 2.2.4, 2.2.5 and 2.2.6 as the tested releases, all inside the range", () => {
+    expect(TESTED_HOSTS).toEqual(["2.2.3", "2.2.4", "2.2.5", "2.2.6"])
     for (const version of TESTED_HOSTS) expect(satisfies(version, tested), version).toBe(true)
   })
 
-  it.each(["2.2.3", "2.2.4", "2.2.5"])("passes the tested release %s with no warning", (version) => {
+  it.each(["2.2.3", "2.2.4", "2.2.5", "2.2.6"])("passes the tested release %s with no warning", (version) => {
     expect(checkHost(version, tested, false)).toEqual({ version, range: tested, tested: true })
   })
 
   it("runs another release inside the range, and calls it untested", () => {
-    expect(checkHost("2.2.6", tested, false)).toEqual({ version: "2.2.6", range: tested, tested: false })
+    expect(checkHost("2.2.99", tested, false)).toEqual({ version: "2.2.99", range: tested, tested: false })
   })
 
   it.each(["2.3.0", "0.0.0-dev-202610301200"])("refuses %s with HOST_UNTESTED and the override hint", (version) => {

@@ -109,11 +109,11 @@ sign-in. A call to a server that is not connected gets the connection codes and 
 
 ## Platform facts
 
-These hold on OpenCode 2.2.3, 2.2.4 and 2.2.5, the releases in `TESTED_HOSTS`.
+These hold on OpenCode 2.2.3, 2.2.4, 2.2.5 and 2.2.6, the releases in `TESTED_HOSTS`.
 
 | Topic | Fact | Source |
 | --- | --- | --- |
-| Credential status | A status set with `integration.connection.status` is not on what `connection.active` returns; `integration.get` projects it as `connections[].status`, so the plugin reads its own mark back from there and clears only its own message. A 401 whose token refresh fails with no refresh token leaves the credential in place, so the `/connect` mark is only observable then. The host test signs in through the loopback callback and the token endpoint, then challenges, and asserts the mark is set and cleared. | The host test, on 2.2.3, 2.2.4 and 2.2.5 |
+| Credential status | A status set with `integration.connection.status` is not on what `connection.active` returns; `integration.get` projects it as `connections[].status`, so the plugin reads its own mark back from there and clears only its own message. A 401 whose token refresh fails with no refresh token leaves the credential in place, so the `/connect` mark is only observable then. The host test signs in through the loopback callback and the token endpoint, then challenges, and asserts the mark is set and cleared. | The host test, on 2.2.3, 2.2.4, 2.2.5 and 2.2.6 |
 
 ## Build
 

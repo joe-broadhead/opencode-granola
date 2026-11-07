@@ -6,7 +6,7 @@ Read [AGENTS.md](AGENTS.md) first: it lists the rules for this repository and th
 ## Set up
 
 You need Node.js 24 or later, npm, and [Bun](https://bun.sh). CI and releases use Node.js 24 and Bun 1.4.4, the Bun inside stock
-OpenCode 2.2.3, 2.2.4 and 2.2.5.
+OpenCode 2.2.3, 2.2.4, 2.2.5 and 2.2.6.
 
 ```sh
 npm ci --ignore-scripts
@@ -48,7 +48,7 @@ npm run check
 | pack | `npm run test:pack` | `node test/pack-smoke.mjs`: builds, packs and installs the package, then loads it in stock OpenCode |
 
 The host stage runs the same cases in the public `@opencode/sdk` 2.2.3, embedded in the test process, and in stock
-`opencode serve` 2.2.3, 2.2.4 and 2.2.5 (`TESTED_HOSTS` in `src/hosts.ts`, the one list of tested releases) through
+`opencode serve` 2.2.3, 2.2.4, 2.2.5 and 2.2.6 (`TESTED_HOSTS` in `src/hosts.ts`, the one list of tested releases) through
 `@opencode/client`. It needs Bun and a prior `npm run build`,
 because OpenCode loads the plugin from `dist/`. It covers registration, the default rules, prompts and saved
 approvals, the per-agent fix, status in each connection state, the export, runs where nobody is present and
@@ -58,7 +58,7 @@ The pack stage builds explicitly, packs the package and installs the tarball alo
 scripts off. It checks that the tarball holds exactly the `files` whitelist, with no source or JSX and under 1 MB, that
 it installs no dependencies, and that `dist/` holds only `index.js` and `tui.js`, with no relative, dynamic or
 `require()` import and nothing but modules OpenCode provides. It then loads the installed
-package in stock `opencode serve` 2.2.3, 2.2.4 and 2.2.5, and imports `.` and `./tui` under Bun next to the host
+package in stock `opencode serve` 2.2.3, 2.2.4, 2.2.5 and 2.2.6, and imports `.` and `./tui` under Bun next to the host
 packages, which it installs from the npm registry. It needs npm, Bun and network access to the npm registry.
 
 ### Environment variables

@@ -277,6 +277,45 @@ A folder rule like this covers exports that the model or a direct tool call make
 Mode programs that run with nobody present are checked for every path, so they need `"resource": "*"`, as in the
 recipe above.
 
+## Events list
+
+`granola_events_list` (`tools.granola.events_list` in Code Mode, and the tools RPC method `events_list`) is Granola's
+side of Memory's sources funnel: the shared `events_list` contract, `src/host/events-list.ts`, which every source
+plugin carries unchanged. It lists the meetings you took part in since a cursor, as normalised events, oldest first.
+It only reads, never asks and calls no model, so Memory's collector can run it unattended.
+
+```
+events_list({ since?, cursor?, limit?, account?, source? })
+  → { source: "granola", account: "default", owner: { id, label }, events, cursor, more, trust: "untrusted" }
+```
+
+| Input | Meaning |
+| --- | --- |
+| `since` | Where to start without a cursor: an ISO date (a UTC day) or date-time with `Z` or an offset. Default: 24 hours ago. |
+| `cursor` | The previous result's cursor. It wins over `since`. |
+| `limit` | Most events, 1 to 500; 100 by default. A result also stops before 900,000 bytes of JSON. |
+| `account` | `default`, Granola's one account. |
+| `source` | `granola`, the one source. |
+
+How it reads, through OpenCode's own Granola tools, each with its own permission:
+
+- `get_account_info` names the owner: `mailto:` and the signed-in email. The cursor holds a digest of it, so after
+  a sign-in to another account an old cursor is refused.
+- `search_meetings`, one week at a time, with `from_date` and `to_date` as UTC times and `attended_only: true`:
+  the meetings you captured or are listed on. Every page of a week is read, because Granola lists newest first.
+  Granola's server no longer offers `list_meetings`, so search with no keywords is its browse path.
+- `get_meetings`, up to 10 at a time, for each listed meeting's start, link, attendees and AI summary.
+
+Each event is one meeting: kind `meeting`, the meeting ID, its start (`meeting_at`), its title, attendees as actors
+(`mailto:` and the email, or `name:` and the name when Granola has no email), Granola's AI summary cut to 4,096
+characters, and its link. Private notes and transcripts are not read. A meeting is listed once it started 2 hours ago,
+so its notes are most likely done; a meeting whose notes change afterwards is not listed again. The cursor is the
+(start, ID) of the last meeting listed: calling again with it lists what follows, and an older cursor lists the same
+meetings again.
+
+The default rules allow `granola_events_list`. Its reads, `granola_get_account_info`, `granola_search_meetings` and
+`granola_get_meetings`, must be allowed too for the agent of the session that runs it.
+
 ## Host check
 
 When it loads, the plugin compares the OpenCode version with its supported range, `>=2.2.3 <2.3.0`, which
@@ -365,3 +404,16 @@ replaced by `<url>`. OpenCode's sign-in error is never repeated, because it can 
 | `EXPORT_WRITE_FAILED` | Could not write *path* in the export folder: *reason*. | Make sure the export folder that /granola-status shows is writable and has free space, then export again. |
 
 The export's next steps are written for the model, which passes them on to you.
+
+### Events list
+
+| Code | Message | Next step |
+| --- | --- | --- |
+| `EVENTS_INVALID_INPUT` | The events_list input is invalid: *problems*. | Pass only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
+| `EVENTS_CURSOR_INVALID` | The cursor was not issued by Granola's events_list for this account and its signed-in user. | Pass a cursor from a previous result of the same account, or start again with since. |
+| `EVENTS_ACCOUNT_UNKNOWN` | Granola has one account, default. | Leave account out, or pass "default". |
+| `EVENTS_SOURCE_UNKNOWN` | This plugin lists one source, granola. | Leave source out, or pass "granola". |
+| `EVENTS_OWNER_UNKNOWN` | Granola did not name the signed-in account's email. | Run /granola-status, and sign in to Granola again if it shows a problem. |
+| `EVENTS_READ_FAILED` | Granola's *tool* failed: *reason*. | Call events_list again with the same cursor; if it keeps failing, run /granola-status. |
+
+Through the tools RPC, a script gets the same code and next step as the RPC error `failed`.

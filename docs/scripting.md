@@ -15,6 +15,7 @@ server. It uses the tools RPC, `granola.meetings.tools`, through `opencode api` 
 | `get_meeting_attachment` | `granola_get_meeting_attachment` |
 | `list_templates` | `granola_list_templates` |
 | `search_transcripts` | `granola_search_transcripts` |
+| `events_list` | `granola_events_list`, the plugin's own read: the meetings you took part in since a cursor, as Memory's events ([configuration](configuration.md#events-list)) |
 | `describe` | none: lists the methods, their permission actions, whether OpenCode lists each tool now, and each tool's input as JSON Schema |
 
 Each method runs Granola's own read tool with the same input, through OpenCode's own connection and sign-in. The
@@ -104,6 +105,9 @@ A refusal or failure is the RPC error `failed`, with a message `CODE: what happe
 | `TOOL_UNAVAILABLE` | The server is connected, but OpenCode does not list the tool, usually because your Granola plan does not include it. |
 | `UPSTREAM_ERROR` | Granola answered with an error, such as a meeting that does not exist or a feature your plan does not include. The message holds the first line of Granola's text, at most 300 characters, with tokens and URL query strings removed. |
 | `CANCELLED` | The request was cancelled. |
+
+`events_list` also gives its own codes, such as `EVENTS_CURSOR_INVALID` and `EVENTS_READ_FAILED`, with the next steps in
+the [configuration guide](configuration.md#events-list-1).
 
 OpenCode itself answers `rpc.invalid_input` for a body that is not the envelope above, and `rpc.method_not_found` for a
 method that does not exist, such as a write or a tool Granola added later.

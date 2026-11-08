@@ -11,9 +11,9 @@ function effect(rules: readonly Rule[], action: string): Rule["effect"] {
 }
 
 describe("default Granola rules", () => {
-  it("ask for every Granola tool, allow exactly the known reads, then deny give_feedback", () => {
+  it("ask for every Granola tool, allow exactly the known reads and the plugin's own read, then deny give_feedback", () => {
     expect(DEFAULT_RULES[0]).toEqual({ action: "granola_*", resource: "*", effect: "ask" })
-    expect(DEFAULT_RULES.slice(1, -1)).toEqual(READ_TOOLS.map((name) => ({ action: `granola_${name}`, resource: "*", effect: "allow" })))
+    expect(DEFAULT_RULES.slice(1, -1)).toEqual([...READ_TOOLS, "events_list"].map((name) => ({ action: `granola_${name}`, resource: "*", effect: "allow" })))
     expect(DEFAULT_RULES.at(-1)).toEqual({ action: "granola_give_feedback", resource: "*", effect: "deny" })
   })
 

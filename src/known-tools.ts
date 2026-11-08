@@ -3,7 +3,7 @@ export const SERVER = "granola"
 
 /**
  * Granola's tools, classified from the server's readOnlyHint and destructiveHint annotations at the last
- * reviewed release. A tool missing here is unknown: it stays available and asks before it runs.
+ * reviewed release. A tool missing here is unknown: it stays available, and the default block's `granola_*` rule decides it.
  */
 export const READ_TOOLS = [
   "get_account_info",

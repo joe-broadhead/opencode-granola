@@ -70,7 +70,7 @@ export interface Status {
     readonly visible: number
     /** Granola tools this plugin removed, such as sign_out. */
     readonly hidden: number
-    /** Granola tools this plugin version does not know; they ask before running. */
+    /** Granola tools this plugin version does not know; the default block's `granola_*` rule decides them. */
     readonly unknown: number
     readonly unknownNames: readonly string[]
   }

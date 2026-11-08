@@ -55,9 +55,9 @@ describe("Granola's tools RPC", () => {
     expect(KNOWN_READS).toHaveLength(10)
   })
 
-  it("never makes a write, sign_out, export_markdown or an unknown tool a method", async () => {
+  it("never makes a write, sign_out, export_markdown or an unknown tool a method; events_list is the plugin's own", async () => {
     const { handlers } = await started()
-    expect(Object.keys(handlers).sort()).toEqual(["describe", ...READ_TOOLS].sort())
+    expect(Object.keys(handlers).sort()).toEqual(["describe", "events_list", ...READ_TOOLS].sort())
     for (const name of [...WRITE_TOOLS, ...HIDDEN_TOOLS, ...PLUGIN_TOOLS, "brand_new_tool"]) expect({ name, method: handlers[name] }).toEqual({ name, method: undefined })
   })
 

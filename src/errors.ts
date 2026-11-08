@@ -19,6 +19,12 @@ export type Code =
   | "EXPORT_TOO_LARGE"
   | "EXPORT_READ_FAILED"
   | "EXPORT_WRITE_FAILED"
+  | "EVENTS_INVALID_INPUT"
+  | "EVENTS_CURSOR_INVALID"
+  | "EVENTS_ACCOUNT_UNKNOWN"
+  | "EVENTS_SOURCE_UNKNOWN"
+  | "EVENTS_OWNER_UNKNOWN"
+  | "EVENTS_READ_FAILED"
 
 /** Every user-facing failure: a stable code, what happened, and what to do next, in plain text. */
 export interface Problem {

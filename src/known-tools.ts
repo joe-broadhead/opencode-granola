@@ -32,8 +32,11 @@ export const WRITE_TOOLS = [
 /** sign_out revokes the grant OpenCode holds; `opencode mcp logout granola` does that instead. */
 export const HIDDEN_TOOLS = ["sign_out"] as const
 
-/** Tools this plugin adds to the granola namespace itself. */
+/** Tools this plugin adds to the granola namespace itself that write: the Markdown export, a local file. */
 export const PLUGIN_TOOLS = ["export_markdown"] as const
+
+/** Tools this plugin adds to the granola namespace itself that only read: events_list, Memory's source of meetings. */
+export const PLUGIN_READS = ["events_list"] as const
 
 export type ToolClass = "read" | "write" | "hidden" | "plugin" | "unknown"
 
@@ -49,6 +52,6 @@ export function classify(id: string): ToolClass | undefined {
   if (has(READ_TOOLS)) return "read"
   if (has(WRITE_TOOLS)) return "write"
   if (has(HIDDEN_TOOLS)) return "hidden"
-  if (has(PLUGIN_TOOLS)) return "plugin"
+  if (has(PLUGIN_TOOLS) || has(PLUGIN_READS)) return "plugin"
   return "unknown"
 }

@@ -13,7 +13,7 @@ export type Route = "connected" | "needs-auth" | "sign-in" | "pending"
 
 /** Tool names by how the plugin treats them. `brand_new_tool` stands in for a tool this plugin version does not know. */
 export const TOOLS = {
-  read: ["get_account_info", "list_meetings", "get_meetings", "get_meeting_transcript", "search_transcripts"],
+  read: ["get_account_info", "list_meetings", "search_meetings", "get_meetings", "get_meeting_transcript", "search_transcripts"],
   write: ["create_folder", "update_folder", "add_note_to_folder", "remove_note_from_folder"],
   hidden: ["sign_out"],
   unknown: ["brand_new_tool"],
@@ -22,6 +22,10 @@ export const TOOLS = {
 /** The server's display title, which OpenCode shows once connected. */
 export const TITLE = "Granola (synthetic)"
 export const WORKSPACE = "Synthetic workspace"
+/** The signed-in account's email, which get_account_info names. */
+export const EMAIL = "someone@example.test"
+/** When the one meeting started. */
+export const MEETING_AT = "2026-10-28T10:00:00Z"
 /** The only meeting the server knows. */
 export const MEETING = "m-1"
 /** A meeting whose transcript the server refuses with Granola's plan error, as on a free plan. */
@@ -64,6 +68,7 @@ const WRITE = { readOnlyHint: false, destructiveHint: true }
 const SCHEMAS: Record<string, object> = {
   get_account_info: object(),
   list_meetings: object({ limit: { type: "integer", minimum: 1 } }),
+  search_meetings: object({ from_date: { type: "string" }, to_date: { type: "string" }, cursor: { type: "string" }, limit: { type: "integer", minimum: 1 }, attended_only: { type: "boolean" } }),
   get_meetings: object({ meeting_ids: { type: "array", items: { type: "string" }, maxItems: 10 } }),
   get_meeting_transcript: object({ meeting_id: { type: "string" }, offset: { type: "integer", minimum: 0 }, max_chars: { type: "integer", minimum: 1000 } }),
   search_transcripts: object({ keywords: { type: "array", items: { type: "string" } }, limit: { type: "integer", minimum: 1 } }),
@@ -96,7 +101,7 @@ function meetings(ids: readonly string[]): string {
   const found = ids.filter((id) => id === MEETING)
   if (!found.length) return "<not_found_hint>\nNo meeting matches the requested IDs. Check them with list_meetings or search_meetings.\n</not_found_hint>"
   const body = found.map((id) => [
-    `<meeting id="${id}" title="Weekly sync" meeting_at="2026-10-28T10:00:00Z" url="https://notes.example.test/d/${id}">`,
+    `<meeting id="${id}" title="Weekly sync" meeting_at="${MEETING_AT}" url="https://notes.example.test/d/${id}">`,
     `<known_participants total="1"><participant name="Ada" /></known_participants>`,
     `<summary>### Decisions\n- Ship the export</summary>`,
     `<private_notes>Follow up next week.</private_notes>`,
@@ -108,9 +113,15 @@ function meetings(ids: readonly string[]): string {
 function call(name: string, args: Record<string, unknown>) {
   switch (name) {
     case "get_account_info":
-      return text({ active_workspace: { id: "w-1", display_name: WORKSPACE } })
+      return text({ email: EMAIL, active_workspace: { id: "w-1", display_name: WORKSPACE } })
     case "list_meetings":
       return text({ meetings: [{ id: MEETING, title: "Weekly sync" }] })
+    case "search_meetings": {
+      // The one meeting, when it starts within the window; Granola's pagination element ends the page.
+      const inside = Date.parse(String(args.from_date)) <= Date.parse(MEETING_AT) && Date.parse(MEETING_AT) <= Date.parse(String(args.to_date))
+      const rows = inside ? [`<meeting id="${MEETING}" title="Weekly sync" date="Oct 28, 2026"><known_participants total="1"><participant name="Ada" /></known_participants></meeting>`] : []
+      return text([`<meetings_data count="${rows.length}">`, ...rows, `<pagination has_more="false" completion_status="complete" />`, "</meetings_data>"].join("\n"))
+    }
     case "get_meetings":
       return text(meetings(Array.isArray(args.meeting_ids) ? args.meeting_ids.map(String) : []))
     case "get_meeting_transcript": {

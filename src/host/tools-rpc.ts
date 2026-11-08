@@ -30,6 +30,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 // >>> PLUGIN-SPECIFIC >>>
 
 import { connectionProblem, toolUnavailable } from "../errors.js"
+import { EventsFailure } from "../events/errors.js"
 import type { ConnectionState } from "../rpc/contract.js"
 import { READ_TOOLS } from "../known-tools.js"
 import { PLUGIN_ID as GRANOLA_ID } from "../meta.js"
@@ -42,7 +43,8 @@ export const PLUGIN_ID = GRANOLA_ID
 /**
  * The MCP tools that become methods, by their upstream name (the tool id without the `<server>_` prefix). Only known
  * reads belong here: an allowlist, so a tool the server adds later is never a method. Granola's are the ten reads of
- * `src/known-tools.ts`; its writes, sign_out and the plugin's own export_markdown, a local-file write, never are.
+ * `src/known-tools.ts`; its writes, sign_out and the plugin's own export_markdown, a local-file write, never are. The
+ * plugin's own read, events_list, is a method too, as an owned method that setup passes.
  */
 export const KNOWN_READS: readonly string[] = READ_TOOLS
 
@@ -75,9 +77,11 @@ export const NEXT_STEPS: NextSteps = {
   CANCELLED: "Call the method again if you still need the result.",
 }
 
-/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step. Granola has none. */
-export function pluginError(_error: unknown): Failure | undefined {
-  return undefined
+/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step: events_list's. */
+export function pluginError(error: unknown): Failure | undefined {
+  if (!(error instanceof EventsFailure)) return undefined
+  const { code, message, next } = error.problem
+  return { code, what: message.replace(/[.\s]+$/, ""), next }
 }
 
 // <<< PLUGIN-SPECIFIC <<<

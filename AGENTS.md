@@ -30,9 +30,14 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 - **Errors** are `CODE: what happened. Next step: one step.` Upstream errors pass through unchanged, except in the
   tools RPC for scripts, which gives Granola's first line only, redacted, as `UPSTREAM_ERROR`.
 - **Scripts read only.** The tools RPC, `granola.meetings.tools`, makes exactly the known reads methods; writes,
-  `sign_out`, `export_markdown` and unknown tools never are. `src/host/tools-rpc.ts` is a copy of a module shared by
+  `sign_out`, `export_markdown` and unknown tools never are; the plugin's own `events_list` is. `src/host/tools-rpc.ts` is a copy of a module shared by
   several plugins: change only its block between the `PLUGIN-SPECIFIC` markers here, and the rest in the shared copy
   first. The executor it calls skips tool hooks, so it applies the hook's work itself.
+- **Events list.** `granola_events_list` is Granola's side of Memory's sources funnel. `src/host/events-list.ts` is the
+  shared `events_list` contract every source plugin carries unchanged (`scripts/check-copies.mjs` pins its hash):
+  change it in every source plugin at once. `src/events/` reads Granola's text and lists the events; its tests run the
+  contract's conformance check on a synthetic Granola. It is the plugin's one read (`PLUGIN_READS`), allowed by
+  default and an owned tools RPC method.
 - **Text** in skills, errors and status is plain language with no process terms (`test/ux.test.ts`). Docs describe
   what the code does now. No tokens, sign-in links, meeting content or personal data anywhere; test data is invented.
 - **Releases** come only from the release workflow on a `vX.Y.Z` tag; it refuses a private package or a tag that

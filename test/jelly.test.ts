@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { PLUGIN_TOOLS, READ_TOOLS, SERVER, WRITE_TOOLS, toolID } from "../src/known-tools.js"
+import { PLUGIN_READS, PLUGIN_TOOLS, READ_TOOLS, SERVER, WRITE_TOOLS, toolID } from "../src/known-tools.js"
 import { DEFAULT_RULES } from "../src/permissions.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, effectFromRules, readPackage } from "./support/jelly-kit.js"
 
@@ -19,9 +19,9 @@ describe("the jelly declaration", () => {
     expect(declarationProblems(ROOT, { effectOf: effectFromRules(DEFAULT_RULES) })).toEqual([])
   })
 
-  it("declares every known read as read-only, and every write and the plugin's own tools as not", () => {
+  it("declares every known read and the plugin's own read as read-only, and every write and the plugin's export as not", () => {
     const known = new Map<string, boolean>([
-      ...READ_TOOLS.map((name): [string, boolean] => [toolID(name), true]),
+      ...[...READ_TOOLS, ...PLUGIN_READS].map((name): [string, boolean] => [toolID(name), true]),
       ...[...WRITE_TOOLS, ...PLUGIN_TOOLS].map((name): [string, boolean] => [toolID(name), false]),
     ])
     const declared = new Map(jelly.tools.map((tool) => [tool.permission, tool.readOnly]))

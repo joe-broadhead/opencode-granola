@@ -1,5 +1,6 @@
 import type { Plugin } from "@opencode/plugin"
 import { registerCommands, type CommandsContext } from "./commands.js"
+import { eventsMethod, registerEvents } from "./events/index.js"
 import { registerExport, type ExportContext } from "./export/index.js"
 import { checkHost } from "./host-check.js"
 import type { ToolsRpcOptions } from "./host/tools-rpc.js"
@@ -54,9 +55,11 @@ export async function setup(ctx: SetupContext, toolsRpc: ToolsRpc): Promise<() =
   await registerCommands(ctx, status)
   await registerSkills(ctx, skills)
   await registerExport(ctx, options)
+  await registerEvents(ctx)
   await registerRpc(ctx, status)
   // Scripts call Granola's reads with no model, as a session and its agent; a user's own granola server is not ours.
-  const stopTools = await toolsRpc({ mcp: { server: SERVER, managed: () => server.conflict() === undefined } })
+  // events_list is the plugin's own read, for Memory's collector: it reads through the same Granola tools.
+  const stopTools = await toolsRpc({ mcp: { server: SERVER, managed: () => server.conflict() === undefined }, owned: [eventsMethod(ctx)] })
   return async () => {
     tools?.dispose()
     await stopTools()

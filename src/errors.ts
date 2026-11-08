@@ -20,6 +20,49 @@ export type Code =
   | "EXPORT_READ_FAILED"
   | "EXPORT_WRITE_FAILED"
 
+/**
+ * Every code the plugin's own code raises, as one table. The README's Troubleshooting table names each one, and
+ * `test/error-tables.test.ts` fails when the two differ either way or a code appears here that nothing raises.
+ */
+export const PLUGIN_CODES = [
+  "NOT_REGISTERED",
+  "CONNECTING",
+  "AUTH_REQUIRED",
+  "CONNECTION_FAILED",
+  "DISABLED",
+  "TOOL_UNAVAILABLE",
+  "HOST_UNTESTED",
+  "OPTIONS_INVALID",
+  "STATUS_UNAVAILABLE",
+  "SKILLS_INVALID",
+  "PACKAGE_INVALID",
+  "EXPORT_INVALID_INPUT",
+  "EXPORT_INVALID_PATH",
+  "EXPORT_EXISTS",
+  "EXPORT_TOO_LARGE",
+  "EXPORT_READ_FAILED",
+  "EXPORT_WRITE_FAILED",
+] as const satisfies readonly Code[]
+
+/**
+ * The codes the tools RPC gives a script: the ones `docs/scripting.md` documents. Most come from the shared tools RPC
+ * module and from OpenCode's own connection state; they are the same names the model gets.
+ */
+export const RPC_CODES = [
+  "PERMISSION_DENIED",
+  "SESSION_UNKNOWN",
+  "SESSION_AGENT_REQUIRED",
+  "TOOL_UNAVAILABLE",
+  "SERVER_CONFLICT",
+  "AUTH_REQUIRED",
+  "CONNECTING",
+  "CONNECTION_FAILED",
+  "DISABLED",
+  "NOT_REGISTERED",
+  "UPSTREAM_ERROR",
+  "CANCELLED",
+] as const
+
 /** Every user-facing failure: a stable code, what happened, and what to do next, in plain text. */
 export interface Problem {
   readonly code: Code

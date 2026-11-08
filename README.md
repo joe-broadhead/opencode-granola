@@ -150,17 +150,30 @@ Each member then signs in once with `/connect` → Granola. A managed `mcp.serve
 
 Run `/granola-status` (or `/granola` in the terminal UI) first. It shows the rows `Connection`, `Account`, `Access`,
 `Export folder`, `Skills`, `Tools`, `Agents without default rules` (`none` when no agent needs the fix), `OpenCode` and
-exactly one `Next step`. Each connection state:
+exactly one `Next step`. Every error the plugin raises has a code and a next step:
 
-| Status | Code | What to do |
+| Code | When | What to do |
 | --- | --- | --- |
-| not configured | `NOT_REGISTERED` | Retry in a few seconds; if it persists, check that no organisation policy (`mcp.use`) or other plugin removes the `granola` server, then restart OpenCode. |
-| connecting | `CONNECTING` | Retry in a few seconds. |
-| sign-in required | `AUTH_REQUIRED` | Run `/connect` and choose Granola, then press `o` or Enter to open the sign-in page. In a terminal, `opencode mcp auth granola` opens it automatically. |
-| failed | `CONNECTION_FAILED` | Reconnect Granola from `/mcps`, and if it keeps failing, run `/connect` and choose Granola to sign in again. |
-| disabled | `DISABLED` | Enable `granola` in `/mcps`, or remove `"disabled": true` from `mcp.servers.granola` in your OpenCode config. |
-| conflict | none | Remove `mcp.servers.granola` from your OpenCode config to use Granola's official server. |
-| connected | none | Ready. The next step reads `Nothing to do.`, or names agents without default rules. |
+| `NOT_REGISTERED` | The `granola` server is not registered yet. | Retry in a few seconds; if it persists, check that no organisation policy (`mcp.use`) or other plugin removes the `granola` server, then restart OpenCode. |
+| `CONNECTING` | Granola is still connecting. | Retry in a few seconds. |
+| `AUTH_REQUIRED` | Granola needs you to sign in. | Run `/connect` and choose Granola, then press `o` or Enter to open the sign-in page. In a terminal, `opencode mcp auth granola` opens it automatically. |
+| `CONNECTION_FAILED` | The connection failed. | Reconnect Granola from `/mcps`, and if it keeps failing, run `/connect` and choose Granola to sign in again. |
+| `DISABLED` | `granola` is disabled in OpenCode. | Enable `granola` in `/mcps`, or remove `"disabled": true` from `mcp.servers.granola` in your OpenCode config. |
+| `TOOL_UNAVAILABLE` | Granola does not offer that tool for this account. | Your Granola plan may not include it; `/granola-status` lists the tools Granola offers you. |
+| `HOST_UNTESTED` | OpenCode is outside `>=2.2.3 <2.3.0`. | Use OpenCode `>=2.2.3 <2.3.0`, or set `allowUntestedHost: true` to run anyway. |
+| `OPTIONS_INVALID` | A plugin option has an unknown name or a wrong type. | The message names the option; fix the Granola plugin options in `opencode.json`. |
+| `STATUS_UNAVAILABLE` | Status could not be read. | Run `/granola-status` again in a few seconds. |
+| `SKILLS_INVALID` | A bundled skill file is missing or broken. | Reinstall the plugin. |
+| `PACKAGE_INVALID` | The plugin's `package.json` is inconsistent. | Reinstall the plugin. |
+| `EXPORT_INVALID_INPUT` | The export request is malformed. | Pass `meeting_ids` (1 to 20) and `content` (`notes`, `transcript` or `both`), and only `path` and `overwrite` besides. |
+| `EXPORT_INVALID_PATH` | The export path is not allowed. | Use a relative path inside the export folder, without `..`, a leading `/` or links. |
+| `EXPORT_EXISTS` | The file already exists. | Choose another path, or export again with `overwrite: true` after asking. |
+| `EXPORT_TOO_LARGE` | The export is over its 8 MB limit. | Export fewer meetings at a time. |
+| `EXPORT_READ_FAILED` | Granola could not return a meeting's notes or transcript. | Export again without that meeting. |
+| `EXPORT_WRITE_FAILED` | The file could not be written. | Check that the export folder `/granola-status` shows is writable and has free space, then export again. |
+
+A status of `conflict` has no code: your config defines `mcp.servers.granola` for a different server, and the plugin
+never overwrites it. An entry for Granola's official URL is used as it is.
 
 **`MCP server not found: granola` from `opencode mcp auth granola`, right after OpenCode starts.** Plugins are still
 loading for a few seconds. Run it again, or use `/connect`, which updates live.

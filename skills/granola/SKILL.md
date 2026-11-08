@@ -48,11 +48,11 @@ Results today: `list_meetings`, `search_meetings` and `get_meetings` return XML-
 - `/granola-status` shows the connection, the workspace and the next step. An error with a code such as `AUTH_REQUIRED` carries its own next step: pass it on.
 - Granola's free plan covers the last 30 days, with no transcripts or folders. Say so instead of working around it.
 
-## Changes ask first
+## Changes
 
-Reads run without asking. OpenCode asks before `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary`, `export_markdown` and any Granola tool this plugin doesn't know yet. Make a change only when the user asks, say first what it will do, and don't retry after a decline. A folder with workspace visibility shares its notes with the whole workspace.
+Every tool is allowed by default, so no prompt appears: your sentence is the notice the user gets. Make a change only when the user asks, say first what it will do, and don't retry after a decline. The changes are `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and `export_markdown`. A folder with workspace visibility shares its notes with the whole workspace.
 
-`give_feedback` is off by default, although Granola's instructions ask for reports: sending one is the user's choice. If the user asks to report a Granola problem, they can allow `granola_give_feedback` in their permissions.
+`give_feedback` sends a report to Granola's team, although the user did not ask for one: send it only when the user asks to report a Granola problem. A `deny` rule or the plugin option `"access": "ask-changes"` makes a change ask first.
 
 `get_meeting_attachment` returns signed links that anyone can open for a few minutes. Share them only with the user in the chat, never in a file, message or tracker.
 

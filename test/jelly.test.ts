@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { PLUGIN_TOOLS, READ_TOOLS, SERVER, WRITE_TOOLS, toolID } from "../src/known-tools.js"
-import { DEFAULT_RULES } from "../src/permissions.js"
+import { defaultRules } from "../src/permissions.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, effectFromRules, readPackage } from "./support/jelly-kit.js"
 
 /**
@@ -16,7 +16,7 @@ const jelly = pkg.jelly as Declaration & { rpc: unknown[]; views: unknown[]; con
 
 describe("the jelly declaration", () => {
   it("follows the plugin authors' standard, with the effects the plugin's own default rules give", () => {
-    expect(declarationProblems(ROOT, { effectOf: effectFromRules(DEFAULT_RULES) })).toEqual([])
+    expect(declarationProblems(ROOT, { effectOf: effectFromRules(defaultRules()) })).toEqual([])
   })
 
   it("declares every known read as read-only, and every write and the plugin's own tools as not", () => {

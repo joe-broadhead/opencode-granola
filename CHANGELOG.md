@@ -4,9 +4,29 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- `access`, the plugin option every OpenCode plugin of this family has: `"all"` (the default), `"ask-changes"` and
+  `"read-only"`. It generates the default permission block from the tool classes, and `/granola-status` shows it in the
+  `Access` row and in the status RPC's `access` field.
+- `assets/icon-128.png` and `assets/icon-256.png`, with `opencode.icons` and `opencode.vendor` in `package.json`, and
+  `scripts/check-icons.mjs`, the family icon contract's check.
+
 ### Changed
 
-- tools RPC v2: every known tool is scriptable under a prior explicit allow. Granola's writes, `give_feedback` (a send)
+- **Every Granola tool is allowed by default.** The plugin's generated block allows every known tool and the `granola_*`
+  namespace, so a tool Granola adds later runs without a prompt too, `give_feedback` is no longer off, and the export is
+  no longer an ask. Restrict it with `access`, with an agent's own rules, or with a rule per tool; the README's
+  Permissions section and SECURITY say what an all-allow default means here.
+- The export folder is outside the project, so OpenCode asks for `external_directory` as well as the export's own
+  action. A refusal that names it costs nothing and becomes `EXPORT_PATH_NOT_PERMITTED`, whose next step is that rule.
+- `docs/scripting.md` is the family's scripting contract: the strict envelope, the location section and its unload note,
+  the result wording, and the refusal table, with an example-parsing test.
+- `PLUGIN_CODES` and `RPC_CODES` are the one typed code table, checked against the README, the configuration guide and
+  the scripting guide.
+- The CI has an `actionlint` job, and `npm run check` runs `actionlint` and the icon check.
+- The docs' tested-host sentences are checked against `TESTED_HOSTS`, and the README prints the default block in full.
+- tools RPC v2: every known tool is scriptable. Granola's writes, `give_feedback` (a send)
   and the plugin's `export_markdown` (an export, confined to the export folder) are methods now, so a script can write,
   send or export with the session's allow; `sign_out` stays outside, since the plugin removes it. The shared tools RPC
   module is updated in place and `scripts/check-copies.mjs` pins its v2 hash. Every method carries a class, and

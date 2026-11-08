@@ -19,9 +19,12 @@ writes each declared `ask` or `deny` as that tool's default instead (the person'
 replaces it), and denies a read-only helper every tool not marked `readOnly`. A declared `allow`
 changes nothing in Jelly.
 
-- Ask: `granola_create_folder`, `granola_update_folder`, `granola_add_note_to_folder`, `granola_remove_note_from_folder`, `granola_update_private_notes`, `granola_generate_summary`, `granola_export_markdown`.
-- Off: `granola_give_feedback`, which sends a report to Granola. Granola's own instructions tell the model to send it unasked.
-- Everything else runs, as the plugin's own rules let it.
+- Ask: none. Every tool is allowed by default, in Jelly as in OpenCode.
+- Off: none.
+- Everything else runs, as the plugin's own rules let it. That includes `granola_give_feedback`, which sends a report to
+  Granola's team and which Granola's own instructions tell the model to send unasked, and
+  `granola_export_markdown`, which writes a file outside the project. A Jelly admin turns either into an ask, or off,
+  in Jelly's own tool settings; in OpenCode the same is a rule, or the `access` option.
 
 The hidden `sign_out` is not declared: the plugin removes it from the agents' tools.
 

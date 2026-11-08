@@ -72,10 +72,14 @@ describe("Granola's tools RPC", () => {
     for (const property of Object.values(exported.output.properties)) expect(property).not.toHaveProperty("pattern")
   })
 
-  it("refuses a write that would ask before Granola runs, and runs it when the session allows it", async () => {
-    const { call, ran } = await started()
-    expect(await call("create_folder", { title: "New" })).toMatchObject({ type: "failed", data: { code: "PERMISSION_DENIED" } })
-    expect(ran).toEqual([])
+  it("runs a write at the default access, and refuses one the session's own rules ask for", async () => {
+    const { call, ran, host } = await started()
+    expect(await call("create_folder", { title: "New" })).toEqual({ text: JSON.stringify({ ok: true }) })
+    expect(ran).toEqual(["create_folder"])
+    // A session rule of the user's own, in the same shape a restricted access value gives.
+    host.sessions.set("ses_careful", { agent: "build", permissions: [{ action: "granola_update_folder", resource: "*", effect: "ask" }] })
+    expect(await call("update_folder", { folder_id: "f-1", title: "Renamed" }, "ses_careful")).toMatchObject({ type: "failed", data: { code: "PERMISSION_DENIED" } })
+    expect(ran).toEqual(["create_folder"])
   })
 
   it("runs a read as the session's agent and returns its structured content and text", async () => {

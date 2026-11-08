@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { connectionProblem } from "../src/errors.js"
-import { DEFAULT_RULES, insertDefaults } from "../src/permissions.js"
+import { defaultRules, insertDefaults } from "../src/permissions.js"
 import { readPackageInfo } from "../src/meta.js"
 import { STATUS_SCHEMA, type ConnectionState } from "../src/rpc/contract.js"
 import { AGENT_FIX, CONFLICT_NEXT, UNTESTED_HOST_NEXT, buildStatus, createStatus, formatStatus, type StatusInputs } from "../src/status.js"
@@ -46,6 +46,7 @@ describe("status model", () => {
       title: "Granola",
       tools: { visible: 3, hidden: 1, unknown: 0, unknownNames: [] },
       workspace: "Acme",
+      access: "all",
       unguardedAgents: [],
       shadowedSkills: [],
       exportDirectory: "/home/someone/Granola",
@@ -96,18 +97,21 @@ describe("status model", () => {
     expect(status.tools.unknownNames).not.toContain("Weird-Name")
     // Available counts every Granola tool the model can call, unknown ones included, but not the plugin's export.
     expect(status.tools.visible).toBe(30)
-    expect(formatStatus(status)).toContain("Tools: 30 available, 1 hidden, 27 unknown, asking before they run: brand_new_tool,")
+    expect(formatStatus(status)).toContain("Tools: 30 available, 1 hidden, 27 unknown, running too: brand_new_tool,")
+    // The unknown tools' posture follows the access value.
+    expect(formatStatus(buildStatus(inputs({ access: "ask-changes", tools })))).toContain("27 unknown, asking before they run: brand_new_tool,")
+    expect(formatStatus(buildStatus(inputs({ access: "read-only", tools })))).toContain("27 unknown, denied: brand_new_tool,")
   })
 
   it("names agents that missed the defaults and offers the block for each agent's own permissions", () => {
     const status = buildStatus(inputs({ agents: [guarded(), agent("reviewer")] }))
     expect(status.unguardedAgents).toEqual(["reviewer"])
-    expect(status.permissionsBlock).toEqual(DEFAULT_RULES)
+    expect(status.permissionsBlock).toEqual(defaultRules())
     expect(status.nextStep).toBe(AGENT_FIX)
     expect(status.nextStep).toBe("Put the default rules shown by /granola-status first in each listed agent's own permissions, in opencode.json or the agent's Markdown file, followed by your top-level rules for Granola tools.")
     const text = formatStatus(status)
     expect(text).toContain("Agents without default rules: reviewer\n")
-    expect(text).toContain(`  "agents": {\n    "reviewer": {\n      "permissions": [\n        ${JSON.stringify(DEFAULT_RULES[0])},`)
+    expect(text).toContain(`  "agents": {\n    "reviewer": {\n      "permissions": [\n        ${JSON.stringify(defaultRules()[0])},`)
     expect(text).not.toMatch(/^"permissions": \[/m)
   })
 

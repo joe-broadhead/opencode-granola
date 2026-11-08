@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest"
 import plugin from "../src/index.js"
 import { setup } from "../src/setup.js"
 import { readPackageInfo } from "../src/meta.js"
-import { DEFAULT_RULES } from "../src/permissions.js"
+import { defaultRules } from "../src/permissions.js"
 import { OFFICIAL_URL } from "../src/server.js"
 import type { Status } from "../src/rpc/contract.js"
 import { agent, fakeHost } from "./fakes.js"
@@ -28,7 +28,7 @@ describe("plugin definition", () => {
     const host = fakeHost({ baseAgents: () => [agent("build")] })
     await setup(host.ctx, host.toolsRpc)
     expect(host.servers.get("granola")).toEqual({ type: "remote", url: OFFICIAL_URL })
-    expect(host.agents.get("build")!.permissions.slice(1, 1 + DEFAULT_RULES.length)).toEqual(DEFAULT_RULES)
+    expect(host.agents.get("build")!.permissions.slice(1, 1 + defaultRules().length)).toEqual(defaultRules())
     expect([...host.commands.keys()]).toEqual(["granola-status"])
     expect(host.skills.size).toBeGreaterThan(0)
     expect(host.hooks.has("execute.after")).toBe(true)

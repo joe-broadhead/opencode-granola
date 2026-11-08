@@ -145,7 +145,10 @@ test("the tarball holds exactly the files whitelist, with no source or JSX, unde
 // The private flag is not checked here: release.yml checks it itself.
 test("its package.json states the tested OpenCode line, and has no dependencies, peers or install scripts", () => {
   const manifest = JSON.parse(readFileSync(join(alone.installed, "package.json"), "utf8"))
-  assert.deepEqual(manifest.opencode, { host: SUPPORTED_RANGE })
+  assert.equal(manifest.opencode?.host, SUPPORTED_RANGE)
+  assert.deepEqual(manifest.opencode?.icons?.map((icon) => icon.src), ["assets/icon.svg", "assets/icon-128.png", "assets/icon-256.png"])
+  assert.deepEqual(manifest.opencode?.vendor, { id: "granola", name: "Granola", domain: "granola.ai" })
+  assert.equal(manifest.jelly?.icon, "assets/icon.svg")
   for (const field of UNDECLARED) assert.equal(manifest[field], undefined, field)
   assert.deepEqual(Object.keys(manifest.scripts ?? {}).filter((name) => INSTALL_SCRIPTS.includes(name)), [])
 })
@@ -324,10 +327,10 @@ for (const version of HOST_VERSIONS) {
       assert.ok(build, "the build agent is listed")
       const base = build.permissions.findIndex((rule) => rule.action === "*" && rule.resource === "*" && rule.effect === "allow")
       assert.ok(base >= 0, "build has a base allow")
-      assert.deepEqual(build.permissions[base + 1], { action: "granola_*", resource: "*", effect: "ask" })
-      const block = build.permissions.slice(base + 1, base + 13)
-      for (const action of ["granola_get_meetings", "granola_list_templates"]) {
-        assert.ok(block.some((rule) => rule.action === action && rule.resource === "*" && rule.effect === "allow"), action)
+      assert.deepEqual(build.permissions[base + 1], { action: "granola_*", resource: "*", effect: "allow" })
+      // Every tool the plugin registers is allowed, the writes and the export included.
+      for (const action of ["granola_get_meetings", "granola_list_templates", "granola_update_folder", "granola_export_markdown"]) {
+        assert.ok(build.permissions.slice(base + 1, base + 20).some((rule) => rule.action === action && rule.resource === "*" && rule.effect === "allow"), action)
       }
 
       const { output: status } = await host.api("POST", "/api/rpc/granola.meetings/status", { input: {} })
@@ -335,6 +338,7 @@ for (const version of HOST_VERSIONS) {
       assert.equal(status.version, pkg.version)
       assert.deepEqual(status.host, { version, range: SUPPORTED_RANGE, tested: true })
       assert.equal(status.nextStep, 'Enable granola in /mcps, or remove "disabled": true from mcp.servers.granola in your OpenCode config.')
+      assert.equal(status.access, "all")
       assert.deepEqual(status.unguardedAgents, [])
       assert.equal(status.hostWarning, undefined)
       assert.equal(status.conflict, undefined)

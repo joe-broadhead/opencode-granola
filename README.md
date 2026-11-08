@@ -87,42 +87,87 @@ See [Scripting](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs
 
 ## Permissions
 
-| Kind | Tools | Default |
-| --- | --- | --- |
-| Reads | `get_account_info`, `list_meeting_folders`, `list_meetings`, `search_meetings`, `get_meetings`, `get_meeting_transcript`, `search_transcripts`, `query_granola_meetings`, `get_meeting_attachment`, `list_templates` | run without asking |
-| Changes | `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` | ask first |
-| Reports to Granola | `give_feedback` | off; Granola's own instructions tell the model to send it unasked. Add an `ask` rule for `granola_give_feedback` to turn it on |
-| The plugin's export | `export_markdown` | asks first |
-| New tools | any Granola tool this plugin version does not know yet | ask first; status names them |
-| Hidden | `sign_out` | removed; use `opencode mcp logout granola` |
+**Every tool is allowed by default.** An agent can read your meetings, transcripts and notes, and change them: create,
+rename and fill folders, update private notes, generate a summary, send `give_feedback` to Granola's team on its own
+(Granola's instructions tell it to), and export Markdown into the export folder. Nothing here deletes a meeting, but a
+write changes what you keep, and an export writes a file outside the project. Restrict it in any of these three ways:
 
-The plugin inserts these rules into each agent, directly after the agent's base "allow everything" rule. Your own
-`permissions` and your saved "Always allow" answers override them, and a `deny` you configure always wins. Explore
-and Title also get the block, but their own later deny rules still keep Granola tools out, and Plan keeps its
-restrictions. An agent without a base "allow everything" rule gets no rules.
+1. **The `access` option**, which drives the default rules the plugin inserts:
 
-For example, to let one write run without asking:
+   | Value | What runs | What asks |
+   | --- | --- | --- |
+   | `"all"` (the default) | every tool, and any tool Granola adds later | nothing |
+   | `"ask-changes"` | the read tools | everything else, new tools and exports included |
+   | `"read-only"` | the read tools | nothing: everything else is **denied** |
+
+   ```json
+   { "plugins": [{ "package": "@joe-broadhead/opencode-granola", "options": { "access": "read-only" } }] }
+   ```
+
+2. **An agent that asks, or reads only**, with rules of its own, later than the plugin's:
+
+   ```json
+   { "agents": { "assistant": { "permissions": [
+     { "action": "granola_*", "resource": "*", "effect": "ask" },
+     { "action": "granola_search_meetings", "resource": "*", "effect": "allow" }
+   ] } } }
+   ```
+
+3. **A rule per tool**, with the exact names in
+   [`src/known-tools.ts`](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/src/known-tools.ts). A later rule
+   wins, and a `deny` on `*` also hides the tool from the model:
+
+   ```json
+   { "permissions": [
+     { "action": "granola_give_feedback", "resource": "*", "effect": "deny" },
+     { "action": "granola_create_folder", "resource": "*", "effect": "ask" }
+   ] }
+   ```
+
+The plugin inserts this block directly after each agent's base "allow everything" rule, generated from
+`defaultRules("all")` in `src/permissions.ts`:
 
 ```json
-{
-  "permissions": [
-    { "action": "granola_create_folder", "resource": "*", "effect": "allow" }
-  ]
-}
+[
+  { "action": "granola_*", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },
+  { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },
+  { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },
+  { "action": "granola_query_granola_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
+  { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
+  { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },
+  { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },
+  { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },
+  { "action": "granola_export_markdown", "resource": "*", "effect": "allow" }
+]
 ```
 
-Agents defined only in your own config are created after plugins start, so they miss the default rules, and Granola's
-writes would run there without asking. Status names each such agent and gives the block to paste first in each listed
-agent's own `permissions`, in `opencode.json` or the agent's Markdown file. An agent whose own rules already ask or deny
-for every Granola tool needs nothing and is not named. Do not put the block in the top-level `permissions`, which would
-loosen Explore.
+An export folder is outside the project, so OpenCode asks for `external_directory` as well as the export's own action;
+[Markdown export](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md#permission) has that
+rule.
 
-In `opencode run` and other runs where nobody can answer, a call that would ask is refused; reads still work.
+Everything later than these rules still wins: an agent's own stricter rules (Explore cannot use Granola), your
+`permissions` in `opencode.json`, and your saved answers. In `opencode run` and other runs where nobody can answer, a
+call that would ask is refused; reads still work.
+
+Agents defined only in your own config are created after plugins start, so they miss the default rules.
+`/granola-status` names each such agent and gives the block to paste first in each listed agent's own `permissions`, in
+`opencode.json` or the agent's Markdown file. An agent whose own rules already ask or deny for every Granola tool needs
+nothing and is not named. Do not put the block in the top-level `permissions`, which would loosen Explore.
 
 ## Configure
 
-Two options, both optional: `exportDirectory`, an absolute path for exports (default: `Granola` in your home
-folder), and `allowUntestedHost`. The
+Three options, all optional: `exportDirectory`, an absolute path for exports (default: `Granola` in your home folder);
+`allowUntestedHost`; and `access`, which decides whether every tool runs, the changes ask, or only the reads run. The
 [configuration guide](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md) covers them,
 the full rule block, recipes, the export and every error code.
 
@@ -171,6 +216,7 @@ exactly one `Next step`. Every error the plugin raises has a code and a next ste
 | `EXPORT_TOO_LARGE` | The export is over its 8 MB limit. | Export fewer meetings at a time. |
 | `EXPORT_READ_FAILED` | Granola could not return a meeting's notes or transcript. | Export again without that meeting. |
 | `EXPORT_WRITE_FAILED` | The file could not be written. | Check that the export folder `/granola-status` shows is writable and has free space, then export again. |
+| `EXPORT_PATH_NOT_PERMITTED` | OpenCode asks for `external_directory` before anything outside the project is written, and the export folder is outside it. | Allow it with `{ "action": "external_directory", "resource": "<the export folder>/*", "effect": "allow" }`, or set `exportDirectory` inside the project. |
 
 A status of `conflict` has no code: your config defines `mcp.servers.granola` for a different server, and the plugin
 never overwrites it. An entry for Granola's official URL is used as it is.

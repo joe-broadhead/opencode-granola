@@ -18,6 +18,7 @@ function status(overrides: Partial<Status> = {}): Status {
     unguardedAgents: [],
     shadowedSkills: [],
     exportDirectory: "/home/someone/Granola",
+    access: "all",
     version: VERSION,
     host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
     nextStep: "Nothing to do.",
@@ -56,7 +57,7 @@ describe("status dialog view", () => {
     const details = ready({ workspace: "Acme", tools: { visible: 17, hidden: 1, unknown: 2, unknownNames: ["brand_new_tool"] } })
     expect(row(details, "Connection")).toEqual({ label: "Connection", text: "connected (Granola)", tone: "ok" })
     expect(row(details, "Account")!.text).toBe("workspace Acme")
-    expect(row(details, "Tools")!.text).toBe("17 available, 1 hidden, 2 unknown, asking before they run: brand_new_tool")
+    expect(row(details, "Tools")!.text).toBe("17 available, 1 hidden, 2 unknown, running too: brand_new_tool")
     expect(row(details, "OpenCode")!.text).toBe(`2.2.3 (tested; supported range >=2.2.3 <2.3.0), plugin ${VERSION}`)
     expect(view(details).next).toBe("Nothing to do.")
   })

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { GranolaError } from "../src/errors.js"
-import { parseOptions } from "../src/options.js"
+import { ACCESS_VALUES, parseOptions } from "../src/options.js"
 
 const home = "/home/someone"
 
@@ -15,14 +15,23 @@ function failure(raw: unknown): GranolaError {
 }
 
 describe("plugin options", () => {
-  it("default to <home>/Granola and the tested host only", () => {
-    expect(parseOptions(undefined, home)).toEqual({ exportDirectory: "/home/someone/Granola", allowUntestedHost: false })
-    expect(parseOptions({}, home)).toEqual({ exportDirectory: "/home/someone/Granola", allowUntestedHost: false })
+  it("default to <home>/Granola, the tested host only, and every tool allowed", () => {
+    expect(parseOptions(undefined, home)).toEqual({ exportDirectory: "/home/someone/Granola", allowUntestedHost: false, access: "all" })
+    expect(parseOptions({}, home)).toEqual({ exportDirectory: "/home/someone/Granola", allowUntestedHost: false, access: "all" })
   })
 
   it("accept an absolute export directory and the override", () => {
     expect(parseOptions({ exportDirectory: "/data/notes/../Granola", allowUntestedHost: true }, home))
-      .toEqual({ exportDirectory: "/data/Granola", allowUntestedHost: true })
+      .toEqual({ exportDirectory: "/data/Granola", allowUntestedHost: true, access: "all" })
+  })
+
+  it("accepts every access value", () => {
+    for (const access of ACCESS_VALUES) expect(parseOptions({ access }, home).access).toBe(access)
+  })
+
+  it("rejects an access value it does not know", () => {
+    expect(failure({ access: "write" }).message).toContain('access must be "all" (the default), "ask-changes" or "read-only"')
+    expect(failure({ access: 1 }).message).toContain("access must be")
   })
 
   it("name the unknown key", () => {

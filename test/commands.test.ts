@@ -14,6 +14,7 @@ const status: Status = {
   unguardedAgents: [],
   shadowedSkills: [],
   exportDirectory: "/x",
+  access: "all",
   version: VERSION,
   host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
   nextStep: "Run `/connect` and choose Granola.",

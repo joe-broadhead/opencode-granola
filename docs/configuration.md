@@ -25,12 +25,13 @@ Options go in the plugin's entry in `plugins`. Both are optional.
 | --- | --- | --- |
 | `exportDirectory` | `Granola` in your home folder | Where `export_markdown` writes files. It must be an absolute path; write out your home folder instead of `~`. The folder is created on the first approved export. |
 | `allowUntestedHost` | `false` | `true` lets the plugin run on an OpenCode version outside the supported range (`>=2.2.3 <2.3.0`). Status then shows a warning. See [Host check](#host-check). |
+| `access` | `"all"` | What the default permission rules allow: `"all"` (every tool), `"ask-changes"` (reads run, everything else asks) or `"read-only"` (reads run, everything else is denied). See [Permissions](#permissions). |
 
 The options are checked strictly when the plugin starts. An unknown key or a wrong type stops the plugin with one error
 that names the key, for example:
 
 ```text
-OPTIONS_INVALID: Plugin option exportDir is not supported; use exportDirectory or allowUntestedHost. Next step: Fix the Granola plugin options in your OpenCode config, then reload OpenCode.
+OPTIONS_INVALID: Plugin option exportDir is not supported; use exportDirectory, allowUntestedHost, access. Next step: Fix the Granola plugin options in your OpenCode config, then reload OpenCode.
 ```
 
 Permissions are configured with OpenCode's own `permissions` rules, as below.
@@ -49,8 +50,34 @@ including the ones that change things in Granola, would run without asking.
 
 ### The default rules
 
-When it starts, the plugin inserts this block into every agent that has the base "allow everything" rule, directly
-after that rule:
+**Every tool is allowed by default.** At `access: "all"` (the default), the plugin inserts this block into every agent
+that has the base "allow everything" rule, directly after that rule:
+
+```json
+[
+  { "action": "granola_*", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },
+  { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },
+  { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },
+  { "action": "granola_query_granola_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
+  { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
+  { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },
+  { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },
+  { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },
+  { "action": "granola_export_markdown", "resource": "*", "effect": "allow" }
+]
+```
+
+or, at `access: "ask-changes"`, this one:
 
 ```json
 [
@@ -65,19 +92,52 @@ after that rule:
   { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
   { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
-  { "action": "granola_give_feedback", "resource": "*", "effect": "deny" }
+  { "action": "granola_create_folder", "resource": "*", "effect": "ask" },
+  { "action": "granola_update_folder", "resource": "*", "effect": "ask" },
+  { "action": "granola_add_note_to_folder", "resource": "*", "effect": "ask" },
+  { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "ask" },
+  { "action": "granola_update_private_notes", "resource": "*", "effect": "ask" },
+  { "action": "granola_generate_summary", "resource": "*", "effect": "ask" },
+  { "action": "granola_give_feedback", "resource": "*", "effect": "ask" },
+  { "action": "granola_export_markdown", "resource": "*", "effect": "ask" }
 ]
 ```
 
+or, at `access: "read-only"`:
+
+```json
+[
+  { "action": "granola_*", "resource": "*", "effect": "deny" },
+  { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },
+  { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },
+  { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },
+  { "action": "granola_query_granola_meetings", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
+  { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
+  { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_create_folder", "resource": "*", "effect": "deny" },
+  { "action": "granola_update_folder", "resource": "*", "effect": "deny" },
+  { "action": "granola_add_note_to_folder", "resource": "*", "effect": "deny" },
+  { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "deny" },
+  { "action": "granola_update_private_notes", "resource": "*", "effect": "deny" },
+  { "action": "granola_generate_summary", "resource": "*", "effect": "deny" },
+  { "action": "granola_give_feedback", "resource": "*", "effect": "deny" },
+  { "action": "granola_export_markdown", "resource": "*", "effect": "deny" }
+]
+```
+
+The block is generated from `defaultRules(access)` in `src/permissions.ts`, so it follows the tool lists and the option.
 So:
 
-- Granola's known reads run without a prompt.
-- `give_feedback`, which sends a report to Granola, is off: a deny on `*` hides it from the model. Granola's own
-  instructions tell the model to send it on its own, which would put an unexplained prompt in front of you. To send
-  reports, add `{ "action": "granola_give_feedback", "resource": "*", "effect": "ask" }` to your `permissions`.
-- Everything else under `granola_` asks first: Granola's writes (`create_folder`, `update_folder`,
-  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes` and `generate_summary`), any Granola tool
-  that this plugin version does not know yet, and `export_markdown`.
+- Granola's known reads run without a prompt at every `access` value.
+- At the default `"all"`, every other tool runs too: Granola's writes (`create_folder`, `update_folder`,
+  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes` and `generate_summary`), `give_feedback`
+  (which sends a report to Granola's team, and which Granola's own instructions tell the model to send unasked), the
+  plugin's `export_markdown`, and any Granola tool this plugin version does not know yet.
+- `"ask-changes"` asks for those, and `"read-only"` denies them. A `deny` on `*` also hides the tool from the model.
 - Explore and Title also get the block, but their own later deny rules still keep Granola's tools out. Plan keeps its
   own restrictions. An agent without the base rule gets no rules.
 
@@ -90,7 +150,7 @@ These rules are the whole permission mechanism; approvals are configured only th
 ### Agents that miss the default rules
 
 OpenCode creates agents that are defined only in your own config after plugins have started, so they do not get the
-block. In those agents, Granola's writes would run without asking. `/granola-status` and the
+block. In those agents, the `access` option reaches nothing. `/granola-status` and the
 status dialog list each such agent under "Agents without default rules" and give the fix. An agent is listed when it
 has a base allow, lacks the block, and its own rules would let a Granola tool this plugin does not know run without
 asking. An agent whose rules already ask or deny for every Granola tool needs no fix and is not listed. With no such
@@ -112,17 +172,25 @@ For example, for an agent `reviewer`, when your top-level `permissions` allow `g
       "mode": "primary",
       "permissions": [
         // The Granola permission block, as listed above:
-        { "action": "granola_*", "resource": "*", "effect": "ask" },
-        { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },
-        { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },
-        { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },
-        { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },
-        { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },
-        { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },
-        { "action": "granola_query_granola_meetings", "resource": "*", "effect": "allow" },
-        { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
-        { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
-        { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+        { "action": "granola_*", "resource": "*", "effect": "allow" },,
+        { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },,
+        { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },,
+        { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },,
+        { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },,
+        { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },,
+        { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },,
+        { "action": "granola_query_granola_meetings", "resource": "*", "effect": "allow" },,
+        { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },,
+        { "action": "granola_list_templates", "resource": "*", "effect": "allow" },,
+        { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },,
+        { "action": "granola_create_folder", "resource": "*", "effect": "allow" },,
+        { "action": "granola_update_folder", "resource": "*", "effect": "allow" },,
+        { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },,
+        { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "allow" },,
+        { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },,
+        { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },,
+        { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },,
+        { "action": "granola_export_markdown", "resource": "*", "effect": "allow" },
         // Then your top-level rules for Granola tools, so they keep winning:
         { "action": "granola_create_folder", "resource": "*", "effect": "allow" }
         // Then the agent's other rules.
@@ -132,7 +200,8 @@ For example, for an agent `reviewer`, when your top-level `permissions` allow `g
 }
 ```
 
-`/granola-status` prints the same block as JSON, ready to copy. Do not put the block in the top-level `permissions`:
+`/granola-status` prints the same block as JSON for the current `access`, ready to copy. Do not put the block in the
+top-level `permissions`:
 OpenCode adds top-level rules to every agent after its base rules, so the block would loosen agents such as Explore,
 which otherwise deny Granola's tools.
 
@@ -259,6 +328,22 @@ order, with its notes and transcript. Transcripts are read page by page until th
 
 ### Permission
 
+**The export folder is outside the project**, by default `Granola` in your home folder, so OpenCode asks for
+`external_directory` as well as the export's own action before anything is written. A rule for `granola_export_markdown`
+alone is not enough where nobody is present: allow both, with the export folder's path:
+
+```json
+{
+  "permissions": [
+    { "action": "granola_export_markdown", "resource": "scheduled/*", "effect": "allow" },
+    { "action": "external_directory", "resource": "/home/someone/Granola/scheduled/*", "effect": "allow" }
+  ]
+}
+```
+
+A refusal that names `external_directory` costs nothing: nothing is read and nothing is written, and the error's next
+step gives that rule. Point `exportDirectory` inside the project to avoid it.
+
 The export asks before it reads any meeting. The prompt shows the path inside the export folder. If you reject it,
 nothing is read and nothing is written. If a meeting cannot be read, nothing is written.
 
@@ -312,15 +397,17 @@ model. It reads only OpenCode's local state and holds no token and no sign-in li
 | `conflict` | With the state `conflict`: why the user's own `granola` server is not this plugin's |
 | `tools` | `visible`: Granola's tools the model can call now, unknown ones included (not the plugin's export); `hidden`: tools the plugin removed, such as `sign_out`; `unknown`: tools this plugin version does not know; `unknownNames`: at most 20 of their names, only those made of lowercase letters, digits and `_` |
 | `workspace` | The active workspace from the most recent account read in this OpenCode run |
+| `access` | `all`, `ask-changes` or `read-only`: what the generated default rules allow |
 | `unguardedAgents` | Agents that would run an unknown Granola tool without asking; empty when there are none |
-| `permissionsBlock` | With `unguardedAgents`: the rules to put first in each of those agents' own `permissions` |
+| `permissionsBlock` | With `unguardedAgents`: the rules for the current `access` to put first in each of those agents' own `permissions` |
 | `shadowedSkills` | Skills OpenCode loads instead of the plugin's own because they use the same id, each with `name` (the plugin's skill) and `path` (the file that takes its place); empty when there are none |
 | `exportDirectory` | The export folder |
 | `hostWarning` | Only on a host outside the supported range that runs because of `allowUntestedHost` |
 | `nextStep` | Exactly one next step: the `Next step` row, `Nothing to do.` when nothing is needed |
 
 The text surfaces show the rows `Connection`, `Account`, `Access`, `Export folder`, `Skills`, `Tools`,
-`Agents without default rules`, `OpenCode` and `Next step`, in that order, every row always there. `Skills` reads
+`Agents without default rules`, `OpenCode` and `Next step`, in that order, every row always there. The `Access` row
+states what the `access` option allows. `Skills` reads
 `the plugin's own`, or names each skill that takes the place of one of the plugin's. The RPC has one
 error, `unavailable`, with `data: { code: "STATUS_UNAVAILABLE", next }`.
 
@@ -363,5 +450,6 @@ replaced by `<url>`. OpenCode's sign-in error is never repeated, because it can 
 | `EXPORT_TOO_LARGE` | The export is larger than its 8 MB limit. | Export fewer meetings at a time. |
 | `EXPORT_READ_FAILED` | Granola could not return the *notes or transcript* of meeting *id*: *reason*. Nothing was written. | Export again without that meeting. |
 | `EXPORT_WRITE_FAILED` | Could not write *path* in the export folder: *reason*. | Make sure the export folder that /granola-status shows is writable and has free space, then export again. |
+| `EXPORT_PATH_NOT_PERMITTED` | OpenCode asks for the external_directory permission before anything outside the project is written, and the export folder *folder* is outside it. | Allow it with { "action": "external_directory", "resource": "*folder*/*", "effect": "allow" } in your permissions, or set exportDirectory inside the project. |
 
 The export's next steps are written for the model, which passes them on to you.

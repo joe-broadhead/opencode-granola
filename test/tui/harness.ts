@@ -31,6 +31,7 @@ function status(overrides: Partial<Status>): Status {
     unguardedAgents: [],
     shadowedSkills: [],
     exportDirectory: "/home/someone/Granola",
+    access: "all",
     version: VERSION,
     host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
     nextStep: "Nothing to do.",

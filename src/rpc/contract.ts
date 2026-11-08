@@ -5,6 +5,14 @@ import { Rpc } from "@opencode/plugin/rpc"
 /** OpenCode's state for the granola MCP server; absent means no server of that name is registered. */
 export type ConnectionState = "connected" | "pending" | "disabled" | "failed" | "needs_auth" | "absent"
 
+/**
+ * What the default rules allow. `all` is the default; the other two are how a user restricts the plugin. It lives here,
+ * in the contract, so the TUI part can name it without importing the server's option parsing.
+ */
+export type Access = "all" | "ask-changes" | "read-only"
+
+export const ACCESS_VALUES: readonly Access[] = ["all", "ask-changes", "read-only"]
+
 /** A skill OpenCode loads under one of the plugin's skill ids, from another file, instead of the plugin's own. */
 export interface ShadowedSkill {
   readonly name: string
@@ -68,6 +76,8 @@ export interface Status {
   }
   /** The active workspace from the most recent account read in this OpenCode run. */
   readonly workspace?: string
+  /** What the default rules allow: the `access` option, `all` unless it was set. */
+  readonly access: Access
   /** Agents whose own rules would let a Granola tool this plugin does not know run without asking; empty when none. */
   readonly unguardedAgents: readonly string[]
   /**
@@ -88,7 +98,7 @@ export interface Status {
 export const STATUS_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["version", "host", "state", "tools", "unguardedAgents", "shadowedSkills", "exportDirectory", "nextStep"],
+  required: ["version", "host", "state", "access", "tools", "unguardedAgents", "shadowedSkills", "exportDirectory", "nextStep"],
   properties: {
     version: { type: "string" },
     host: {
@@ -118,6 +128,7 @@ export const STATUS_SCHEMA = {
       },
     },
     workspace: { type: "string" },
+    access: { type: "string", enum: ["all", "ask-changes", "read-only"] },
     unguardedAgents: { type: "array", items: { type: "string" } },
     permissionsBlock: {
       type: "array",
@@ -193,6 +204,13 @@ function hostRow(status: Status): StatusRow {
   return { label: "OpenCode", text: `${found} (${tested ? "tested" : "untested"}; supported range ${range}), plugin ${status.version}`, ...(tested ? {} : { tone: "info" as const }) }
 }
 
+/** The permission posture, one sentence per `access` value, from the tool lists. */
+export function accessText(access: Access): string {
+  if (access === "all") return "every tool runs without asking, reads, changes, new tools and exports included"
+  if (access === "read-only") return "reads run without asking; every other tool is denied"
+  return "reads run without asking; changes, new tools and exports ask first"
+}
+
 /** The rows /granola-status and the dialog show, in order; the Next step line follows them. */
 export function statusRows(status: Status): StatusRow[] {
   const connected = status.state === "connected"
@@ -202,13 +220,14 @@ export function statusRows(status: Status): StatusRow[] {
   if (status.tools.hidden) tools.push(`${status.tools.hidden} hidden`)
   if (status.tools.unknown) {
     const named = status.tools.unknownNames.length ? `: ${status.tools.unknownNames.join(", ")}` : ""
-    tools.push(`${status.tools.unknown} unknown, asking before they run${named}`)
+    const posture = status.access === "all" ? "running too" : status.access === "read-only" ? "denied" : "asking before they run"
+    tools.push(`${status.tools.unknown} unknown, ${posture}${named}`)
   }
   const agents = status.unguardedAgents
   return [
     { label: "Connection", text: connection, tone: TONES[status.state] },
     { label: "Account", text: !connected ? "unknown until Granola connects" : status.workspace ? `workspace ${status.workspace}` : "workspace unknown until the agent reads your Granola account" },
-    { label: "Access", text: "reads run without asking; changes, new tools and exports ask first; give_feedback is off" },
+    { label: "Access", text: accessText(status.access) },
     { label: "Export folder", text: status.exportDirectory },
     status.shadowedSkills.length
       ? { label: "Skills", text: status.shadowedSkills.map((skill) => `${skill.name} is replaced by ${skill.path}`).join("; "), tone: "warning" as const }

@@ -19,6 +19,7 @@ export type Code =
   | "EXPORT_TOO_LARGE"
   | "EXPORT_READ_FAILED"
   | "EXPORT_WRITE_FAILED"
+  | "EXPORT_PATH_NOT_PERMITTED"
 
 /**
  * Every code the plugin's own code raises, as one table. The README's Troubleshooting table names each one, and
@@ -42,6 +43,7 @@ export const PLUGIN_CODES = [
   "EXPORT_TOO_LARGE",
   "EXPORT_READ_FAILED",
   "EXPORT_WRITE_FAILED",
+  "EXPORT_PATH_NOT_PERMITTED",
 ] as const satisfies readonly Code[]
 
 /**
@@ -151,6 +153,18 @@ export const STATUS_UNAVAILABLE: Problem = {
   code: "STATUS_UNAVAILABLE",
   message: "Granola status could not be read.",
   next: "Run /granola-status again in a few seconds.",
+}
+
+/**
+ * Writing outside the project needs two rules: the export's own action and OpenCode's `external_directory`. This is the
+ * refusal when the second one is missing, and its next step is the rule itself.
+ */
+export function externalDirectory(folder: string): Problem {
+  return {
+    code: "EXPORT_PATH_NOT_PERMITTED",
+    message: `OpenCode asks for the external_directory permission before anything outside the project is written, and the export folder ${folder} is outside it.`,
+    next: `Allow it with { "action": "external_directory", "resource": "${folder}/*", "effect": "allow" } in your permissions, or set exportDirectory inside the project.`,
+  }
 }
 
 export function invalidOption(key: string, problem: string): Problem {

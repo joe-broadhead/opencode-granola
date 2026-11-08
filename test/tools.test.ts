@@ -84,6 +84,19 @@ describe("execute.after", () => {
     }
   })
 
+  // R19: the export folder is outside the project, so OpenCode asks for external_directory as well as its action.
+  it("gives an external_directory refusal of the export the rule as its next step", async () => {
+    const host = fakeHost({ baseTools: () => [mcpTool("get_meetings")] })
+    await registerTools(host.ctx, "/data/Granola")
+    const after = host.hooks.get("execute.after")!
+    const event = failure("granola_export_markdown", "permission.rejected: external_directory")
+    await after(event)
+    expect(event.error).toBeInstanceOf(ToolError)
+    expect(event.error.message).toContain("EXPORT_PATH_NOT_PERMITTED:")
+    expect(event.error.message).toContain('{ "action": "external_directory", "resource": "/data/Granola/*", "effect": "allow" }')
+    expect(event.error.metadata).toMatchObject({ code: "EXPORT_PATH_NOT_PERMITTED" })
+  })
+
   it("keeps the host's error when the connection state cannot be read", async () => {
     const { host, after } = await setup()
     host.ctx.mcp.list = async () => { throw new Error("offline") }

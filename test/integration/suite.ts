@@ -11,7 +11,7 @@ import { connectionProblem, toolUnavailable } from "../../src/errors.js"
 import { SIGN_IN_MESSAGE } from "../../src/integration.js"
 import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { HIDDEN_TOOLS, PLUGIN_TOOLS, WRITE_TOOLS } from "../../src/known-tools.js"
-import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
+import { defaultRules, type Rule } from "../../src/permissions.js"
 import { Granola, type Status } from "../../src/rpc/contract.js"
 import { AGENT_FIX, CONFLICT_NEXT, formatStatus, shadowedFix } from "../../src/status.js"
 import { FAILING, MEETING, PLAN_LIMITED, TITLE, TOOLS, UPSTREAM_FAILURE, WORKSPACE, type SyntheticGranola } from "../synthetic-granola/server.js"
@@ -24,7 +24,7 @@ const SKILLS = ["granola", "granola-meeting-brief"]
 const CONFIG_ONLY = ["reviewer", "fixed", "locked", "careful"]
 
 const isBaseAllow = (rule: Rule) => rule.action === "*" && rule.resource === "*" && rule.effect === "allow"
-const blocks = (permissions: readonly Rule[]) => permissions.filter((rule) => rule.action === "granola_*" && rule.effect === "ask").length
+const blocks = (permissions: readonly Rule[]) => permissions.filter((rule) => rule.action === "granola_*" && rule.effect !== "deny").length
 const granolaRules = (permissions: readonly Rule[]) => permissions.filter((rule) => rule.action.startsWith("granola"))
 const id = (name: string) => `granola_${name}`
 /** OpenCode has registered the server and finished its first connection attempt. */
@@ -199,8 +199,8 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(agents.map((agent) => agent.id)).toEqual(expect.arrayContaining(["build", "plan", "general", "explore", ...CONFIG_ONLY]))
         for (const agent of agents.filter((entry) => !CONFIG_ONLY.includes(entry.id))) {
           const base = agent.permissions.findIndex(isBaseAllow)
-          const rules = base === -1 ? [] : agent.permissions.slice(base + 1, base + 1 + DEFAULT_RULES.length)
-          expect({ agent: agent.id, rules, blocks: blocks(agent.permissions) }).toEqual({ agent: agent.id, rules: base === -1 ? [] : DEFAULT_RULES, blocks: base === -1 ? 0 : 1 })
+          const rules = base === -1 ? [] : agent.permissions.slice(base + 1, base + 1 + defaultRules().length)
+          expect({ agent: agent.id, rules, blocks: blocks(agent.permissions) }).toEqual({ agent: agent.id, rules: base === -1 ? [] : defaultRules(), blocks: base === -1 ? 0 : 1 })
         }
       })
 
@@ -212,7 +212,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         for (const agent of loaded) {
           const permissions = [...agent.permissions]
           const base = permissions.findIndex(isBaseAllow)
-          if (base !== -1) permissions.splice(base + 1, DEFAULT_RULES.length)
+          if (base !== -1) permissions.splice(base + 1, defaultRules().length)
           expect({ agent: agent.id, permissions }).toEqual({ agent: agent.id, permissions: bare.find((entry) => entry.id === agent.id)!.permissions })
         }
       })
@@ -232,34 +232,30 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(calls()).toEqual(["get_meetings"])
       })
 
-      test.each(["update_folder", "brand_new_tool"])("%s asks first, and does not run when rejected", async (tool) => {
+      test.each(["update_folder", "brand_new_tool"])("%s runs without asking: every tool is allowed by default", async (tool) => {
         const calls = received()
-        const result = await run("main", { agent: "build", tool: id(tool), replies: ["reject"] })
-        expect(result).toMatchObject({ asked: [{ action: id(tool), resources: ["*"], save: ["*"] }], error: { tag: "Permission.DeclinedError" } })
-        expect(result.asked).toHaveLength(1)
+        expect(await run("main", { agent: "build", tool: id(tool) })).toMatchObject({ asked: [] })
+        expect(calls()).toEqual([tool])
+        expect(await check("main", "build", id(tool))).toEqual({ outcome: "allow" })
+      })
+
+      test("an agent's own ask rule, later than the block, makes one call ask", async () => {
+        const calls = received()
+        const result = await run("main", { agent: "careful", tool: id("get_meetings"), input: { meeting_ids: [MEETING] }, replies: ["reject"] })
+        expect(result).toMatchObject({ asked: [{ action: id("get_meetings"), resources: ["*"], save: ["*"] }], error: { tag: "Permission.DeclinedError" } })
         expect(calls()).toEqual([])
-      })
-
-      test("give_feedback is denied by default, and in an agent given the block by hand", async () => {
-        expect(await check("main", "build", id("give_feedback"))).toEqual({ outcome: "deny" })
-        expect(await check("main", "fixed", id("give_feedback"))).toEqual({ outcome: "deny" })
-      })
-
-      test("a write runs once approved", async () => {
-        const calls = received()
-        const result = await run("main", { agent: "build", tool: id("update_folder"), input: { folder_id: "f-1" }, replies: ["once"] })
-        expect(result).toMatchObject({ asked: [{ action: id("update_folder") }] })
-        expect(Object.hasOwn(result, "error")).toBe(false)
+        // Its other tools still run.
+        expect(await run("main", { agent: "careful", tool: id("update_folder"), input: { folder_id: "f-1" } })).toMatchObject({ asked: [] })
         expect(calls()).toEqual(["update_folder"])
       })
 
-      test("the user's allow rule for a write removes the prompt", async () => {
+      test("the user's allow rule keeps a write running without a prompt", async () => {
         const calls = received()
         expect(await run("main", { agent: "build", tool: id("create_folder"), input: { title: "Notes" } })).toMatchObject({ asked: [], output: expect.anything() })
         expect(calls()).toEqual(["create_folder"])
       })
 
-      test("the user's deny rule wins, without asking", async () => {
+      test("the user's deny rule wins, without asking, and a deny also hides the tool", async () => {
         const calls = received()
         expect(await run("main", { agent: "build", tool: id("remove_note_from_folder") })).toMatchObject({ asked: [], error: { tag: "Permission.BlockedError" } })
         // general's own rules deny every Granola tool, reads included.
@@ -267,9 +263,15 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(calls()).toEqual([])
       })
 
-      test("Plan is not weakened: reads run, writes ask, and its own edit rule still denies", async () => {
+      test("an agent that asks for everything, reads included", async () => {
+        const calls = received()
+        expect(await run("main", { agent: "locked", tool: id("get_meetings"), input: { meeting_ids: [MEETING] } })).toMatchObject({ asked: [], error: { tag: "Permission.BlockedError" } })
+        expect(calls()).toEqual([])
+      })
+
+      test("Plan is not weakened: its own edit rule still denies and Granola runs as the block allows", async () => {
         expect(await run("main", { agent: "plan", tool: id("get_meetings"), input: { meeting_ids: [MEETING] } })).toMatchObject({ asked: [] })
-        expect(await run("main", { agent: "plan", tool: id("update_folder"), replies: ["reject"] })).toMatchObject({ asked: [{ action: id("update_folder") }] })
+        expect(await run("main", { agent: "plan", tool: id("update_folder"), input: { folder_id: "f-1" } })).toMatchObject({ asked: [] })
         expect(await check("main", "plan", "edit", join(host.location("main").directory, "notes.md"))).toEqual({ outcome: "deny" })
       })
 
@@ -283,18 +285,18 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
 
       test("an agent defined only in user config misses the block, and status names it with the per-agent fix", async () => {
         const calls = received()
-        expect(await run("main", { agent: "reviewer", tool: id("update_folder") })).toMatchObject({ asked: [] })
+        expect(await run("main", { agent: "reviewer", tool: id("update_folder"), input: { folder_id: "f-1" } })).toMatchObject({ asked: [] })
         expect(calls()).toEqual(["update_folder"])
         const current = await status("main")
         expect(current.unguardedAgents).toEqual(["reviewer"])
-        expect(current.permissionsBlock).toEqual(DEFAULT_RULES)
+        expect(current.permissionsBlock).toEqual(defaultRules())
         expect(current.nextStep).toBe(AGENT_FIX)
       })
 
-      test("with the per-agent fix, that agent asks before writes, the user's own rules still win, and Explore is not loosened", async () => {
+      test("with the per-agent fix, that agent carries the block and the user's own rules still win", async () => {
         expect(await run("main", { agent: "fixed", tool: id("get_meetings"), input: { meeting_ids: [MEETING] } })).toMatchObject({ asked: [] })
-        expect(await run("main", { agent: "fixed", tool: id("update_folder"), replies: ["reject"] })).toMatchObject({ asked: [{ action: id("update_folder") }], error: { tag: "Permission.DeclinedError" } })
-        expect(await run("main", { agent: "fixed", tool: id("create_folder") })).toMatchObject({ asked: [] })
+        expect(await run("main", { agent: "fixed", tool: id("update_folder"), input: { folder_id: "f-1" } })).toMatchObject({ asked: [] })
+        expect(await run("main", { agent: "fixed", tool: id("create_folder"), input: { title: "Notes" } })).toMatchObject({ asked: [] })
         expect(await run("main", { agent: "fixed", tool: id("remove_note_from_folder") })).toMatchObject({ asked: [], error: { tag: "Permission.BlockedError" } })
         expect(await run("main", { agent: "explore", tool: id("get_meetings") })).toMatchObject({ asked: [], error: { tag: "Permission.BlockedError" } })
       })
@@ -341,11 +343,30 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(await status("main")).toMatchObject({ state: "connected", workspace: WORKSPACE })
       })
 
-      test("a write needs approval that nobody can give, so it is refused and does not run", async () => {
+      test("a write runs: every tool is allowed, so nobody needs to approve it", async () => {
         const calls = received()
         const result = await codeMode("main", `await tools.granola.update_folder({ folder_id: "f-1" }); throw new Error("SEEN " + JSON.stringify("ran"))`)
-        expect(result).toEqual({ refused: expect.stringContaining(`Permission ${id("update_folder")} needs approval`) })
+        expect(result).toEqual({ seen: "ran" })
+        expect(calls()).toEqual(["update_folder"])
+      })
+
+      // R2: an ask and a deny are refused with nothing sent, and a name that is not a tool is refused, all inside
+      // Code Mode's `execute`, where no prompt can be answered.
+      test("under ask-changes an ask is refused with nothing sent; a deny is refused; an unknown name is refused", async () => {
+        await statusWhen("ask-changes", connected)
+        const calls = received()
+        const asked = await codeMode("ask-changes", `await tools.granola.update_folder({ folder_id: "f-1" }); throw new Error("SEEN " + JSON.stringify("ran"))`)
+        expect(asked).toEqual({ refused: expect.stringContaining(`Permission ${id("update_folder")} needs approval`) })
         expect(calls()).toEqual([])
+        const read = await codeMode("ask-changes", `await tools.granola.get_meetings({ meeting_ids: [${JSON.stringify(MEETING)}] }); throw new Error("SEEN " + JSON.stringify("read"))`)
+        expect(read).toEqual({ seen: "read" })
+        expect(calls()).toEqual(["get_meetings"])
+        const denied = await codeMode("read-only", `await tools.granola.update_folder({ folder_id: "f-1" }); throw new Error("SEEN " + JSON.stringify("ran"))`)
+        // A deny also hides the tool from Code Mode's catalog, so the refusal names it either way.
+        expect(denied).toEqual({ refused: expect.stringMatching(new RegExp(`(Permission denied|needs approval):? ?${id("update_folder")}|Unknown Code Mode tool: granola\\.update_folder`)) })
+        const unknown = await codeMode("main", `await tools.granola.shiny_new_tool({}); throw new Error("SEEN " + JSON.stringify("ran"))`)
+        expect(unknown).toEqual({ refused: expect.stringContaining("granola.shiny_new_tool") })
+        expect(calls()).toEqual(["get_meetings"])
       })
 
       test("sign_out cannot be called", async () => {
@@ -369,11 +390,12 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(createHash("sha256").update(data).digest("hex")).toBe(seen.sha256)
       })
 
-      test("otherwise an export needs approval that nobody can give, so nothing is written", async () => {
+      test("under ask-changes an export asks, so nothing is written", async () => {
+        await statusWhen("ask-changes", connected)
         const calls = received()
-        const result = await codeMode("main", `await tools.granola.export_markdown({ meeting_ids: [${JSON.stringify(MEETING)}], content: "notes", path: "manual/brief.md" }); throw new Error("SEEN " + JSON.stringify("ran"))`)
+        const result = await codeMode("ask-changes", `await tools.granola.export_markdown({ meeting_ids: [${JSON.stringify(MEETING)}], content: "notes", path: "manual/brief.md" }); throw new Error("SEEN " + JSON.stringify("ran"))`)
         expect(result).toEqual({ refused: expect.stringContaining(`Permission ${id("export_markdown")} needs approval`) })
-        expect(existsSync(join(host.exports("main"), "manual"))).toBe(false)
+        expect(existsSync(join(host.exports("ask-changes"), "manual"))).toBe(false)
         expect(calls()).toEqual([])
       })
     })
@@ -381,22 +403,31 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
     describe("export_markdown", () => {
       const exportInput = (path: string) => ({ meeting_ids: [MEETING], content: "both", path })
 
-      test("rejected: asks once for the file's path, then reads and writes nothing", async () => {
+      test("at the default access it runs without asking", async () => {
         const calls = received()
-        const result = await run("main", { agent: "build", tool: id("export_markdown"), input: exportInput("interactive/rejected.md"), replies: ["reject"] })
+        const result = await run("main", { agent: "build", tool: id("export_markdown"), input: exportInput("interactive/plain.md") })
+        expect(result).toMatchObject({ asked: [], output: { path: join(host.exports("main"), "interactive", "plain.md") } })
+        expect(calls()).toEqual(["get_meetings", "get_meeting_transcript"])
+      })
+
+      test("under ask-changes, rejected: asks once for the file's path, then reads and writes nothing", async () => {
+        await statusWhen("ask-changes", connected)
+        const calls = received()
+        const result = await run("ask-changes", { agent: "build", tool: id("export_markdown"), input: exportInput("interactive/rejected.md"), replies: ["reject"] })
         expect(result).toMatchObject({
           asked: [{ action: id("export_markdown"), resources: ["interactive/rejected.md"], save: ["*"], metadata: { meeting_count: 1, content: "both", overwrite: false } }],
           error: { tag: "Permission.DeclinedError" },
         })
         expect(result.asked).toHaveLength(1)
         expect(calls()).toEqual([])
-        expect(existsSync(join(host.exports("main"), "interactive"))).toBe(false)
+        expect(existsSync(join(host.exports("ask-changes"), "interactive"))).toBe(false)
       })
 
-      test("approved once: writes one readable file through Granola's reads and returns its path, size and checksum", async () => {
+      test("under ask-changes, approved once: writes one readable file and returns its path, size and checksum", async () => {
+        await statusWhen("ask-changes", connected)
         const calls = received()
-        const result = await run("main", { agent: "build", tool: id("export_markdown"), input: exportInput("interactive/approved.md"), replies: ["once"] })
-        const file = join(host.exports("main"), "interactive", "approved.md")
+        const result = await run("ask-changes", { agent: "build", tool: id("export_markdown"), input: exportInput("interactive/approved.md"), replies: ["once"] })
+        const file = join(host.exports("ask-changes"), "interactive", "approved.md")
         expect(result).toMatchObject({ asked: [{ action: id("export_markdown") }], output: { path: file } })
         const { output } = result as { output: { bytes: number; sha256: string } }
         const data = readFileSync(file)
@@ -408,7 +439,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(markdown).toContain("Ship the export")
         expect(markdown).toContain("Welcome to the weekly sync")
         expect(calls()).toEqual(["get_meetings", "get_meeting_transcript"])
-        expect(readdirSync(join(host.exports("main"), "interactive"))).toEqual(["approved.md"])
+        expect(readdirSync(join(host.exports("ask-changes"), "interactive"))).toEqual(["approved.md"])
       })
 
       test("without transcripts on the plan, a transcript export writes the notes and says why", async () => {
@@ -429,19 +460,22 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
       })
     })
 
-    // Saved approvals apply to the whole project, so these run last in the main project, on one tool.
+    // Saved approvals apply to the whole project, so these run last in the main project, on one tool whose agent asks.
     describe("a saved approval", () => {
       test("replying always lets the next call run without asking", async () => {
         const calls = received()
-        expect(await run("main", { agent: "build", tool: id("add_note_to_folder"), replies: ["always"] })).toMatchObject({ asked: [{ action: id("add_note_to_folder") }] })
-        expect(await run("main", { agent: "build", tool: id("add_note_to_folder") })).toMatchObject({ asked: [] })
-        expect(calls()).toEqual(["add_note_to_folder", "add_note_to_folder"])
+        expect(await run("main", { agent: "careful", tool: id("get_meetings"), input: { meeting_ids: [MEETING] }, replies: ["always"] })).toMatchObject({ asked: [{ action: id("get_meetings") }] })
+        expect(await run("main", { agent: "careful", tool: id("get_meetings"), input: { meeting_ids: [MEETING] } })).toMatchObject({ asked: [] })
+        expect(calls()).toEqual(["get_meetings", "get_meetings"])
         const saved = await host.client.permission.saved.list({}, header("main"))
-        expect(saved.map((entry) => [entry.action, entry.resource])).toContainEqual([id("add_note_to_folder"), "*"])
+        expect(saved.map((entry) => [entry.action, entry.resource])).toContainEqual([id("get_meetings"), "*"])
+        // The save is per action and resource "*": build, which had no ask of its own, was never asked.
+        expect(await run("main", { agent: "build", tool: id("get_meetings"), input: { meeting_ids: [MEETING] } })).toMatchObject({ asked: [] })
+        expect(calls()).toEqual(["get_meetings", "get_meetings", "get_meetings"])
       })
 
       test("the user's deny still wins over it", async () => {
-        expect(await run("main", { agent: "general", tool: id("add_note_to_folder") })).toMatchObject({ asked: [], error: { tag: "Permission.BlockedError" } })
+        expect(await run("main", { agent: "general", tool: id("get_meetings") })).toMatchObject({ asked: [], error: { tag: "Permission.BlockedError" } })
       })
     })
 
@@ -489,25 +523,26 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(value.methods.find((method: { name: string }) => method.name === "export_markdown")).toMatchObject({ kind: "plugin", class: "export", action: id("export_markdown") })
       })
 
-      test("a write is a method, refused before Granola runs until the session allows it", async () => {
+      test("a write is a method that runs at the default access, and a session's ask refuses it before Granola runs", async () => {
         const calls = received()
-        // The project's own rules allow create_folder and deny remove_note_from_folder; update_folder still asks.
-        expect(await call("build", "update_folder", { folder_id: "f-1", title: "Scripted" })).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
-        expect(JSON.stringify(await call("build", "update_folder", { folder_id: "f-1", title: "Scripted" }))).toContain("would ask")
-        expect(calls()).toEqual([])
-        const allowed = await host.client.session.create({ title: "Write script", ...at("main"), agent: "build", permissions: [scriptRule(id("update_folder"), "allow")] })
-        expect(await call(allowed.id, "update_folder", { folder_id: "f-1", title: "Scripted" })).toMatchObject({ value: expect.anything() })
+        expect(await call("build", "update_folder", { folder_id: "f-1", title: "Scripted" })).toMatchObject({ value: expect.anything() })
+        expect(calls()).toEqual(["update_folder"])
+        // The careful agent asks for one read: the same shape a restricted access value gives.
+        const asked = await call("careful", "get_meetings", { meeting_ids: [MEETING] })
+        expect(asked).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(JSON.stringify(asked)).toContain("would ask")
+        const denied = await host.client.session.create({ title: "No write", ...at("main"), agent: "build", permissions: [scriptRule(id("create_folder"), "deny")] })
+        expect(await call(denied.id, "create_folder", { title: "No" })).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
         expect(calls()).toEqual(["update_folder"])
       })
 
-      test("the export is a method that writes a file only under an allow", async () => {
+      test("the export is a method that writes a file at the default access, and never past a session deny", async () => {
         const calls = received()
-        const refused = await call("build", "export_markdown", { meeting_ids: [MEETING], content: "notes" })
-        expect(refused).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
-        expect(calls()).toEqual([])
-        const allowed = await host.client.session.create({ title: "Export script", ...at("main"), agent: "build", permissions: [scriptRule(id("export_markdown"), "allow")] })
-        const written = await call(allowed.id, "export_markdown", { meeting_ids: [MEETING], content: "notes" })
+        const written = await call("build", "export_markdown", { meeting_ids: [MEETING], content: "notes", path: "script/default.md" })
         expect(written, JSON.stringify(written)).toMatchObject({ value: { path: expect.stringMatching(/\.md$/), bytes: expect.any(Number), sha256: expect.stringMatching(/^[0-9a-f]{64}$/) } })
+        const denied = await host.client.session.create({ title: "No export", ...at("main"), agent: "build", permissions: [scriptRule(id("export_markdown"), "deny")] })
+        expect(await call(denied.id, "export_markdown", { meeting_ids: [MEETING], content: "notes", path: "script/denied.md" })).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(existsSync(join(host.exports("main"), "script", "denied.md"))).toBe(false)
       })
 
       test("an unknown tool is no method, and a session rule can narrow a write", async () => {
@@ -564,6 +599,40 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect((await call("narrow", "list_meetings", {})).value).toMatchObject({ text: expect.any(String) })
         expect((await call("reopen", "get_meetings", { meeting_ids: [MEETING] })).value).toMatchObject({ text: expect.stringContaining(MEETING) })
         expect(await call("reopen", "list_meetings", {})).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+      })
+
+      // R18: one host per access value, on the tools RPC path, where a refusal must reach nothing.
+      test("ask-changes: its own block, a read runs, and a change is refused before Granola runs", async () => {
+        await statusWhen("ask-changes", connected)
+        const agent = (await state("ask-changes")).agents.find((entry) => entry.id === "build")!
+        const base = agent.permissions.findIndex(isBaseAllow)
+        expect(agent.permissions.slice(base + 1, base + 1 + defaultRules("ask-changes").length)).toEqual(defaultRules("ask-changes"))
+        const session = (await host.client.session.create({ title: "Ask changes", ...at("ask-changes"), agent: "build" })).id
+        const calls = received()
+        expect((await call(session, "list_meetings", {}, "ask-changes")).value).toMatchObject({ text: expect.any(String) })
+        const refused = await call(session, "update_folder", { folder_id: "f-1" }, "ask-changes")
+        expect(refused).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(JSON.stringify(refused)).toContain("would ask")
+        const exported = await call(session, "export_markdown", { meeting_ids: [MEETING], content: "notes" }, "ask-changes")
+        expect(exported).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(calls()).toEqual(["list_meetings"])
+        expect(await status("ask-changes")).toMatchObject({ access: "ask-changes" })
+        expect(formatStatus(await status("ask-changes"))).toContain("Access: reads run without asking; changes, new tools and exports ask first")
+      })
+
+      test("read-only: its own block, a read runs, and every other tool is denied", async () => {
+        await statusWhen("read-only", connected)
+        const agent = (await state("read-only")).agents.find((entry) => entry.id === "build")!
+        const base = agent.permissions.findIndex(isBaseAllow)
+        expect(agent.permissions.slice(base + 1, base + 1 + defaultRules("read-only").length)).toEqual(defaultRules("read-only"))
+        const session = (await host.client.session.create({ title: "Read only", ...at("read-only"), agent: "build" })).id
+        const calls = received()
+        expect((await call(session, "list_meetings", {}, "read-only")).value).toMatchObject({ text: expect.any(String) })
+        expect(await call(session, "update_folder", { folder_id: "f-1" }, "read-only")).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(await call(session, "give_feedback", {}, "read-only")).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(calls()).toEqual(["list_meetings"])
+        expect(await status("read-only")).toMatchObject({ access: "read-only" })
+        expect(formatStatus(await status("read-only"))).toContain("Access: reads run without asking; every other tool is denied")
       })
 
       test("gives Granola's own error as UPSTREAM_ERROR: its first line, with the signed URL redacted", async () => {

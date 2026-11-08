@@ -41,15 +41,22 @@ the active workspace's display name is kept in memory only. It makes no network 
 What the model can do in Granola is limited by three layers, in this order:
 
 1. **Your Granola account and plan.** Granola decides which tools your account gets and what they can reach.
-2. **Default permission rules.** Granola's known reads run without a prompt. Everything else under `granola_` asks
-   first: Granola's writes, tools this plugin version does not know yet, and `export_markdown`. Granola's `sign_out`
-   tool is hidden, and its `give_feedback`, which sends a report to Granola, is denied.
+2. **Default permission rules: everything is allowed.** Every tool the plugin registers runs without a prompt, and so
+   does a tool Granola adds later, so an agent can change what you keep: create and rename folders, add and remove notes
+   from them, update private notes, generate a summary, send `give_feedback` to Granola's team (Granola's own
+   instructions tell it to), and export Markdown into the export folder, which is outside the project. Granola's
+   `sign_out` stays hidden. Set the plugin option `"access": "ask-changes"` (reads run, everything else asks) or
+   `"access": "read-only"` (reads run, everything else is denied), or add a `deny` rule, to restrict it.
 3. **Your OpenCode permissions.** Your `permissions` rules and saved "Always allow" answers override the defaults. A
    `deny` you configure always wins.
 
 The [configuration guide](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md#permissions)
 has the rules and how to change them. Things to know:
 
+- **The export folder is outside the project.** `export_markdown` writes under its export folder, which by default is
+  outside the project directory, so OpenCode asks for `external_directory` as well as the export's own action. A rule for
+  `granola_export_markdown` alone does not cover a run where nobody is present: allow `external_directory` for that
+  folder too, or set `exportDirectory` inside the project. A refusal that names it writes nothing.
 - **Saved approvals are broad.** "Always allow" on a Granola tool saves the pattern `*` for that tool's action, and for
   an export it covers every path. The saved answer applies to every agent in the OpenCode project, Plan included, until
   you remove it. OpenCode identifies a project by its git repository. A folder with no git commit belongs to OpenCode's
@@ -76,9 +83,10 @@ tools for a script, with no model. It adds no authority:
 - A script names a session that names an agent, and runs as them. A call resolves the tool's action against that
   agent's rules and then the session's before anything runs; OpenCode's own executor then checks it again, as it does
   for the model.
-- Only a resolved `allow` runs. An `ask` is refused, because no one is there to answer it, and a `deny` is refused;
-  both cost no tool call and no prompt. The default rules allow the ten reads and ask for the writes, `give_feedback`
-  (which they deny) and the export, so a script that writes, sends or exports needs a prior allow rule.
+- A script gets the same default as the model: every known tool is allowed at `access: "all"`, so a script can write,
+  send and export. Under `"ask-changes"` or `"read-only"` it needs a rule of its own. Only a resolved `allow` runs; an
+  `ask` is refused, because no one is there to answer it, and a `deny` is refused. Both cost no tool call and no
+  prompt.
 - Every known tool is a method, with a class; `sign_out` is not a tool this plugin offers, and a tool Granola adds
   later is not a method until it is classified. A saved **Always allow** does not authorise an ad-hoc script; its
   grant is a rule in config, or a Jobs run session.

@@ -2,7 +2,8 @@ import type { Plugin } from "@opencode/plugin"
 import { connectionProblem } from "./errors.js"
 import type { HostCheck } from "./host-check.js"
 import { SERVER, classify } from "./known-tools.js"
-import { DEFAULT_RULES, unguardedAgents, type Rule } from "./permissions.js"
+import type { Access } from "./options.js"
+import { defaultRules, unguardedAgents, type Rule } from "./permissions.js"
 import { STATE_OF, statusRows, type ConnectionState, type ShadowedSkill, type Status } from "./rpc/contract.js"
 import { TESTED_HOSTS } from "./hosts.js"
 
@@ -18,6 +19,8 @@ export interface StatusInputs {
   readonly conflict?: string
   readonly workspace?: string
   readonly exportDirectory: string
+  /** What the default rules allow: the `access` option, `all` when the plugin options were not read. */
+  readonly access?: Access
   readonly version: string
   readonly host: HostCheck
 }
@@ -70,7 +73,8 @@ export function buildStatus(inputs: StatusInputs): Status {
   const unknown = classes.filter((tool) => tool.kind === "unknown").map((tool) => tool.id.slice(SERVER.length + 1))
   // Every Granola tool on the server that the model can call, unknown ones included; not the plugin's own export.
   const visible = classes.filter((tool) => tool.kind === "read" || tool.kind === "write" || tool.kind === "unknown").length
-  const unguarded = unguardedAgents(inputs.agents)
+  const access = inputs.access ?? "all"
+  const unguarded = unguardedAgents(inputs.agents, access)
   const shadowed = shadowedSkills(inputs)
   const nextStep = (inputs.conflict ? CONFLICT_NEXT : undefined)
     ?? problem?.next
@@ -92,8 +96,9 @@ export function buildStatus(inputs: StatusInputs): Status {
       unknownNames: unknown.filter((name) => SAFE_NAME.test(name)).slice(0, LISTED_UNKNOWN),
     },
     ...(inputs.workspace ? { workspace: inputs.workspace } : {}),
+    access,
     unguardedAgents: unguarded,
-    ...(unguarded.length ? { permissionsBlock: DEFAULT_RULES.map((rule) => ({ ...rule })) } : {}),
+    ...(unguarded.length ? { permissionsBlock: defaultRules(access).map((rule) => ({ ...rule })) } : {}),
     shadowedSkills: shadowed,
     exportDirectory: inputs.exportDirectory,
     ...(inputs.host.warning ? { hostWarning: inputs.host.warning } : {}),

@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode/plugin"
-import { connectionProblem, toolError, type Problem } from "./errors.js"
+import { connectionProblem, externalDirectory, toolError, type Problem } from "./errors.js"
 import { HIDDEN_TOOLS, SERVER, classify, toolID } from "./known-tools.js"
 import { workspaceName } from "./workspace.js"
 
@@ -45,7 +45,7 @@ export function captureWorkspace(result: AccountResult): void {
   for (const set of workspaceSetters) set(result)
 }
 
-export async function registerTools(ctx: ToolsContext): Promise<ToolsState> {
+export async function registerTools(ctx: ToolsContext, exportFolder?: string): Promise<ToolsState> {
   let hidden = 0
   let workspace: string | undefined
   const setWorkspace = (result: AccountResult) => void (workspace = workspaceName(result) ?? workspace)
@@ -62,7 +62,14 @@ export async function registerTools(ctx: ToolsContext): Promise<ToolsState> {
 
   await ctx.tool.hook("execute.after", async (event) => {
     const kind = classify(event.tool)
-    if (kind === undefined || kind === "plugin") return
+    if (kind === undefined) return
+    if (kind === "plugin") {
+      // The export's folder is outside the project, so OpenCode asks for external_directory as well as its action.
+      if (event.tool === toolID("export_markdown") && event.status !== "completed" && /external_directory/i.test(event.error.message)) {
+        event.error = toolError(externalDirectory(exportFolder ?? "the export folder"))
+      }
+      return
+    }
     if (event.status === "completed") {
       if (event.tool === toolID("get_account_info")) setWorkspace(event.result)
       return

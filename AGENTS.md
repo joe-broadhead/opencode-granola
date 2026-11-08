@@ -24,20 +24,27 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 - **Nothing always visible.** Status lives in `/granola-status` and the `/granola` dialog.
 - **One status model.** `src/status.ts` builds it; the rows are Connection, Account, Access, Export folder, Skills,
   Tools, Agents without default rules (`none` when empty), OpenCode and exactly one Next step. The status RPC carries
-  the shared fields `version`, `host`, `state` (machine form, such as `sign_in_required`), `unguardedAgents` and
-  `nextStep`, and maps a failed read to its error `unavailable`.
-- **Default rules, not hooks.** `ctx.agent.transform` inserts the block from `src/permissions.ts` after each agent's
-  base allow and never weakens a stricter agent. Agents that miss it, and whose own rules would let an unknown
-  Granola tool run without asking, are named by status, with the block to paste.
+  the shared fields `version`, `host`, `state` (machine form, such as `sign_in_required`), `access`, `unguardedAgents`
+  and `nextStep`, and maps a failed read to its error `unavailable`.
+- **Default rules, not hooks.** `ctx.agent.transform` inserts the block from `defaultRules(access)` in
+  `src/permissions.ts` after each agent's base allow and never weakens a stricter agent. Agents that miss it, and whose
+  own rules would let an unknown Granola tool run without asking, are named by status, with the block to paste.
+- **Every tool is allowed by default.** The one option that restricts the plugin is `access`: `"all"` (the default),
+  `"ask-changes"` (reads run, everything else asks) and `"read-only"` (reads run, everything else is denied). The block
+  is generated from the tool lists, status and the README print it in full, and `test/docs.test.ts` asserts the printed
+  block equals `defaultRules(access)` for each value. A tool Granola adds later is covered by `granola_*`, so it follows
+  `access` too. There is no deny in the default block.
 - **Granola's tools stay Granola's.** Classify them in `src/known-tools.ts` to match the live server; unknown tools
   ask. `sign_out` stays hidden.
 - **Errors** are `CODE: what happened. Next step: one step.` Upstream errors pass through unchanged, except in the
-  tools RPC for scripts, which gives Granola's first line only, redacted, as `UPSTREAM_ERROR`.
+  tools RPC for scripts, which gives Granola's first line only, redacted, as `UPSTREAM_ERROR`. `PLUGIN_CODES` and
+  `RPC_CODES` in `src/errors.ts` are the one table: `test/error-tables.test.ts` fails when a code raised in `src` is in
+  neither, or when the README's Troubleshooting table or docs/scripting.md's refusal table drifts from it.
 - **Scripts.** The tools RPC, `granola.meetings.tools`, makes every known tool a method with its class: the reads,
-  Granola's writes, `give_feedback` (a send the default rules deny) and the plugin's `export_markdown` (an export,
-  confined to the export root). `sign_out` is not a tool this plugin offers, and an unknown tool never is. A call
-  resolves the rule before dispatch: only an allow runs, an ask is refused with no tool call, and `describe` reports
-  each class, plus each method's permission when given a session. Only the `PLUGIN-SPECIFIC` block changes. `src/host/tools-rpc.ts` is a copy of a module shared by
+  Granola's writes, `give_feedback` (a send) and the plugin's `export_markdown` (an export, confined to the export
+  root). `sign_out` is not a tool this plugin offers, and an unknown tool never is. A call resolves the rule before
+  dispatch: only an allow runs, an ask or a deny is refused with no tool call, and `describe` reports each class, plus
+  each method's permission when given a session. Only the `PLUGIN-SPECIFIC` block changes. `src/host/tools-rpc.ts` is a copy of a module shared by
   several plugins: change only its block between the `PLUGIN-SPECIFIC` markers here, and the rest in the shared copy
   first. The executor it calls skips tool hooks, so it applies the hook's work itself.
 - **Text** in skills, errors and status is plain language with no process terms (`test/ux.test.ts`). Docs describe

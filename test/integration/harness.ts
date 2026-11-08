@@ -15,7 +15,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
 import { OpenCode as Remote, type OpenCodeClient } from "@opencode/client"
 import { TESTED_HOSTS } from "../../src/hosts.js"
-import { DEFAULT_RULES, type Rule } from "../../src/permissions.js"
+import { defaultRules, type Rule } from "../../src/permissions.js"
 import type { SyntheticGranola } from "../synthetic-granola/server.js"
 
 export const REPO = realpathSync(fileURLToPath(new URL("../..", import.meta.url)))
@@ -48,10 +48,11 @@ export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" |
  * - invalid: a plugin option the plugin does not support;
  * - untested: connected, with allowUntestedHost;
  * - automation: connected, with exports allowed for runs where nobody is present;
+ * - ask-changes and read-only: connected, with the plugin option that restricts the default rules;
  * - unload: connected, then the plugin is removed from the config.
  * - sign-in: needs a sign-in, then signs in through the fake's own flow, so `/connect`'s mark can be checked.
  */
-const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "unload", "sign-in"] as const
+const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "ask-changes", "read-only", "unload", "sign-in"] as const
 export type Project = (typeof PROJECTS)[number]
 
 export interface Host {
@@ -107,10 +108,10 @@ function projectConfig(project: Project, plugin: string, fake: SyntheticGranola,
           general: { permissions: [deny("granola_*")] },
           reviewer: configOnly("Defined only in user config"),
           // The fix status gives for an agent defined only in user config: the block, then the user's own rules.
-          fixed: configOnly("Has the Granola permission block", [...DEFAULT_RULES, ...USER_RULES]),
+          fixed: configOnly("Has the Granola permission block", [...defaultRules(), ...USER_RULES]),
           // For scripts: one denies every Granola tool, the other asks before one read.
-          locked: configOnly("Denies Granola", [...DEFAULT_RULES, ...USER_RULES, deny("granola_*")]),
-          careful: configOnly("Asks before get_meetings", [...DEFAULT_RULES, ...USER_RULES, ask("granola_get_meetings")]),
+          locked: configOnly("Denies Granola", [...defaultRules(), ...USER_RULES, deny("granola_*")]),
+          careful: configOnly("Asks before get_meetings", [...defaultRules(), ...USER_RULES, ask("granola_get_meetings")]),
         },
         experimental: { schedules: true },
       }
@@ -129,6 +130,10 @@ function projectConfig(project: Project, plugin: string, fake: SyntheticGranola,
     case "automation":
       // A schedule's check program is authorized per tool for every resource, so a narrower export rule does not cover it.
       return { plugins: [granola(), probe()], permissions: [allow("granola_export_markdown")], experimental: { schedules: true } }
+    case "ask-changes":
+      return { plugins: [granola({ exportDirectory: exports, access: "ask-changes" }), probe()], experimental: { schedules: true } }
+    case "read-only":
+      return { plugins: [granola({ exportDirectory: exports, access: "read-only" }), probe()], experimental: { schedules: true } }
     case "unload":
       return { plugins: [granola(), probe()], experimental: { schedules: true } }
     case "sign-in":

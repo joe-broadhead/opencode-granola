@@ -39,18 +39,19 @@ export async function setup(ctx: SetupContext, toolsRpc: ToolsRpc): Promise<() =
 
   const server = await registerServer(ctx)
   const integration = await registerIntegration(ctx, server.conflict)
-  await registerPermissions(ctx)
+  await registerPermissions(ctx, options.access)
   let tools: ToolsState | undefined
   const status = createStatus(ctx, () => ({
     hidden: tools?.hidden() ?? 0,
     workspace: tools?.workspace(),
     conflict: server.conflict(),
     exportDirectory: options.exportDirectory,
+    access: options.access,
     version: info.version,
     host,
     bundledSkills: skills.map(({ name, path }) => ({ name, path })),
   }))
-  tools = await registerTools(ctx)
+  tools = await registerTools(ctx, options.exportDirectory)
   await registerCommands(ctx, status)
   await registerSkills(ctx, skills)
   await registerExport(ctx, options)

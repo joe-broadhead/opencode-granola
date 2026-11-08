@@ -32,7 +32,14 @@ const sorted = (codes: Iterable<string>) => [...new Set(codes)].sort()
 
 describe("error tables", () => {
   it("raises only codes the table names", () => {
-    const raised = sources(SRC).flatMap((file) => [...readFileSync(file, "utf8").matchAll(/\bcode: "([A-Z][A-Z_]+)"/g)].map((match) => match[1]!))
+    const raised = sources(SRC).flatMap((file) => {
+      const text = readFileSync(file, "utf8")
+      return [
+        ...[...text.matchAll(/\bcode: "([A-Z][A-Z_]+)"/g)].map((match) => match[1]!),
+        // A code that starts a message instead, as `CODE: what happened`.
+        ...[...text.matchAll(/["'`]([A-Z][A-Z_]+): /g)].map((match) => match[1]!),
+      ]
+    })
     // Node's own errno codes, such as EEXIST, are matched in the export's file writer; they are not the plugin's.
     const plugin = raised.filter((code) => !/^E[A-Z]+$/.test(code))
     expect(plugin.length).toBeGreaterThan(10)

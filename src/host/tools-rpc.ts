@@ -46,20 +46,16 @@ export const PLUGIN_ID = GRANOLA_ID
 
 /**
  * Every known tool, by its upstream name, with its class. The table is `src/known-tools.ts`, the one list the default
- * rules, this module and the skills read: the nine reads of today's server, its seven writes, and the plugin's own
- * export. `give_feedback` sends to Granola's team, so it is a send and the default rules deny it: a method that
- * always refuses. `sign_out` is not a tool this plugin offers (it removes it from the registry), so it is not here.
- * A tool the server adds later is not a method; `describe` lists it as unclassified.
+ * rules, this module and the skills read: the ten reads of today's server, its seven writes, and the plugin's own
+ * export. `give_feedback` sends to Granola's team, so it is a send; like every other tool it is allowed at the default
+ * `access`. `sign_out` is not a tool this plugin offers (it removes it from the registry), so it is not here. A tool
+ * the server adds later is not a method; `describe` lists it as unclassified.
  */
 export const METHODS: readonly MethodSpec[] = [
   ...READ_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: "read" })),
   ...WRITE_TOOLS.map((name): MethodSpec => ({ kind: "mcp", name, class: name === "give_feedback" ? "send" : "write" })),
 ]
 
-/**
- * The plugin's own export tool, built in setup where it has the plugin's context and its export folder. It runs the
- * tool's own `exportMarkdown`, which confines the file to the export root and asserts `granola_export_markdown`.
- */
 /**
  * The export's output for an RPC method. The tool's own schema marks the checksum with a pattern; OpenCode's RPC
  * output validation refuses patterns as unsafe, so this copy has the same fields without one.
@@ -75,6 +71,10 @@ const EXPORT_RPC_OUTPUT = {
   },
 } as const
 
+/**
+ * The plugin's own export tool, built in setup where it has the plugin's context and its export folder. It runs the
+ * tool's own `exportMarkdown`, which confines the file to the export root and asserts `granola_export_markdown`.
+ */
 export function exportMethod(ctx: Plugin.Context, exportDirectory: string): PluginMethod {
   return {
     kind: "plugin",

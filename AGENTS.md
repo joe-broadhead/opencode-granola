@@ -15,6 +15,10 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
   rather than deprecate.
 - **No runtime dependencies or peers.** OpenCode packages, OpenTUI and Solid are devDependencies. Ship prebuilt
   JavaScript with no lifecycle scripts and no declaration files.
+- **The icons.** `assets/icon.svg`, `assets/icon-128.png` and `assets/icon-256.png` are a neutral notebook glyph: no
+  Granola logo, shape or brand colour, because the plugin is unofficial. They come from the family icon kit, and
+  `scripts/check-icons.mjs` is a byte-identical copy of the kit's: `opencode.icons`, `jelly.icon`, the three `exports`
+  and the three `files` entries are the only places they are described, and `opencode.vendor` declares Granola.
 - **Two self-contained bundles.** `scripts/build.mjs` (esbuild) writes only `dist/index.js` and `dist/tui.js`. Neither
   imports a sibling file; only `@opencode/plugin`, OpenTUI, Solid and `node:*` stay external. `tsc` only typechecks.
 - **Nothing always visible.** Status lives in `/granola-status` and the `/granola` dialog.

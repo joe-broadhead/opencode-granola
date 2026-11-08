@@ -43,9 +43,11 @@ npm run check
 | typecheck | `npm run typecheck` | `tsc --noEmit` for the server (`tsconfig.json`), the TUI (`tsconfig.tui.json`) and the tests (`test/tsconfig.json`) |
 | lint | `npm run lint` | `scripts/check-forbidden.mjs`: forbidden APIs and imports in `src/`, `test/` and `scripts/`, and the package shape in `package.json` |
 | build | `npm run build` | `scripts/build.mjs`: deletes `dist/`, then esbuild bundles the server into `dist/index.js` and the TUI, compiled with Solid's Babel transform, into `dist/tui.js`. Each file is self-contained. |
+| icons | `npm run icons` | `node scripts/check-icons.mjs`: the three icons, the manifest's declarations and the tarball's `files` against the family icon contract |
 | unit | `npm test` | Vitest: `test/*.test.ts` and `test/tui/*.test.ts`. The TUI render test runs the built `dist/tui.js` under Bun, so build first. |
 | host | `npm run test:host` | `bun test ./test/integration`: the plugin from `dist/` in three OpenCode hosts, with Granola's URL routed to the loopback server in `test/synthetic-granola/` |
 | pack | `npm run test:pack` | `node test/pack-smoke.mjs`: builds, packs and installs the package, then loads it in stock OpenCode |
+| actionlint | `npm run actionlint` | `node scripts/check-workflows.mjs`: `actionlint` parses the workflows as workflows when it is on `PATH`; otherwise it prints a notice, and CI's own `workflows` job runs it |
 
 The host stage runs the same cases in the public `@opencode/sdk` 2.2.3, embedded in the test process, and in stock
 `opencode serve` 2.2.3, 2.2.4, 2.2.5 and 2.2.6 (`TESTED_HOSTS` in `src/hosts.ts`, the one list of tested releases) through
@@ -65,14 +67,15 @@ packages, which it installs from the npm registry. It needs npm, Bun and network
 
 | Variable | Effect |
 | --- | --- |
-| `OPENCODE_BIN_2_2_3`, `OPENCODE_BIN_2_2_4`, `OPENCODE_BIN_2_2_5` | Paths to stock `opencode` binaries of those versions, used by the host and pack stages. Unset, each stage installs `@opencode/cli@<version>` from npm into a temporary folder, once per version and run. |
+| `OPENCODE_BIN_2_2_3`, `OPENCODE_BIN_2_2_4`, `OPENCODE_BIN_2_2_5`, `OPENCODE_BIN_2_2_6` | Paths to stock `opencode` binaries of those versions, used by the host and pack stages. Unset, each stage installs `@opencode/cli@<version>` from npm into a temporary folder, once per version and run. |
 | `VITEST_MAX_WORKERS` | The number of Vitest workers for the unit stage. Use `2` on a busy machine. |
 
 For example:
 
 ```sh
 OPENCODE_BIN_2_2_3=/path/to/opencode-2.2.3 OPENCODE_BIN_2_2_4=/path/to/opencode-2.2.4 \
-  OPENCODE_BIN_2_2_5=/path/to/opencode-2.2.5 VITEST_MAX_WORKERS=2 npm run check
+  OPENCODE_BIN_2_2_5=/path/to/opencode-2.2.5 OPENCODE_BIN_2_2_6=/path/to/opencode-2.2.6 \
+  VITEST_MAX_WORKERS=2 npm run check
 ```
 
 ### Isolation

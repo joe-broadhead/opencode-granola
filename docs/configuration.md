@@ -344,8 +344,9 @@ alone is not enough where nobody is present: allow both, with the export folder'
 A refusal that names `external_directory` costs nothing: nothing is read and nothing is written, and the error's next
 step gives that rule. Point `exportDirectory` inside the project to avoid it.
 
-The export asks before it reads any meeting. The prompt shows the path inside the export folder. If you reject it,
-nothing is read and nothing is written. If a meeting cannot be read, nothing is written.
+The export is allowed by the default block, so it runs without a prompt, and the path it will write is in its result.
+With `access: "ask-changes"`, or a rule that asks, the prompt shows the path inside the export folder; if you reject
+it, nothing is read and nothing is written. If a meeting cannot be read, nothing is written.
 
 To export without a prompt, allow the action `granola_export_markdown` with a rule. The resource is the path inside the
 export folder, so a rule can cover one folder:

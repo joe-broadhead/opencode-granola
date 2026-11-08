@@ -69,4 +69,6 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 - `Plugin.image`;
 - imports of private host source, paths inside `@opencode/*` packages, `@opencode/ai`, other private host packages,
   `@opencode-ai/*`, machine-local paths, and `effect` in `src`;
-- in `package.json`: dependencies, peers, lifecycle scripts, an unpinned `@opencode/plugin` or another host range.
+- in `package.json`: dependencies, peers, lifecycle scripts, an unpinned `@opencode/plugin` or another host range;
+- internal process wording, in the code's comments and in every shipped doc: a decision's author, a lane, or a ticket
+  of our own has no place in either. State the behaviour instead.

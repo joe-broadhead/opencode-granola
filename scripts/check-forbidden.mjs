@@ -2,7 +2,7 @@
 // Fails on forbidden host APIs, private host source imports and bundled host runtime. It reads code, not text:
 // comments, copy and the test suite's own sample strings never match. Model-visible wording is checked by
 // test/ux.test.ts, and the src import boundaries by test/architecture.test.ts.
-import { readFileSync, readdirSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs"
 import { relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
@@ -30,6 +30,17 @@ const problems = []
 const report = (file, node, message) => {
   const { line } = node.getSourceFile().getLineAndCharacterOfPosition(node.getStart())
   problems.push(`${relative(root, file)}:${line + 1}: ${message}`)
+}
+
+/** Every text file under a folder, for the wording scan; a folder that does not exist yields nothing. */
+function walkText(directory) {
+  if (!existsSync(directory)) return []
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name === "node_modules" || entry.name === ".git") return []
+    const path = `${directory}/${entry.name}`
+    if (entry.isDirectory()) return walkText(path)
+    return /\.(?:md|tsx?|[cm]?js|json|jsonc)$/.test(entry.name) ? [path] : []
+  })
 }
 
 function walk(directory) {
@@ -133,6 +144,24 @@ function checkManifest() {
   for (const name of LIFECYCLE) if (pkg.scripts?.[name] !== undefined) fail(`has a ${name} script; OpenCode installs plugins with scripts off, so ship a built dist/`)
   if (pkg.devDependencies?.["@opencode/plugin"] !== SDK_VERSION) fail(`@opencode/plugin must be a devDependency pinned to exactly ${SDK_VERSION}`)
   if (pkg.opencode?.host !== SUPPORTED_RANGE) fail(`opencode.host must be exactly "${SUPPORTED_RANGE}"`)
+}
+
+/**
+ * Shipped text states behaviour, never who decided it or which internal lane changed it. The pass reads the docs and
+ * the code's own comments as text: a decision's author, a lane, or a ticket of our own has no place in either.
+ */
+const INTERNAL = /\bowner(?:'s)? (?:decision|ruling)\b|\bthe lead\b|\blane\s+[A-Z]\d*\b|\bhey-jelly\s*#\d+|\bG[1-4] lane\b|\breconcile lane\b/i
+const DOCS = ["README.md", "AGENTS.md", "SECURITY.md", "CONTRIBUTING.md", "docs", "skills", "src", "test", "scripts"]
+for (const entry of DOCS) {
+  const path = `${root}${entry}`
+  const files = existsSync(path) && statSync(path).isDirectory() ? walkText(path) : [path]
+  for (const file of files.filter((candidate) => existsSync(candidate))) {
+    if (file === fileURLToPath(import.meta.url)) continue
+    readFileSync(file, "utf8").split("\n").forEach((line, index) => {
+      const found = INTERNAL.exec(line)
+      if (found) problems.push(`${relative(root, file)}:${index + 1}: internal process wording "${found[0]}"; describe the behaviour instead`)
+    })
+  }
 }
 
 const shipped = walk(`${root}src`)

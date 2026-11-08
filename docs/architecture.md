@@ -38,15 +38,15 @@ OpenCode 2.2.x
 | `src/known-tools.ts` | The known-tool table: reads, writes, the hidden `sign_out`, and the plugin's own tools. |
 | `src/permissions.ts` | The default rule block, its insertion, and the check for agents that missed it. |
 | `src/integration.ts` | Names the server's sign-in "Granola" in `/connect`, and marks a stored sign-in that Granola rejects so `/connect` shows "Sign in required". |
-| `src/tools.ts` | The namespace description, hiding `sign_out`, and the `execute.after` hook. |
+| `src/tools.ts` | The namespace description, hiding `sign_out`, and the `execute.after` hook, which also names the `external_directory` rule for a refused export. |
 | `src/workspace.ts` | Reads the active workspace's display name from a `get_account_info` result. |
 | `src/status.ts` | The status model behind `/granola-status`, the RPC and the TUI dialog. |
-| `src/errors.ts` | Error codes, messages and next steps; `Tool.Error` for the model. |
+| `src/errors.ts` | Error codes, messages and next steps, the one `PLUGIN_CODES` table, and `Tool.Error` for the model. |
 | `src/commands.ts` | `/granola-status`, posted as a notice that does not start a model turn. |
 | `src/skills.ts` | Loads `skills/*/SKILL.md`. |
 | `src/export/` | `export_markdown`: input, paths, Granola reads, rendering and its errors. |
 | `src/io/markdown-export.ts` | The atomic file writer. |
-| `src/rpc/` | The RPC contract, shared by the server and the TUI part, and its registration. |
+| `src/rpc/` | The RPC contract, shared by the server and the TUI part, and its registration. It also carries the `access` type, so the TUI part names it without importing option parsing. |
 | `src/tui/` | The terminal UI status dialog, bundled into `dist/tui.js`. |
 | `src/host/tools-rpc.ts` | The tools RPC for scripts. A copy of a module shared by several plugins; only its marked block is Granola's. |
 
@@ -55,7 +55,9 @@ OpenCode 2.2.x
 OpenCode asserts the action `granola_<tool>` with the resource `*` before each Granola call. Every agent starts from a
 base `* * allow` rule, and OpenCode applies the last matching rule. The plugin's `agent.transform` inserts its block
 directly after that base rule, so the user's top-level rules, the agent's own rules and saved "Always allow" answers,
-which all come later, override it. Agents without the base rule are left alone, so a stricter agent is never
+which all come later, override it. The block comes from `defaultRules(access)`: every tool is allowed at `"all"`, the
+reads only with everything else asking at `"ask-changes"`, and the reads only with everything else denied at
+`"read-only"`. Agents without the base rule are left alone, so a stricter agent is never
 weakened. The transform is synchronous and idempotent: OpenCode replays it on every rebuild, and the block appears
 once.
 
@@ -69,9 +71,8 @@ The default rules are the whole permission mechanism. Plugin tools are not promp
 ## Known and unknown tools
 
 `src/known-tools.ts` classifies Granola's tools from the read-only and destructive hints Granola publishes. The
-classification only decides the default rules: known reads are allowed, and everything else under `granola_` asks.
-A tool Granola adds later is never blocked or hidden; it asks until a release classifies it, and status lists it by
-name.
+classification only decides the default rules: the reads are always allowed, and everything else follows the `access`
+option. A tool Granola adds later is never blocked or hidden, and `granola_*` covers it; status lists it by name.
 
 ## Status
 
@@ -79,14 +80,15 @@ One model, built by `buildStatus` in `src/status.ts`, serves `/granola-status`, 
 reads only OpenCode's local state: `ctx.mcp.list()` for the connection, `ctx.tool.list()` for tool counts,
 `ctx.agent.list()` for agents that missed the defaults, and `ctx.skill.list()` for a skill of the user's that uses one
 of the plugin's skill ids and so takes its place. It never calls Granola. The RPC carries the fields every plugin of
-this family shares (`version`, `host`, `state`, `unguardedAgents`, `nextStep`), and answers a status it cannot read with
-its error `unavailable`. The workspace name comes from the last successful `get_account_info` call, seen by the
+this family shares (`version`, `host`, `state`, `access`, `unguardedAgents`, `nextStep`), and answers a status it cannot
+read with its error `unavailable`. The workspace name comes from the last successful `get_account_info` call, seen by the
 `execute.after` hook or the tools RPC, and is kept in memory only.
 
 ## Export
 
 `export_markdown` validates its input and path, checks that Granola's read tools are available, and asks for
-permission. Only then does it read the meetings through the executors of OpenCode's own `granola_get_meetings` and
+permission. Its folder is outside the project, so OpenCode asks for `external_directory` as well; a refusal that names
+it becomes `EXPORT_PATH_NOT_PERMITTED`, with that rule as its next step. Only then does it read the meetings through the executors of OpenCode's own `granola_get_meetings` and
 `granola_get_meeting_transcript` tools, which check their own permissions. It pages transcripts within an 8 MB budget,
 renders one Markdown document, and writes it atomically under the export folder with mode `0600`. When Granola
 refuses transcripts for the user's plan, or does not list the transcript tool, the export keeps the notes and marks
@@ -98,7 +100,7 @@ OpenCode's tool hooks, so the export maps connection failures to the plugin's er
 The tools RPC, `granola.meetings.tools`, lets a script call every known Granola tool with no model
 ([Scripting](scripting.md)). Each call names a session; the session's agent and rules decide, exactly as for the
 model. The RPC resolves the method's action against the agent's and the session's rules before dispatch, so only an
-allow runs, and then calls the tool's executor from `ctx.tool.list()`, which checks the agent's rules, the session's
+allow runs (every tool at the default `access`), and then calls the tool's executor from `ctx.tool.list()`, which checks the agent's rules, the session's
 rules and saved approvals. A permission `evaluate` hook turns an inner ask on one of the RPC's own calls in flight into
 a deny, since no one can answer it. Every known tool is a method, with its class: the list is `src/known-tools.ts`, and
 the plugin's export is built in setup, where it has the export folder.

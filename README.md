@@ -87,7 +87,7 @@ See [Scripting](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs
 
 ## Permissions
 
-**Every tool is allowed by default.** An agent can read your meetings, transcripts and notes, and change them: create,
+**Every tool is allowed by default.** The `access` option decides whether each tool runs, asks or is denied. At its default, `"all"`, an agent can read your meetings, transcripts and notes, and change them: create,
 rename and fill folders, update private notes, generate a summary, send `give_feedback` to Granola's team on its own
 (Granola's instructions tell it to), and export Markdown into the export folder. Nothing here deletes a meeting, but a
 write changes what you keep, and an export writes a file outside the project. Restrict it in any of these three ways:

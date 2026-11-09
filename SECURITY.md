@@ -41,7 +41,7 @@ the active workspace's display name is kept in memory only. It makes no network 
 What the model can do in Granola is limited by three layers, in this order:
 
 1. **Your Granola account and plan.** Granola decides which tools your account gets and what they can reach.
-2. **Default permission rules: everything is allowed.** Every tool the plugin registers runs without a prompt, and so
+2. **Default permission rules: everything is allowed at the default `access`.** Every tool the plugin registers runs without a prompt, and so
    does a tool Granola adds later, so an agent can change what you keep: create and rename folders, add and remove notes
    from them, update private notes, generate a summary, send `give_feedback` to Granola's team (Granola's own
    instructions tell it to), and export Markdown into the export folder, which is outside the project. Granola's

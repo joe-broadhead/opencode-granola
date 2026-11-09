@@ -39,7 +39,7 @@ import { PLUGIN_ID as GRANOLA_ID } from "../meta.js"
 import type { ConnectionState } from "../rpc/contract.js"
 import { CONFLICT_NEXT } from "../status.js"
 import { captureWorkspace } from "../tools.js"
-import { READ_TOOLS, SERVER, WRITE_TOOLS, toolID } from "../known-tools.js"
+import { READ_TOOLS, WRITE_TOOLS, toolID } from "../known-tools.js"
 
 /** The plugin's id. The RPC id is `<PLUGIN_ID>.tools`: `granola.meetings.tools`. */
 export const PLUGIN_ID = GRANOLA_ID

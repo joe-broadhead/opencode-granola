@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode/plugin"
-import { SERVER, WRITE_TOOLS, PLUGIN_TOOLS, READ_TOOLS, toolID } from "./known-tools.js"
+import { WRITE_TOOLS, PLUGIN_TOOLS, READ_TOOLS, toolID } from "./known-tools.js"
 import type { Access } from "./options.js"
 
 export interface Rule {

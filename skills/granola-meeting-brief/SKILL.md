@@ -3,6 +3,8 @@ name: granola-meeting-brief
 description: Prep me for my next or tomorrow's meeting, brief me before my call with a person or company, catch me up on a project, or recap a period's meetings, from the user's Granola notes. Builds a sourced brief of decisions, open questions and who owes what. Load before the first Granola tool call.
 ---
 
+If Granola's tools are absent, run `/connect` and choose Granola, or on Jelly call jelly_connection_request.
+
 # Granola meeting brief
 
 A short brief in which every claim is tied to a meeting. The `granola` skill covers the tools, quoting and citing; follow it too.

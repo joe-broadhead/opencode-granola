@@ -3,6 +3,8 @@ name: granola
 description: Load before the first Granola tool call (granola_*, tools.granola.*). For questions about the user's Granola meetings: what was said, decided or assigned, notes, transcripts, follow-ups, questions across meetings, saving meetings as Markdown, or Granola sign-in and sign-out.
 ---
 
+If Granola's tools are absent, run `/connect` and choose Granola, or on Jelly call jelly_connection_request.
+
 # Granola meeting notes
 
 Granola's tools are `granola_<tool>`, or `tools.granola.<tool>` in Code Mode; below they drop the prefix. Their descriptions and Granola's server instructions cover the basics. This skill adds the decisions agents get wrong. For any brief or recap, before a meeting or across a period of meetings, also load `granola-meeting-brief`.

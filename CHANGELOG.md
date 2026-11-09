@@ -14,6 +14,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
+- Each Granola skill's first line says how to sign in when the tools are absent: `/connect`, or on Jelly `jelly_connection_request`.
+
 - **Every Granola tool is allowed by default.** The plugin's generated block allows every known tool and the `granola_*`
   namespace, so a tool Granola adds later runs without a prompt too, `give_feedback` is no longer off, and the export is
   no longer an ask. Restrict it with `access`, with an agent's own rules, or with a rule per tool; the README's

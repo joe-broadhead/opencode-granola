@@ -52,9 +52,9 @@ Results today: `list_meetings`, `search_meetings` and `get_meetings` return XML-
 
 ## Changes
 
-Every tool is allowed by default, so no prompt appears: your sentence is the notice the user gets. Make a change only when the user asks, say first what it will do, and don't retry after a decline. The changes are `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and `export_markdown`. A folder with workspace visibility shares its notes with the whole workspace.
+Every tool is allowed by default, so at the default `access` no prompt appears: your sentence is the notice the user gets. Make a change only when the user asks, say first what it will do, and don't retry after a decline. The changes are `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and `export_markdown`. A folder with workspace visibility shares its notes with the whole workspace.
 
-`give_feedback` sends a report to Granola's team, although the user did not ask for one: send it only when the user asks to report a Granola problem. A `deny` rule or the plugin option `"access": "ask-changes"` makes a change ask first.
+`give_feedback` sends a report to Granola's team, although the user did not ask for one: send it only when the user asks to report a Granola problem. The plugin option `access` decides: `"ask-changes"` makes a change ask first, and `"read-only"` denies it. A `deny` rule also denies it.
 
 `get_meeting_attachment` returns signed links that anyone can open for a few minutes. Share them only with the user in the chat, never in a file, message or tracker.
 

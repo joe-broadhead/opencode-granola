@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url"
 import { Skill, type Plugin } from "@opencode/plugin"
 import { GranolaError, skillsInvalid } from "./errors.js"
 
-export interface BundledSkill {
+interface BundledSkill {
   readonly name: string
   readonly description: string
   readonly path: string

@@ -4,7 +4,7 @@ import { GranolaError, packageInvalid } from "./errors.js"
 /** Stable: plugin storage and diagnostics are keyed by it. */
 export const PLUGIN_ID = "granola.meetings"
 
-export interface PackageInfo {
+interface PackageInfo {
   readonly version: string
   /** The supported OpenCode range, from package.json#opencode.host. */
   readonly hostRange: string

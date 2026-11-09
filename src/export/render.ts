@@ -40,7 +40,7 @@ export interface Meeting {
   readonly transcript?: Transcript
 }
 
-export interface Document {
+interface Document {
   readonly content: Content
   readonly retrievedAt: Date
   readonly meetings: readonly Meeting[]

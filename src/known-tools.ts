@@ -35,7 +35,7 @@ export const HIDDEN_TOOLS = ["sign_out"] as const
 /** Tools this plugin adds to the granola namespace itself. */
 export const PLUGIN_TOOLS = ["export_markdown"] as const
 
-export type ToolClass = "read" | "write" | "hidden" | "plugin" | "unknown"
+type ToolClass = "read" | "write" | "hidden" | "plugin" | "unknown"
 
 export function toolID(name: string): string {
   return `${SERVER}_${name}`

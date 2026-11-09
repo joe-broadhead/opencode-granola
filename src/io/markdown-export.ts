@@ -16,7 +16,7 @@ export interface MarkdownExportOptions {
   readonly assertPublication?: () => void
 }
 
-export interface MarkdownExportResult {
+interface MarkdownExportResult {
   /** Canonical absolute destination. */
   readonly path: string
   readonly bytes: number
@@ -26,7 +26,7 @@ export interface MarkdownExportResult {
 }
 
 /** Why the writer refused. An existing target keeps the EEXIST code that a lost publication race also has. */
-export type RefusalReason = "outside" | "link" | "not-a-file" | "changed" | "too-large"
+type RefusalReason = "outside" | "link" | "not-a-file" | "changed" | "too-large"
 
 export class MarkdownExportRefusal extends Error {
   constructor(readonly reason: RefusalReason, message: string) {

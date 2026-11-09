@@ -19,7 +19,7 @@ export interface ShadowedSkill {
   readonly path: string
 }
 
-export interface PermissionRule {
+interface PermissionRule {
   readonly action: string
   readonly resource: string
   readonly effect: "allow" | "deny" | "ask"
@@ -31,7 +31,7 @@ export interface PermissionRule {
  */
 export type State = "connected" | "sign_in_required" | "connecting" | "disabled" | "failed" | "not_configured" | "conflict"
 
-export const STATES: readonly State[] = ["connected", "sign_in_required", "connecting", "disabled", "failed", "not_configured", "conflict"]
+const STATES: readonly State[] = ["connected", "sign_in_required", "connecting", "disabled", "failed", "not_configured", "conflict"]
 
 /** The state for OpenCode's connection state; a conflict takes precedence in the status model. */
 export const STATE_OF: Readonly<Record<ConnectionState, State>> = {
@@ -167,7 +167,7 @@ export const STATUS_ERROR_SCHEMA = {
 } as const
 
 /** The S9 labels for the states, shared by /granola-status and the TUI dialog. */
-export const STATE_LABELS: Readonly<Record<State, string>> = {
+const STATE_LABELS: Readonly<Record<State, string>> = {
   connected: "connected",
   connecting: "connecting",
   sign_in_required: "sign-in required",
@@ -205,7 +205,7 @@ function hostRow(status: Status): StatusRow {
 }
 
 /** The permission posture, one sentence per `access` value, from the tool lists. */
-export function accessText(access: Access): string {
+function accessText(access: Access): string {
   if (access === "all") return "every tool runs without asking, reads, changes, new tools and exports included"
   if (access === "read-only") return "reads run without asking; every other tool is denied"
   return "reads run without asking; changes, new tools and exports ask first"
@@ -246,7 +246,7 @@ export function statusRows(status: Status): StatusRow[] {
 }
 
 /** The config snippet that gives agents the permission block, written out for the first agent. */
-export function permissionsSnippet(agents: readonly string[], block: readonly PermissionRule[]): string[] {
+function permissionsSnippet(agents: readonly string[], block: readonly PermissionRule[]): string[] {
   const [first, ...rest] = agents
   return [
     `"agents": {`,

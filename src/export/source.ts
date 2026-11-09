@@ -89,7 +89,7 @@ function readPage(result: Result): Page {
   }
 }
 
-export interface Reader {
+interface Reader {
   notes(meetingID: string): Promise<Notes>
   /**
    * Pages through the transcript until it ends, stops advancing, reaches the page limit or uses up `budget`

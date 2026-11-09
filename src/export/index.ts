@@ -59,13 +59,13 @@ export const EXPORT_OUTPUT = {
   },
 } as const
 
-export interface ExportResult {
+interface ExportResult {
   readonly path: string
   readonly bytes: number
   readonly sha256: string
 }
 
-export interface ExportRequest {
+interface ExportRequest {
   readonly meetingIDs: readonly string[]
   readonly content: Content
   readonly path?: string
@@ -87,7 +87,7 @@ export interface ExportContext extends SourceContext {
   readonly permission: Pick<Plugin.Context["permission"], "assert">
 }
 
-export interface ExportDependencies {
+interface ExportDependencies {
   readonly ctx: ExportContext
   readonly exportDirectory: string
   readonly limits?: Limits

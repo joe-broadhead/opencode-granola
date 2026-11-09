@@ -265,6 +265,15 @@ it cannot remove its sign-in, and `opencode auth list` stops showing it.
 
 Files you exported stay in your export folder.
 
+## Known limits
+
+- **Granola's server decides what the tools reach.** The plugin registers the tools Granola's server lists. A tool Granola adds later is not classed by the plugin: the `access` option decides whether it runs, asks or is denied, and `/granola-status` counts it as unknown.
+- **Plan limits.** Granola's free plan has no transcripts or folders, and its meeting history covers the last 30 days. Exports say what is missing rather than working around it.
+- **Exports are bounded.** An export takes 1 to 20 meetings and at most 8 MB; a transcript that does not fit is cut with a note. The file goes outside the project, so OpenCode also asks for `external_directory`.
+- **`give_feedback` reaches Granola's team.** It is allowed by default, and the skill tells the model to send it only when the user asks.
+- **No retries.** The plugin does not retry a failed call. The error names the next step.
+- **Hosts and platforms.** The plugin is tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6, and runs on macOS or Linux. A later 2.2 release starts and is reported as untested.
+
 ## Links
 
 - [Configuration](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md)

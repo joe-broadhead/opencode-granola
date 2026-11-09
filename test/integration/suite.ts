@@ -10,7 +10,6 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { connectionProblem, toolUnavailable } from "../../src/errors.js"
 import { SIGN_IN_MESSAGE } from "../../src/integration.js"
 import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
-import { HIDDEN_TOOLS, PLUGIN_TOOLS, WRITE_TOOLS } from "../../src/known-tools.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
 import { Granola, type Status } from "../../src/rpc/contract.js"
 import { AGENT_FIX, CONFLICT_NEXT, formatStatus, shadowedFix } from "../../src/status.js"
@@ -539,7 +538,6 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
       })
 
       test("the export is a method that writes a file at the default access, and never past a session deny", async () => {
-        const calls = received()
         const written = await call("build", "export_markdown", { meeting_ids: [MEETING], content: "notes", path: "script/default.md" })
         expect(written, JSON.stringify(written)).toMatchObject({ value: { path: expect.stringMatching(/\.md$/), bytes: expect.any(Number), sha256: expect.stringMatching(/^[0-9a-f]{64}$/) } })
         const denied = await host.client.session.create({ title: "No export", ...at("main"), agent: "build", permissions: [scriptRule(id("export_markdown"), "deny")] })

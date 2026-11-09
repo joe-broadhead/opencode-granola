@@ -35,7 +35,7 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
   block equals `defaultRules(access)` for each value. A tool Granola adds later is covered by `granola_*`, so it follows
   `access` too. There is no deny in the default block.
 - **Granola's tools stay Granola's.** Classify them in `src/known-tools.ts` to match the live server; unknown tools
-  ask. `sign_out` stays hidden.
+  follow the `access` option. `sign_out` stays hidden.
 - **Errors** are `CODE: what happened. Next step: one step.` Upstream errors pass through unchanged, except in the
   tools RPC for scripts, which gives Granola's first line only, redacted, as `UPSTREAM_ERROR`. `PLUGIN_CODES` and
   `RPC_CODES` in `src/errors.ts` are the one table: `test/error-tables.test.ts` fails when a code raised in `src` is in

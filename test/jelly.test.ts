@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { PLUGIN_TOOLS, READ_TOOLS, SERVER, WRITE_TOOLS, toolID } from "../src/known-tools.js"
 import { defaultRules } from "../src/permissions.js"
+import { parseOptions } from "../src/options.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, effectFromRules, readPackage } from "./support/jelly-kit.js"
 
 /**
@@ -33,10 +34,11 @@ describe("the jelly declaration", () => {
     expect(jelly.signIns).toEqual([{ id: "granola", label: "Granola", server: SERVER }])
   })
 
-  it("declares no RPC methods, views or contributions", () => {
+  it("declares the flat access option and no RPC methods, views or other contributions", () => {
     expect(jelly.rpc).toEqual([])
     expect(jelly.views).toEqual([])
-    expect(jelly.contributes).toEqual({ homeFeeds: [], homeWidgets: [], workKinds: [], settings: [] })
+    expect(jelly.contributes).toEqual({ homeFeeds: [], homeWidgets: [], workKinds: [], settings: [{ key: "access", label: "Access", type: "string", description: expect.any(String) }] })
+    expect(parseOptions({ access: "read-only" }).access).toBe("read-only")
   })
 })
 

@@ -32,7 +32,7 @@ const settled = (current: Status) => current.state !== "connecting" && current.s
 /** Connected, with Granola's tools in the registry: OpenCode can report connected before it lists them. */
 const connected = (current: Status) => current.state === "connected" && current.tools.visible > 0
 
-export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promise<Host>, fake: () => SyntheticGranola): void {
+export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promise<Host>, fake: () => SyntheticGranola, budget?: (host: Host) => Promise<void>): void {
   describe(name, () => {
     let host: Host
     let changesBefore: string
@@ -44,6 +44,8 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
     afterAll(async () => {
       await host?.close()
     }, 60_000)
+
+    if (budget) test("the forced Granola catalogue stays under 1,000 tokens", () => budget(host), 120_000)
 
     const at = (project: Project) => ({ location: host.location(project) })
     /** For calls whose input names no location: OpenCode then takes it from this header. */

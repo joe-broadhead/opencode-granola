@@ -21,6 +21,7 @@ export const Probe = Rpc.define({
 export interface ProbeOptions {
   /** The synthetic server endpoint that stands in for the official URL. */
   readonly route: string
+  readonly budget?: boolean
 }
 
 export type Decision = "once" | "always" | "reject"
@@ -86,6 +87,13 @@ export default Plugin.define({
     const options = ctx.options as ProbeOptions
     let registered: unknown = null
     let calls = 0
+
+    if (options.budget) await ctx.tool.transform((editor) => {
+      const schema = () => ({ type: "object", properties: { note: { type: "string", description: "x".repeat(9000) } }, required: ["note"] })
+      const input = { "~standard": { version: 1, vendor: "test", validate: (value: unknown) => ({ value }), jsonSchema: { input: schema, output: schema } } }
+      editor.namespace({ name: "filler", description: "Spends the inline budget." })
+      editor.add({ name: "pad", description: "pad", input, options: { namespace: "filler", permission: "filler_pad", pinned: true }, execute: async () => ({ content: "ok" }) } as never)
+    })
 
     await ctx.mcp.transform((editor) => {
       const config = editor.get("granola")

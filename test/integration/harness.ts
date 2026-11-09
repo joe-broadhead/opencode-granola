@@ -38,7 +38,7 @@ function tempDirectory(prefix: string, repository = false): string {
   return path
 }
 
-export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" | "integration" | "location" | "mcp" | "permission" | "plugin" | "rpc" | "server" | "session" | "skill">
+export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" | "integration" | "location" | "mcp" | "model" | "permission" | "plugin" | "rpc" | "server" | "session" | "skill">
 
 /**
  * - main: connected, with the user's own rules and agents, including two for scripts;
@@ -237,8 +237,15 @@ const SDK_VERSION = (JSON.parse(readFileSync(join(REPO, "node_modules", "@openco
  * The public `@opencode/sdk` host in this process, at the version installed as a devDependency. `version` is the
  * OpenCode version it reports to plugins.
  */
-export async function startEmbedded(fake: SyntheticGranola, version: string = SDK_VERSION): Promise<Host> {
+export async function startEmbedded(fake: SyntheticGranola, version: string = SDK_VERSION, modelURL?: string): Promise<Host> {
   const root = makeRoot("sdk", REPO, fake)
+  if (modelURL) {
+    const path = join(root.directory("main"), "opencode.jsonc")
+    const config = JSON.parse(readFileSync(path, "utf8")) as { plugins: { options: Record<string, unknown> }[]; providers?: Record<string, unknown> }
+    config.plugins[1]!.options.budget = true
+    config.providers = { lmstudio: { settings: { baseURL: modelURL } }, ollama: { settings: { baseURL: "" } }, vllm: { settings: { baseURL: "" } } }
+    writeFileSync(path, JSON.stringify(config))
+  }
   const saved = { ...process.env }
   const cwd = process.cwd()
   // A parent OpenCode session (an agent running this suite) must not leak in, and the environment must move before

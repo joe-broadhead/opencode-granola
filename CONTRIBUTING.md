@@ -100,8 +100,9 @@ Linux arm64, macOS arm64 and macOS x64 runners.
 
 ## Granola's tools
 
-`src/known-tools.ts` lists the Granola tools the plugin knows. `READ_TOOLS` run without a prompt, `WRITE_TOOLS` ask,
-`sign_out` is hidden, and anything else asks as an unknown tool. When `/granola-status` lists a new tool:
+`src/known-tools.ts` lists the Granola tools the plugin knows. `READ_TOOLS` run without a prompt. `WRITE_TOOLS` and
+unknown tools follow the `access` option: at the default `"all"` they run, at `"ask-changes"` they ask, and at `"read-only"`
+they are denied. `sign_out` is hidden. When `/granola-status` lists a new tool:
 
 1. Read its description and input schema, and Granola's `readOnlyHint` and `destructiveHint` for it.
 2. Add it to `READ_TOOLS` only if it never changes anything in Granola or sends anything, because reads run without a
@@ -133,8 +134,8 @@ the Requirements in `README.md` either way. Each `CHANGELOG.md` entry follows [K
 ### Releasing
 
 1. On `master`, set `version` in `package.json` and date its `CHANGELOG.md` entry, then run `npm run check`.
-2. Tag that commit `v<version>` and push the tag. The release workflow refuses a private package or a tag that differs
-   from `version`.
+2. Create a signed, annotated tag `v<version>` on that commit (`git tag -s -a v<version> -m "v<version>"`), and push it.
+   The release workflow refuses a private package or a tag that differs from `version`.
 3. Approve the run in the `release` environment.
 4. CI runs `npm ci --ignore-scripts` and `npm run check`, packs the tree once, runs
    `node test/pack-smoke.mjs --tarball <file>` on that tarball, and publishes it with

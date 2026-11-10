@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.0.0] - 2026-11-10
+
 ### Added
 
 - `access`, the plugin option every OpenCode plugin of this family has: `"all"` (the default), `"ask-changes"` and
@@ -204,7 +206,7 @@ All notable changes to this project are documented here. The format follows [Kee
   workspace for status, and a server that is not connected gets the same codes and next steps as for the model.
   `docs/scripting.md` explains it.
 
-## [0.0.0] - 2026-11-01
+## [0.0.0-npm] - 2026-11-01
 
 ### Added
 

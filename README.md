@@ -17,15 +17,13 @@ Unofficial; not affiliated with Granola.
 ## Install
 
 ```sh
-opencode plugin add @joe-broadhead/opencode-granola
+opencode plugin add github:joe-broadhead/opencode-granola#v0.0.0
 ```
 
-This adds the plugin to your global OpenCode config. Run `opencode reload`, or restart OpenCode. Then run
-`/granola-status`: it shows `sign-in required` until you sign in.
+Run `opencode reload`, or restart OpenCode, then run `/granola-status`.
 
-**Update** with `opencode plugin update @joe-broadhead/opencode-granola`, then run `opencode reload`. An entry pinned to
-a version, such as `@joe-broadhead/opencode-granola@0.0.1`, does not update: remove the `@version` from its `plugins`
-entry first.
+The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
+A new release is a new tag: install it with its own `#v<version>` spec.
 
 ## Sign in
 
@@ -105,7 +103,7 @@ write changes what you keep, and an export writes a file outside the project. Re
    | `"read-only"` | the read tools | nothing: everything else is **denied** |
 
    ```json
-   { "plugins": [{ "package": "@joe-broadhead/opencode-granola", "options": { "access": "read-only" } }] }
+   { "plugins": [{ "package": "github:joe-broadhead/opencode-granola#v0.0.0", "options": { "access": "read-only" } }] }
    ```
 
 2. **An agent that asks, or reads only**, with rules of its own, later than the plugin's:
@@ -186,7 +184,7 @@ plugin in the system config, which outranks each member's own config: `/etc/open
 {
   "plugins": [
     {
-      "package": "@joe-broadhead/opencode-granola",
+      "package": "github:joe-broadhead/opencode-granola#v0.0.0",
       "options": { "exportDirectory": "<an absolute path>/Granola" }
     }
   ]
@@ -270,7 +268,7 @@ it cannot remove its sign-in, and `opencode auth list` stops showing it.
 
 1. Sign out of Granola: `opencode mcp logout granola`.
 2. Check: `opencode auth list` no longer lists **Granola**.
-3. Remove the plugin: `opencode plugin remove @joe-broadhead/opencode-granola`, then `opencode reload`.
+3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-granola#v0.0.0`, then `opencode reload`.
    `opencode mcp list` no longer lists `granola`.
 4. Remove any Granola rules you copied into your agents' own `permissions`.
 

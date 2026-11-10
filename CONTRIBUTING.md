@@ -28,8 +28,6 @@ Add the folder's absolute path to `plugins` in your OpenCode config, and restart
 }
 ```
 
-A folder extracted from an `npm pack` tarball works the same way.
-
 ## Check
 
 One command runs every check, in order, and stops at the first failure:
@@ -140,17 +138,17 @@ the Requirements in `README.md` either way. Each `CHANGELOG.md` entry follows [K
 
 ### Releasing
 
-1. On `master`, set `version` in `package.json` and date its `CHANGELOG.md` entry, then run `npm run check`.
-2. Create a signed, annotated tag `v<version>` on that commit (`git tag -s -a v<version> -m "v<version>"`), and push it.
-   The release workflow refuses a private package or a tag that differs from `version`.
-3. Approve the run in the `release` environment.
-4. CI runs `npm ci --ignore-scripts` and `npm run check`, packs the tree once, runs
-   `node test/pack-smoke.mjs --tarball <file>` on that tarball, and publishes it with
-   `npm publish <file> --provenance --access public` through npm trusted publishing, under the dist-tag `latest`, or
-   `next` for a prerelease version such as `<version>-rc.1`. A rerun skips a version that is already on npm.
+Every plugin releases as `v0.0.0`, and it installs from that GitHub tag. The release is one commit on top of a `master`
+head that CI passed, and the tag points at it.
 
-Never unpublish a release. Deprecate it instead, and name the version to use:
+1. Set `version` to `0.0.0` in `package.json`, date the `## [0.0.0]` entry in `CHANGELOG.md`, then run `npm run check`.
+2. Push that commit to `master`, and wait for CI to pass on it.
+3. In a clean checkout of `master` at that commit, run `node scripts/release-commit.mjs --ci-sha <its full sha>`. It builds
+   `dist/`, removes the lifecycle scripts, and creates the signed commit and the signed annotated tag `v0.0.0`. It never
+   pushes; `--dry-run` shows the change first.
+4. Push the tag only: `git push origin v0.0.0`.
+5. Approve the run in the `release` environment. The release workflow checks the tag and its commit, installs the tag on
+   each stock OpenCode host (2.2.3 to 2.2.6), packs it, and creates the GitHub Release with the notes, the tarball and
+   `SHA256SUMS`.
 
-```sh
-npm deprecate @joe-broadhead/opencode-granola@<version> "<reason>. Use <version> instead."
-```
+A tag that already exists stops step 3. Delete the old tag and its Release first, then start again.

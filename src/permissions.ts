@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode/plugin"
-import { WRITE_TOOLS, PLUGIN_TOOLS, READ_TOOLS, toolID } from "./known-tools.js"
+import { PLUGIN_READS, PLUGIN_TOOLS, READ_TOOLS, WRITE_TOOLS, toolID } from "./known-tools.js"
 import type { Access } from "./options.js"
 
 export interface Rule {
@@ -18,7 +18,7 @@ export function defaultRules(access: Access = "all"): Rule[] {
   const other: Rule["effect"] = access === "all" ? "allow" : access === "ask-changes" ? "ask" : "deny"
   return [
     { action: "granola_*", resource: "*", effect: other },
-    ...READ_TOOLS.map((name) => ({ action: toolID(name), resource: "*", effect: "allow" as const })),
+    ...[...READ_TOOLS, ...PLUGIN_READS].map((name) => ({ action: toolID(name), resource: "*", effect: "allow" as const })),
     ...[...WRITE_TOOLS, ...PLUGIN_TOOLS].map((name) => ({ action: toolID(name), resource: "*", effect: other })),
   ]
 }

@@ -13,7 +13,7 @@ import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
 import { Granola, type Status } from "../../src/rpc/contract.js"
 import { AGENT_FIX, CONFLICT_NEXT, formatStatus, shadowedFix } from "../../src/status.js"
-import { FAILING, MEETING, PLAN_LIMITED, TITLE, TOOLS, UPSTREAM_FAILURE, WORKSPACE, type SyntheticGranola } from "../synthetic-granola/server.js"
+import { EMAIL, FAILING, MEETING, MEETING_AT, PLAN_LIMITED, TITLE, TOOLS, UPSTREAM_FAILURE, WORKSPACE, type SyntheticGranola } from "../synthetic-granola/server.js"
 import { ADOPTED_SERVER, globalPaths, OFFICIAL_URL, OTHER_SERVER, repositoryChanges, REPO, SHADOWING_SKILL, type Host, type Project } from "./harness.js"
 import type { CallInput, CallResult, Outcome, ProbeState } from "./probe/index.js"
 
@@ -185,9 +185,9 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect((await status("main")).shadowedSkills).toEqual([])
       })
 
-      test("Granola's tools sit in the granola namespace next to the plugin's export tool; sign_out is removed", async () => {
+      test("Granola's tools sit in the granola namespace next to the plugin's export and events_list; sign_out is removed", async () => {
         const { tools } = await state("main")
-        const expected = [...TOOLS.read, ...TOOLS.write, ...TOOLS.unknown, "export_markdown"].map(id).sort()
+        const expected = [...TOOLS.read, ...TOOLS.write, ...TOOLS.unknown, "export_markdown", "events_list"].map(id).sort()
         expect(tools.map((tool) => tool.id).sort()).toEqual(expected)
         expect(tools.every((tool) => tool.namespace === "granola")).toBe(true)
         expect(tools.filter((tool) => tool.pinned)).toEqual([])
@@ -326,7 +326,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         const current = await statusWhen("needs-auth", settled)
         expect(current).toMatchObject({ state: "sign_in_required", problem: { code: "AUTH_REQUIRED" }, tools: { visible: 0, unknown: 0 } })
         expect(JSON.stringify(current)).not.toMatch(/https?:\/\//)
-        expect((await state("needs-auth")).tools.map((tool) => tool.id).sort()).toEqual([id("export_markdown")])
+        expect((await state("needs-auth")).tools.map((tool) => tool.id).sort()).toEqual([id("events_list"), id("export_markdown")])
       })
 
       test("pending: CONNECTING while the server has not answered", async () => {
@@ -511,7 +511,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         const { value } = await script("main", "describe", {})
         expect(value.id).toBe(TOOLS_RPC_ID)
         expect(Object.fromEntries(value.methods.map((method: { name: string; class: string }) => [method.name, method.class]))).toEqual(
-          Object.fromEntries([...METHODS.map(method => [method.name, method.class]), ["export_markdown", "export"]]),
+          Object.fromEntries([...METHODS.map(method => [method.name, method.class]), ["export_markdown", "export"], ["events_list", "read"]]),
         )
         // An MCP method is available exactly when the connected server lists it.
         for (const method of value.methods.filter((entry: { kind: string }) => entry.kind === "mcp")) {
@@ -565,6 +565,21 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(calls()).toEqual(["get_meetings", "get_meeting_transcript"])
         const session = await host.client.session.get({ sessionID: sessions.build! })
         expect(session.tokens).toMatchObject({ input: 0, output: 0 })
+      })
+
+      test("events_list lists the meeting as Memory's event, with the signed-in email as its owner", async () => {
+        const calls = received()
+        const result = await call("build", "events_list", { since: "2026-10-01" })
+        expect(result.value).toMatchObject({
+          source: "granola",
+          account: "default",
+          owner: { id: `mailto:${EMAIL}`, label: EMAIL },
+          events: [{ source: "granola", external_id: MEETING, kind: "meeting", occurred_at: new Date(MEETING_AT).toISOString(), title: "Weekly sync", url: `https://notes.example.test/d/${MEETING}` }],
+          trust: "untrusted",
+        })
+        expect(result.value.events[0].text).toContain("Ship the export")
+        expect(new Set(calls())).toEqual(new Set(["get_account_info", "search_meetings", "get_meetings"]))
+        expect(await call("build", "events_list", { cursor: "not-a-cursor" })).toMatchObject({ type: "failed", code: "EVENTS_CURSOR_INVALID" })
       })
 
       test("an account read records the workspace that status shows, as the model path does", async () => {

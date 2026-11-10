@@ -20,6 +20,12 @@ export type Code =
   | "EXPORT_READ_FAILED"
   | "EXPORT_WRITE_FAILED"
   | "EXPORT_PATH_NOT_PERMITTED"
+  | "EVENTS_INVALID_INPUT"
+  | "EVENTS_CURSOR_INVALID"
+  | "EVENTS_ACCOUNT_UNKNOWN"
+  | "EVENTS_SOURCE_UNKNOWN"
+  | "EVENTS_OWNER_UNKNOWN"
+  | "EVENTS_READ_FAILED"
 
 /**
  * Every code the plugin's own code raises, as one table. The README's Troubleshooting table names each one, and
@@ -44,6 +50,12 @@ export const PLUGIN_CODES = [
   "EXPORT_READ_FAILED",
   "EXPORT_WRITE_FAILED",
   "EXPORT_PATH_NOT_PERMITTED",
+  "EVENTS_INVALID_INPUT",
+  "EVENTS_CURSOR_INVALID",
+  "EVENTS_ACCOUNT_UNKNOWN",
+  "EVENTS_SOURCE_UNKNOWN",
+  "EVENTS_OWNER_UNKNOWN",
+  "EVENTS_READ_FAILED",
 ] as const satisfies readonly Code[]
 
 /**

@@ -14,12 +14,12 @@ OpenCode 2.2.x
 │    mcp.transform    register "granola" → https://mcp.granola.ai/mcp, unless the user configured another server
 │    integration      name the server's integration "Granola"; mark a rejected sign-in as needing a new one
 │    agent.transform  after each agent's base "* * allow": granola_* ask, then the known reads allow
-│    tool.transform   namespace description; hide sign_out; add export_markdown
+│    tool.transform   namespace description; hide sign_out; add export_markdown and events_list
 │    execute.after    rewrite "server not available" failures; remember the active workspace name
 │    commands         /granola-status
 │    skills           granola, granola-meeting-brief
 │    rpc              granola.meetings/status
-│    tools RPC        granola.meetings.tools: describe and every known tool, for scripts
+│    tools RPC        granola.meetings.tools: describe, every known tool and events_list, for scripts
 └─ TUI part "granola.meetings.tui"   (dist/tui.js, one bundle)
      status dialog: palette entry "Granola: Status", slash /granola
 ```
@@ -47,6 +47,8 @@ OpenCode 2.2.x
 | `src/export/` | `export_markdown`: input, paths, Granola reads, rendering and its errors. |
 | `src/io/markdown-export.ts` | The atomic file writer. |
 | `src/rpc/` | The RPC contract, shared by the server and the TUI part, and its registration. It also carries the `access` type, so the TUI part names it without importing option parsing. |
+| `src/events/` | `events_list`: Granola's text read into meetings, the listing, its cursor and its errors. |
+| `src/host/events-list.ts` | The shared `events_list` contract, carried unchanged: the event type, input, cursors, checks and conformance. |
 | `src/tui/` | The terminal UI status dialog, bundled into `dist/tui.js`. |
 | `src/host/tools-rpc.ts` | The tools RPC for scripts. A copy of a module shared by several plugins; only its marked block is Granola's. |
 
@@ -94,6 +96,15 @@ renders one Markdown document, and writes it atomically under the export folder 
 refuses transcripts for the user's plan, or does not list the transcript tool, the export keeps the notes and marks
 each transcript as not on the plan. Those executors skip
 OpenCode's tool hooks, so the export maps connection failures to the plugin's error codes itself.
+
+## Events list
+
+`events_list` asserts `granola_events_list`, then reads through the executors of OpenCode's own
+`granola_get_account_info`, `granola_search_meetings` and `granola_get_meetings`, which check their own permissions:
+the owner first, then each week from the cursor's position to 2 hours ago, every page of it, sorted by (start, ID), and
+the summaries of the meetings that make the page. Those executors skip OpenCode's tool hooks, so it maps connection
+failures to the plugin's error codes itself, and Granola's own failures to `EVENTS_READ_FAILED`. The tools RPC runs the
+same function as an owned method; `pluginError` turns its errors into the script's code and next step.
 
 ## Scripts
 

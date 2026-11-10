@@ -58,6 +58,10 @@ before it writes. Its inputs are `meeting_ids`, `content` (`notes`, `transcript`
 the export folder, and `overwrite`. When your plan has no transcripts, the file holds the notes and says that
 transcripts are not available on your Granola plan.
 
+It also adds `events_list` (`granola_events_list`), for Memory's collector and other scripts, not for answering
+questions: the meetings you took part in since a cursor, as normalised events with their summaries, oldest first. It
+only reads, and never asks. See [Events list](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md#events-list).
+
 To see the connection, the workspace, the tools and the next step:
 
 - `/granola-status` posts the status in the session.
@@ -140,6 +144,7 @@ The plugin inserts this block directly after each agent's base "allow everything
   { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
   { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_events_list", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
@@ -210,6 +215,12 @@ exactly one `Next step`. Every error the plugin raises has a code and a next ste
 | `STATUS_UNAVAILABLE` | Status could not be read. | Run `/granola-status` again in a few seconds. |
 | `SKILLS_INVALID` | A bundled skill file is missing or broken. | Reinstall the plugin. |
 | `PACKAGE_INVALID` | The plugin's `package.json` is inconsistent. | Reinstall the plugin. |
+| `EVENTS_INVALID_INPUT` | The events_list input is invalid: *problems*. | Pass only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
+| `EVENTS_CURSOR_INVALID` | The cursor was not issued by Granola's events_list for this account and its signed-in user. | Pass a cursor from a previous result of the same account, or start again with since. |
+| `EVENTS_ACCOUNT_UNKNOWN` | Granola has one account, default. | Leave account out, or pass "default". |
+| `EVENTS_SOURCE_UNKNOWN` | This plugin lists one source, granola. | Leave source out, or pass "granola". |
+| `EVENTS_OWNER_UNKNOWN` | Granola did not name the signed-in account's email. | Run /granola-status, and sign in to Granola again if it shows a problem. |
+| `EVENTS_READ_FAILED` | Granola's *tool* failed: *reason*. | Call events_list again with the same cursor; if it keeps failing, run /granola-status. |
 | `EXPORT_INVALID_INPUT` | The export request is malformed. | Pass `meeting_ids` (1 to 20) and `content` (`notes`, `transcript` or `both`), and only `path` and `overwrite` besides. |
 | `EXPORT_INVALID_PATH` | The export path is not allowed. | Use a relative path inside the export folder, without `..`, a leading `/` or links. |
 | `EXPORT_EXISTS` | The file already exists. | Choose another path, or export again with `overwrite: true` after asking. |

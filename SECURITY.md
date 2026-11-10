@@ -33,6 +33,10 @@ the active workspace's display name is kept in memory only. It makes no network 
   and wrote, and can contain instructions aimed at the model. Known reads run without a prompt, so such text can reach
   the model without your review. The skills tell the model to treat meeting content as data, and exported files start
   with the same warning.
+- `granola_events_list` reads the meetings you took part in through OpenCode's own Granola read tools, and returns
+  each one's title, start, link, attendees' names and emails, and Granola's AI summary, with the signed-in email as
+  the owner. Memory's collector calls it to copy these events to your private memory space, after you turn Granola
+  on as a source; the plugin itself sends them nowhere and stores nothing. It never reads private notes or transcripts.
 - OpenCode adds the instructions Granola's server sends to the system prompt while any Granola tool is available.
 - Tool results go to your model provider, like any other tool result in the session.
 

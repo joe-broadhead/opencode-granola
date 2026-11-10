@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { PLUGIN_TOOLS, READ_TOOLS, WRITE_TOOLS, toolID } from "../src/known-tools.js"
+import { PLUGIN_READS, PLUGIN_TOOLS, READ_TOOLS, WRITE_TOOLS, toolID } from "../src/known-tools.js"
 import { defaultRules, hasDefaults, insertDefaults, matches, registerPermissions, unguardedAgents, type Rule } from "../src/permissions.js"
 import { agent, fakeHost } from "./fakes.js"
 
@@ -11,11 +11,11 @@ function effect(rules: readonly Rule[], action: string): Rule["effect"] {
 }
 
 describe("default Granola rules", () => {
-  it("allow every Granola tool by default, reads and one Granola adds later alike", () => {
+  it("allow every Granola tool by default, reads, the plugin's own read and one Granola adds later alike", () => {
     const rules = defaultRules()
     expect(rules[0]).toEqual({ action: "granola_*", resource: "*", effect: "allow" })
     expect(rules.slice(1)).toEqual(
-      [...READ_TOOLS, ...WRITE_TOOLS, ...PLUGIN_TOOLS].map((name) => ({ action: `granola_${name}`, resource: "*", effect: "allow" })),
+      [...READ_TOOLS, ...PLUGIN_READS, ...WRITE_TOOLS, ...PLUGIN_TOOLS].map((name) => ({ action: `granola_${name}`, resource: "*", effect: "allow" })),
     )
     expect(rules.filter((rule) => rule.effect !== "allow")).toEqual([])
   })

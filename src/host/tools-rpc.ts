@@ -33,6 +33,7 @@ import { Rpc } from "@opencode/plugin/rpc"
 
 // >>> PLUGIN-SPECIFIC >>>
 
+import { EventsFailure } from "../events/errors.js"
 import { connectionProblem, toolUnavailable } from "../errors.js"
 import { EXPORT_DESCRIPTION, EXPORT_INPUT, EXPORT_OUTPUT, exportMarkdown } from "../export/index.js"
 import { PLUGIN_ID as GRANOLA_ID } from "../meta.js"
@@ -123,9 +124,11 @@ export const NEXT_STEPS: NextSteps = {
   CANCELLED: "Call the method again if you still need the result.",
 }
 
-/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step. Granola has none. */
-export function pluginError(_error: unknown): Failure | undefined {
-  return undefined
+/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step: events_list's. */
+export function pluginError(error: unknown): Failure | undefined {
+  if (!(error instanceof EventsFailure)) return undefined
+  const { code, message, next } = error.problem
+  return { code, what: message.replace(/[.\s]+$/, ""), next }
 }
 
 // <<< PLUGIN-SPECIFIC <<<

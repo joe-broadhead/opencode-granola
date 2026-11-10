@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-granola",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Unofficial OpenCode plugin for Granola meeting notes, through Granola's official MCP server",
   "keywords": [
     "opencode",
@@ -154,6 +154,12 @@
       {
         "name": "granola.search_transcripts",
         "permission": "granola_search_transcripts",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "granola.events_list",
+        "permission": "granola_events_list",
         "effect": "allow",
         "readOnly": true
       },

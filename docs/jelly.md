@@ -13,7 +13,7 @@ declaration, because that schema accepts no unknown keys.
 
 ## Tools and permissions
 
-18 tools are declared (10 read-only). Jelly's agents have no base "allow everything"
+19 tools are declared (11 read-only). Jelly's agents have no base "allow everything"
 rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly
 writes each declared `ask` or `deny` as that tool's default instead (the person's own choice
 replaces it), and denies a read-only helper every tool not marked `readOnly`. A declared `allow`
@@ -24,7 +24,7 @@ changes nothing in Jelly.
 - Everything else runs, as the plugin's own rules let it. That includes `granola_give_feedback`, which sends a report to
   Granola's team and which Granola's own instructions tell the model to send unasked, and
   `granola_export_markdown`, which writes a file outside the project. A Jelly admin turns either into an ask, or off,
-  in Jelly's own tool settings; in OpenCode the same is a rule, or the `access` option.
+  in Jelly's own tool settings; in OpenCode the same is a rule, or the `access` option. `granola_events_list` is the plugin's own read for Memory's collector, which runs it unattended, so it never asks.
 
 The hidden `sign_out` is not declared: the plugin removes it from the agents' tools.
 
@@ -52,4 +52,4 @@ Jelly folds the declared sign-ins into this plugin's one card, which shows each 
 Jelly's curated catalogue pins an exact version. Each release is published under a new version, so a review in
 Jelly can tell the two apart.
 
-The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, and the shared part of the tools RPC (`src/host/tools-rpc.ts`), equal to the copy every plugin carries.
+The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, the shared part of the tools RPC (`src/host/tools-rpc.ts`) and the events_list source contract (`src/host/events-list.ts`) equal to the copies every plugin carries.

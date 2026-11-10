@@ -56,16 +56,16 @@ describe("Granola's tools RPC", () => {
       ...WRITE_TOOLS.map(name => [name, name === "give_feedback" ? "send" : "write"]),
     ])
     const { handlers } = await started()
-    expect(Object.keys(handlers).sort()).toEqual(["describe", "export_markdown", ...READ_TOOLS, ...WRITE_TOOLS].sort())
+    expect(Object.keys(handlers).sort()).toEqual(["describe", "events_list", "export_markdown", ...READ_TOOLS, ...WRITE_TOOLS].sort())
     // sign_out is not a tool this plugin offers (it removes it), so it is not a method; an unknown tool never is.
     for (const name of [...HIDDEN_TOOLS, "brand_new_tool"]) expect({ name, method: handlers[name] }).toEqual({ name, method: undefined })
   })
 
-  it("reports each method's class, and an export that writes a local file", async () => {
+  it("reports each method's class, events_list included, and an export that writes a local file", async () => {
     const { call } = await started()
     const description = (await call("describe", {})) as { methods: { name: string; class: string }[] }
     const classes = Object.fromEntries(description.methods.map((method) => [method.name, method.class]))
-    expect(classes).toMatchObject({ get_meetings: "read", create_folder: "write", give_feedback: "send", export_markdown: "export" })
+    expect(classes).toMatchObject({ get_meetings: "read", create_folder: "write", give_feedback: "send", export_markdown: "export", events_list: "read" })
     const exported = description.methods.find((method) => method.name === "export_markdown") as unknown as { action: string; output: { properties: Record<string, object> } }
     expect(exported).toMatchObject({ action: "granola_export_markdown" })
     // OpenCode's RPC output validation refuses a pattern, so the method's schema has none; the tool still checks its own.

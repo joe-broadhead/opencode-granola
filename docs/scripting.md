@@ -146,6 +146,9 @@ A refusal or failure is the RPC error `failed`, with a message `CODE: what happe
 OpenCode itself answers `rpc.method_not_found` for a method that does not exist, such as a tool Granola adds later,
 `rpc.unavailable` when the plugin did not register the tools RPC or the call reached another location, and
 `rpc.invalid_input` for a body that is not the envelope above, with one message per problem.
+`events_list` also gives its own codes, such as `EVENTS_CURSOR_INVALID` and `EVENTS_READ_FAILED`, with the next steps in
+the [configuration guide](configuration.md#events-list-1).
+
 
 ## What scripts cannot do
 

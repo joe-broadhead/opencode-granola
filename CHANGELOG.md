@@ -37,6 +37,14 @@ All notable changes to this project are documented here. The format follows [Kee
   tool call and no prompt. A saved "Always allow" no longer authorises an ad-hoc script; its grant is a rule in config,
   or a Jobs run session.
 
+## [0.0.9] - 2026-11-08
+
+### Added
+
+- `granola_events_list`, and the tools RPC method `events_list`: the meetings you took part in since a cursor, as Memory's normalised events, oldest first, each with its title, start, note link, attendees and Granola's AI summary (at most 4,096 characters). It reads through `get_account_info`, `search_meetings` (one week at a time, `attended_only`) and `get_meetings`, never asks, and is allowed by default, so Memory's collector can run it unattended. The owner is the signed-in Granola email, and the account `default`.
+- `src/host/events-list.ts`, the shared `events_list` source contract, carried unchanged; `scripts/check-copies.mjs` pins it like the other shared copies.
+- The errors `EVENTS_INVALID_INPUT`, `EVENTS_CURSOR_INVALID`, `EVENTS_ACCOUNT_UNKNOWN`, `EVENTS_SOURCE_UNKNOWN`, `EVENTS_OWNER_UNKNOWN` and `EVENTS_READ_FAILED`.
+
 ## [0.0.8] - 2026-11-06
 
 ### Changed

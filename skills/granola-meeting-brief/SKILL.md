@@ -11,7 +11,7 @@ A short brief in which every claim is tied to a meeting. The `granola` skill cov
 
 ## 1. Pin down the meeting and the window
 
-- Granola holds only past meetings; it can't see upcoming ones. For "my next meeting" or "tomorrow's call", get the event's title, time and attendees from a calendar tool if one is available, or ask the user which meeting it is. Never present a past Granola meeting as the upcoming one.
+- Granola holds only past meetings; it can't see upcoming ones. For "my next meeting" or "tomorrow's call", get the event's title, time and attendees from a calendar tool if one is available, or ask the user which meeting it is. When the user names their Granola notes, read the calendar only for that event's title, time and attendees, then search Granola for those attendees' earlier meetings before you answer. Never present a past Granola meeting as the upcoming one.
 - Agree the subject and the window. With no preference, start with the last 30 days, widen when that finds nothing, and say which window you used. For a recap of a period, such as last month's meetings, that period is the window.
 - When the widened searches by attendee and by topic find nothing, stop and say so instead of listing a longer period's meetings: a meeting that matches neither the people nor the topic isn't background for this brief.
 

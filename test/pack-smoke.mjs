@@ -3,8 +3,9 @@
 // with scripts off and no dependencies. Installed alone, it loads in each stock OpenCode release, which provides
 // @opencode/plugin, OpenTUI and Solid itself. Next to those host packages, '.' and './tui' import under Bun, and './rpc' is not exported.
 //
-// Usage: node test/pack-smoke.mjs [--tarball <path>]. Without --tarball it builds and packs the repository; with it,
-// it tests that exact tarball, as release.yml does before publishing it. Needs npm and Bun. Set OPENCODE_BIN_2_2_3,
+// Usage: node test/pack-smoke.mjs [--tarball <path>]. It tests the tarball named by --tarball, else by PACK_TARBALL:
+// scripts/release-pack.mjs sets PACK_TARBALL to the tarball release.yml built, and the stage tests that exact file.
+// With neither, it builds and packs the repository. Needs npm and Bun. Set OPENCODE_BIN_2_2_3,
 // OPENCODE_BIN_2_2_4 and OPENCODE_BIN_2_2_5 to stock opencode binaries you already have; otherwise each @opencode/cli
 // release is installed into a temp directory, once per run.
 import assert from "node:assert/strict"
@@ -13,13 +14,14 @@ import { randomUUID } from "node:crypto"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { createServer } from "node:net"
 import { arch, platform } from "node:os"
-import { join, relative, resolve, sep } from "node:path"
+import { join, relative, sep } from "node:path"
 import { after, before, test } from "node:test"
 import { setTimeout as sleep } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
 // Node 24 strips the types of this one plain module, so the pack test shares the host test's list.
 import { TESTED_HOSTS } from "../src/hosts.ts"
+import { givenTarball } from "./pack-source.ts"
 
 const REPO = realpathSync(fileURLToPath(new URL("..", import.meta.url)))
 const pkg = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8"))
@@ -59,8 +61,8 @@ const work = realpathSync(mkdtempSync(join(realpathSync("/tmp"), "granola-pack-"
 run("git", ["init", "--quiet", work], work)
 after(() => rmSync(work, { recursive: true, force: true }))
 
-const tarballFlag = process.argv.indexOf("--tarball")
-const GIVEN = tarballFlag === -1 ? undefined : resolve(process.argv[tarballFlag + 1] ?? "")
+// The tarball this run tests, from --tarball or PACK_TARBALL; undefined packs the repository.
+const GIVEN = givenTarball(process.argv, process.env)
 
 function run(command, args, cwd, env = process.env) {
   const result = spawnSync(command, args, { cwd, encoding: "utf8", env: { ...env, npm_config_update_notifier: "false" } })
@@ -100,7 +102,7 @@ function consumer(name, extra = []) {
 
 before(() => {
   if (GIVEN) {
-    assert.ok(existsSync(GIVEN), `--tarball ${GIVEN} exists`)
+    assert.ok(existsSync(GIVEN), `the tarball to test, ${GIVEN} (--tarball or PACK_TARBALL), exists`)
     // npm reads the tarball's own metadata; the folder has a package.json, so npm never walks up to another project.
     const inspect = join(work, "inspect")
     mkdirSync(inspect)

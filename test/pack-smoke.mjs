@@ -328,9 +328,10 @@ for (const version of HOST_VERSIONS) {
       const base = build.permissions.findIndex((rule) => rule.action === "*" && rule.resource === "*" && rule.effect === "allow")
       assert.ok(base >= 0, "build has a base allow")
       assert.deepEqual(build.permissions[base + 1], { action: "granola_*", resource: "*", effect: "allow" })
-      // Every tool the plugin registers is allowed, the writes and the export included.
-      for (const action of ["granola_get_meetings", "granola_list_templates", "granola_update_folder", "granola_export_markdown"]) {
-        assert.ok(build.permissions.slice(base + 1, base + 20).some((rule) => rule.action === action && rule.resource === "*" && rule.effect === "allow"), action)
+      // Every tool the plugin registers is allowed, the reads, events_list, the writes and the export included: the block
+      // is 20 rules after the base allow, so the window covers all of them.
+      for (const action of ["granola_get_meetings", "granola_list_templates", "granola_events_list", "granola_update_folder", "granola_export_markdown"]) {
+        assert.ok(build.permissions.slice(base + 1, base + 21).some((rule) => rule.action === action && rule.resource === "*" && rule.effect === "allow"), action)
       }
 
       const { output: status } = await host.api("POST", "/api/rpc/granola.meetings/status", { input: {} })

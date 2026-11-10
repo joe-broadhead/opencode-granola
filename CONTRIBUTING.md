@@ -116,6 +116,13 @@ they are denied. `sign_out` is hidden. When `/granola-status` lists a new tool:
 Use `type(scope): summary`, for example `fix(status): explain a disabled server`. Keep commits small, and keep
 `npm run check` green.
 
+### Drift check
+
+The drift check is a manual maintainer check, not part of `npm run check` or CI, and nothing at runtime depends on it.
+`npm run drift -- <tools.json> [--strict]` compares a saved copy of Granola's tool list, OpenCode's tool list or an MCP
+`tools/list` result, with `src/known-tools.ts`. It names what was added, removed or reclassified, and reads only that
+file. `--strict` exits 1 when there is drift.
+
 ## Releases
 
 ### Versioning

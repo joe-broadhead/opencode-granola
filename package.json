@@ -74,7 +74,8 @@
     "test:pack": "node test/pack-smoke.mjs",
     "check": "npm run typecheck && npm run lint && npm run build && npm run icons && npm test && npm run test:host && npm run test:pack && npm run actionlint",
     "icons": "node scripts/check-icons.mjs",
-    "actionlint": "node scripts/check-workflows.mjs"
+    "actionlint": "node scripts/check-workflows.mjs",
+    "drift": "node scripts/check-granola-tools.mjs"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",

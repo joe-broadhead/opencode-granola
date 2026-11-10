@@ -20,10 +20,16 @@ Unofficial; not affiliated with Granola.
 opencode plugin add github:joe-broadhead/opencode-granola#v0.0.0
 ```
 
-Run `opencode reload`, or restart OpenCode, then run `/granola-status`.
+This adds the plugin to your global OpenCode config. Run `opencode reload`, or restart OpenCode. Then run
+`/granola-status`: it shows `sign-in required` until you sign in.
+
+A Git install is removed and updated by its installed spec: `opencode plugin remove github:joe-broadhead/opencode-granola#v0.0.0`. `opencode plugin update` and `opencode plugin check` take the same spec.
 
 The install takes the GitHub release tag. Its commit carries the built `dist/`, so the install runs no build.
 A new release is a new tag: install it with its own `#v<version>` spec.
+
+**Update** with `opencode plugin update github:joe-broadhead/opencode-granola#v0.0.0`, then run `opencode reload`. An entry
+pinned to a tag does not update on its own: install the new release's tag, as above.
 
 ## Sign in
 

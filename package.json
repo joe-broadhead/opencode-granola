@@ -70,9 +70,10 @@
     "build": "node scripts/build.mjs",
     "lint": "node scripts/check-forbidden.mjs && node scripts/check-copies.mjs",
     "test": "vitest run",
+    "test:kit": "node --test scripts/release-kit.test.mjs",
     "test:host": "bun test --timeout 120000 ./test/integration",
     "test:pack": "node test/pack-smoke.mjs",
-    "check": "npm run typecheck && npm run lint && npm run build && npm run icons && npm test && npm run test:host && npm run test:pack && npm run actionlint",
+    "check": "npm run typecheck && npm run lint && npm run build && npm run icons && npm test && npm run test:kit && npm run test:host && npm run test:pack && npm run actionlint",
     "icons": "node scripts/check-icons.mjs",
     "actionlint": "node scripts/check-workflows.mjs",
     "drift": "node scripts/check-granola-tools.mjs"

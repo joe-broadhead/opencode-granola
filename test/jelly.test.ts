@@ -3,7 +3,7 @@ import { PLUGIN_READS, PLUGIN_TOOLS, READ_TOOLS, SERVER, WRITE_TOOLS, toolID } f
 import { defaultRules } from "../src/permissions.js"
 import { ACCESS_VALUES, parseOptions } from "../src/options.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, effectFromRules, readPackage } from "./support/jelly-kit.js"
-import { ACCESS_CHOICES, closedSet, type Setting, settingsProblems, settingValueIssue } from "./support/jelly-settings.js"
+import { ACCESS_CHOICES, settingChoices, type PluginSetting, settingsProblems, settingValueIssue } from "./support/jelly-settings.js"
 
 /**
  * The `jelly` section of package.json, which Jelly reads without loading the plugin. Jelly's agents have no base
@@ -14,7 +14,7 @@ import { ACCESS_CHOICES, closedSet, type Setting, settingsProblems, settingValue
 
 const ROOT = new URL("../", import.meta.url)
 const pkg = readPackage(ROOT)
-const jelly = pkg.jelly as Declaration & { rpc: unknown[]; views: unknown[]; contributes: { homeFeeds: unknown[]; homeWidgets: unknown[]; workKinds: unknown[]; settings: Setting[] }; tools: DeclaredTool[] }
+const jelly = pkg.jelly as Declaration & { rpc: unknown[]; views: unknown[]; contributes: { homeFeeds: unknown[]; homeWidgets: unknown[]; workKinds: unknown[]; settings: PluginSetting[] }; tools: DeclaredTool[] }
 const { settings } = jelly.contributes
 
 describe("the jelly declaration", () => {
@@ -62,7 +62,7 @@ describe("the jelly declaration", () => {
 
   it("offers only access values the options parser takes, its default included, and the parser refuses any other", () => {
     const access = settings.find((setting) => setting.key === "access")!
-    const values = (closedSet(access) ?? []).map((choice) => choice.value)
+    const values = (settingChoices(access) ?? []).map((choice) => choice.value)
     expect(values).toEqual([...ACCESS_VALUES])
     for (const value of values) expect<string>(parseOptions({ access: value }).access).toBe(value)
     expect<string>(parseOptions({}).access).toBe(access.default as string)

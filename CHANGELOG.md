@@ -2,6 +2,26 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Jelly's declaration lists the three tools Granola serves that it lacked: `get_agent_brief` (a read),
+  `create_meeting_note_from_transcript` (a write) and `sign_out` (a change, still hidden from agents, with a note on how
+  to sign out). A read-only helper in Jelly is never given the last two. The plugin knows the first two as a read and a
+  write, so they follow `access` and are tools RPC methods.
+- `test/fixtures/live-tools.json`, Granola's tool list captured live on 14 November 2026, and a test that fails when the
+  declaration and that list disagree.
+
+### Removed
+
+- `list_meetings`, which Granola no longer serves, from the declaration, the known tools, the default rules, the
+  `granola` skill and the docs. The skill browses with `search_meetings` and no keywords instead.
+
+### Changed
+
+- `package.json` is `"private": true`: releases install from their GitHub tag, never from npm.
+
 ## [0.0.1] - 2026-11-13
 
 ### Added

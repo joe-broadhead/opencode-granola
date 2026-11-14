@@ -18,10 +18,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - `list_meetings`, which Granola no longer serves, from the declaration, the known tools, the default rules, the
   `granola` skill and the docs. The skill browses with `search_meetings` and no keywords instead.
 
-### Changed
-
-- `package.json` is `"private": true`: releases install from their GitHub tag, never from npm.
-
 ## [0.0.1] - 2026-11-13
 
 ### Added

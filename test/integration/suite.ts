@@ -606,14 +606,14 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(pending.filter((request) => JSON.stringify(request).includes(sessions.careful!))).toEqual([])
         expect(calls()).toEqual([])
         // The same agent's other reads have no ask, so they run.
-        expect((await call("careful", "list_meetings", {})).value).toMatchObject({ text: expect.any(String) })
+        expect((await call("careful", "get_agent_brief", {})).value).toMatchObject({ text: expect.any(String) })
       })
 
       test("applies the session's rules after the agent's", async () => {
         expect(await call("narrow", "get_meetings", { meeting_ids: [MEETING] })).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
-        expect((await call("narrow", "list_meetings", {})).value).toMatchObject({ text: expect.any(String) })
+        expect((await call("narrow", "get_agent_brief", {})).value).toMatchObject({ text: expect.any(String) })
         expect((await call("reopen", "get_meetings", { meeting_ids: [MEETING] })).value).toMatchObject({ text: expect.stringContaining(MEETING) })
-        expect(await call("reopen", "list_meetings", {})).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
+        expect(await call("reopen", "get_agent_brief", {})).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
       })
 
       // R18: one host per access value, on the tools RPC path, where a refusal must reach nothing.
@@ -624,13 +624,13 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(agent.permissions.slice(base + 1, base + 1 + defaultRules("ask-changes").length)).toEqual(defaultRules("ask-changes"))
         const session = (await host.client.session.create({ title: "Ask changes", ...at("ask-changes"), agent: "build" })).id
         const calls = received()
-        expect((await call(session, "list_meetings", {}, "ask-changes")).value).toMatchObject({ text: expect.any(String) })
+        expect((await call(session, "get_agent_brief", {}, "ask-changes")).value).toMatchObject({ text: expect.any(String) })
         const refused = await call(session, "update_folder", { folder_id: "f-1" }, "ask-changes")
         expect(refused).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
         expect(JSON.stringify(refused)).toContain("would ask")
         const exported = await call(session, "export_markdown", { meeting_ids: [MEETING], content: "notes" }, "ask-changes")
         expect(exported).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
-        expect(calls()).toEqual(["list_meetings"])
+        expect(calls()).toEqual(["get_agent_brief"])
         expect(await status("ask-changes")).toMatchObject({ access: "ask-changes" })
         expect(formatStatus(await status("ask-changes"))).toContain("Access: reads run without asking; changes, new tools and exports ask first")
       })
@@ -642,10 +642,10 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(agent.permissions.slice(base + 1, base + 1 + defaultRules("read-only").length)).toEqual(defaultRules("read-only"))
         const session = (await host.client.session.create({ title: "Read only", ...at("read-only"), agent: "build" })).id
         const calls = received()
-        expect((await call(session, "list_meetings", {}, "read-only")).value).toMatchObject({ text: expect.any(String) })
+        expect((await call(session, "get_agent_brief", {}, "read-only")).value).toMatchObject({ text: expect.any(String) })
         expect(await call(session, "update_folder", { folder_id: "f-1" }, "read-only")).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
         expect(await call(session, "give_feedback", {}, "read-only")).toMatchObject({ type: "failed", code: "PERMISSION_DENIED" })
-        expect(calls()).toEqual(["list_meetings"])
+        expect(calls()).toEqual(["get_agent_brief"])
         expect(await status("read-only")).toMatchObject({ access: "read-only" })
         expect(formatStatus(await status("read-only"))).toContain("Access: reads run without asking; every other tool is denied")
       })
@@ -662,18 +662,18 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(await call("build", "list_templates", {})).toMatchObject({ type: "failed", code: "TOOL_UNAVAILABLE", next: toolUnavailable("list_templates").next })
         await statusWhen("needs-auth", settled)
         const signIn = connectionProblem("needs_auth")!
-        expect(await call("build", "list_meetings", {}, "needs-auth")).toMatchObject({ type: "failed", code: signIn.code, next: signIn.next })
+        expect(await call("build", "get_agent_brief", {}, "needs-auth")).toMatchObject({ type: "failed", code: signIn.code, next: signIn.next })
         const calls = received()
-        expect(await call("build", "list_meetings", {}, "conflict")).toMatchObject({ type: "failed", code: "SERVER_CONFLICT", next: CONFLICT_NEXT })
+        expect(await call("build", "get_agent_brief", {}, "conflict")).toMatchObject({ type: "failed", code: "SERVER_CONFLICT", next: CONFLICT_NEXT })
         expect(calls()).toEqual([])
       })
 
       test("names an unknown session, a session without an agent, and rejects an envelope with extra keys", async () => {
-        expect(await call("ses_does_not_exist", "list_meetings", {})).toMatchObject({ type: "failed", code: "SESSION_UNKNOWN" })
-        expect(await call("agentless", "list_meetings", {})).toMatchObject({ type: "failed", code: "SESSION_AGENT_REQUIRED" })
+        expect(await call("ses_does_not_exist", "get_agent_brief", {})).toMatchObject({ type: "failed", code: "SESSION_UNKNOWN" })
+        expect(await call("agentless", "get_agent_brief", {})).toMatchObject({ type: "failed", code: "SESSION_AGENT_REQUIRED" })
         const calls = received()
         for (const envelope of [{ sessionID: sessions.build, input: {}, extra: true }, { input: {} }, { sessionID: sessions.build, input: "q" }])
-          expect(await script("main", "list_meetings", envelope)).toMatchObject({ type: "rpc.invalid_input" })
+          expect(await script("main", "get_agent_brief", envelope)).toMatchObject({ type: "rpc.invalid_input" })
         expect(calls()).toEqual([])
       })
     })

@@ -13,7 +13,7 @@ declaration, because that schema accepts no unknown keys.
 
 ## Tools and permissions
 
-19 tools are declared (11 read-only). Jelly's agents have no base "allow everything"
+21 tools are declared (11 read-only). Jelly's agents have no base "allow everything"
 rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly
 writes each declared `ask` or `deny` as that tool's default instead (the person's own choice
 replaces it), and denies a read-only helper every tool not marked `readOnly`. A declared `allow`
@@ -26,11 +26,18 @@ changes nothing in Jelly.
   `granola_export_markdown`, which writes a file outside the project. A Jelly admin turns either into an ask, or off,
   in Jelly's own tool settings; in OpenCode the same is a rule, or the `access` option. `granola_events_list` is the plugin's own read for Memory's collector, which runs it unattended, so it never asks.
 
-The hidden `sign_out` is not declared: the plugin removes it from the agents' tools.
+`granola_sign_out` is declared, not read-only, with a note: Granola serves it as a destructive change (it revokes the
+sign-in for every connection that shares it), so a read-only helper is never given it. The plugin removes it from the
+agents' tools in OpenCode and in Jelly alike; sign out from the card, or with `opencode mcp logout granola`.
+`granola_create_meeting_note_from_transcript` is one of Granola's writes: it creates a private note.
 
 A tool the upstream server adds later is not declared, so in Jelly it is not asked about by
 default. Keep `jelly.tools` in step with the known-tool list; `test/jelly.test.ts` checks
 each declared effect against the plugin's own default rules, and the list against the known tools.
+`test/live-tools.test.ts` checks the declaration against Granola's own tool list, captured live on 14 November 2026
+in `test/fixtures/live-tools.json` (`provenance.json` says how): every tool Granola serves is declared, every declared
+tool is served or is the plugin's own (`test/fixtures/tool-registry.json`), and each `readOnly` is Granola's
+`readOnlyHint`.
 
 ## Skills
 

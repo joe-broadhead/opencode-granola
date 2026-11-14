@@ -39,7 +39,7 @@ hostSuite("embedded @opencode/sdk", (server) => startEmbedded(server, undefined,
     const location = host.location("main")
     for (const deadline = Date.now() + 60000;; await sleep(100)) {
       const state = (await host.client.rpc.call({ rpcID: "granola.test.probe", method: "state", input: {}, location })).output as { tools: { id: string }[] }
-      if (state.tools.some(item => item.id === "granola_list_meetings")) break
+      if (state.tools.some(item => item.id === "granola_get_agent_brief")) break
       if (Date.now() > deadline) throw new Error("Granola tools did not register")
     }
     for (const deadline = Date.now() + 30000;; await sleep(100)) {

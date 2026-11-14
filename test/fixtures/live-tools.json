@@ -1,0 +1,1086 @@
+{
+  "schema": "opencode-family/live-tools@1",
+  "evidence": "live-observed",
+  "note": "Captured by scripts/capture-tools.mjs from the server's own tools/list. Descriptions are public tool metadata, recorded in full. No tool was called. No token, header, account id, server instructions or result text is recorded.",
+  "listedAt": "2026-11-14",
+  "server": "granola",
+  "namespace": "granola",
+  "endpoint": "https://mcp.granola.ai/mcp",
+  "auth": "signed-in",
+  "host": {
+    "opencode": "2.2.6",
+    "via": "running OpenCode server: MCP status and active credential; raw MCP tools/list"
+  },
+  "protocol": {
+    "version": "2025-06-18",
+    "server": {
+      "name": "granola-mcp",
+      "version": "1.0.0+3706"
+    }
+  },
+  "pages": 1,
+  "count": 19,
+  "readOnlyHints": 19,
+  "digest": "d735fcc606e69f91d89478517101413b35fa5f5c5e9e596ba8cb39501e60c680",
+  "tools": [
+    {
+      "name": "add_note_to_folder",
+      "title": "Add note to folder",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": false,
+        "idempotentHint": true,
+        "destructiveHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "description": "Meeting UUID, public note ID (not_…) or Granola note link"
+          },
+          "folder_id": {
+            "type": "string",
+            "description": "Destination folder UUID"
+          }
+        },
+        "required": [
+          "note_id",
+          "folder_id"
+        ],
+        "additionalProperties": false
+      },
+      "description": {
+        "sha256": "432705a4024a1ba353c411f2aa064d3f30f9d62df2f8c1e92b1bfd2e0159ef94",
+        "length": 588,
+        "text": "Add a Granola note to a folder (additive and idempotent). Use list_meeting_folders for the folder ID and meeting discovery results for the note ID. Only notes the user created or collaborates on can be added.\n\nAdding a note grants everyone with access to the folder access to the note; a folder with visibility \"workspace\" shares it with the whole workspace, so check the folder's visibility and audience first and use this only when the user has clearly requested that destination.\n\nThe response confirms the outcome (added or already_in_folder) and the folder's visibility and audience."
+      }
+    },
+    {
+      "name": "create_folder",
+      "title": "Create folder",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": false,
+        "idempotentHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Folder name."
+          },
+          "description": {
+            "description": "What the folder is for.",
+            "type": "string",
+            "maxLength": 500
+          },
+          "visibility": {
+            "default": "private",
+            "description": "Who can see the folder: \"private\" (only the user) or \"workspace\" (everyone in the workspace).",
+            "type": "string",
+            "enum": [
+              "private",
+              "workspace"
+            ]
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false
+      },
+      "description": {
+        "sha256": "26098b2a2fa22b0649529e7967de98471b79b713f94da3df0cd29c9ff1d8145e",
+        "length": 690,
+        "text": "Create a top-level Granola folder. Use only when the user explicitly asks for a new folder; to file notes into an existing one, find it with list_meeting_folders and use add_note_to_folder.\n\nvisibility \"private\" (the default) is visible only to the user; \"workspace\" puts it in the Shared space where everyone in the workspace sees every note added, so use it only when the user asks for a team or shared folder.\n\nSub-folders can't be created. A top-level folder with the same title and visibility is returned with outcome already_exists instead of a duplicate; otherwise outcome is created. The response includes the folder's id, visibility and audience; pass the id to add_note_to_folder."
+      }
+    },
+    {
+      "name": "create_meeting_note_from_transcript",
+      "title": "Create meeting note from transcript",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "description": "Meeting title, 1 to 1,000 characters. Required unless upload_id is provided.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "meeting_started_at": {
+            "description": "When the meeting started, ISO 8601 with a timezone offset or Z, e.g. 2026-10-01T09:30:00-04:00. The offset is kept as the meeting's instant. If neither the user nor the transcript says when the meeting took place, ask the user; never guess it. Required unless upload_id is provided.",
+            "type": "string"
+          },
+          "transcript": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200000,
+            "description": "The transcript as plain text: the whole transcript, or one part of it. One utterance per line, in order, as \"Speaker name [mm:ss]: text\", where the time in square brackets is time since the meeting started ([h:mm:ss] past an hour; convert clock times by subtracting the start time), for example:\nAlice Smith [00:01:23]: Let's start with the roadmap.\nIt's a long one, so bear with me.\nSpeaker 2 [00:01:31]: Sounds good.\nBob Lee (chat) [00:01:40]: Here's the doc.\nUse the source's speaker labels; use a generic label such as \"Speaker 2\" or \"Room\" when it has one, and \"Unknown speaker\" when the source doesn't say who spoke. When the source has no times, use [00:00] on every line; when it has no speakers or line breaks, start a new line at each paragraph. Write meeting chat messages as their own lines with \"(chat)\" after the name. Copy every word of what was said exactly, including asides in brackets or parentheses: never summarize, shorten, correct, translate or drop text. A line without the \"Speaker name [mm:ss]:\" prefix continues the utterance above it, as the second line above does. A transcript in another format is rejected with the line to fix, and nothing is imported. At most 100,000 characters, about 15,000 words, per call; send a longer transcript in parts."
+          },
+          "upload_id": {
+            "description": "Only for the second and later parts of a transcript sent in parts: the upload_id returned by the first part's call. Leave it out when sending a whole transcript or a first part. With it, send only transcript, more_parts and meeting_ended_at.",
+            "type": "string"
+          },
+          "more_parts": {
+            "description": "true when more parts of this transcript follow in later calls; Granola then waits for the last part before writing the summary. Leave it out for a whole transcript and for the last part.",
+            "type": "boolean"
+          },
+          "meeting_ended_at": {
+            "description": "When the meeting ended, in the same format, if known. Must be after meeting_started_at. For a transcript sent in parts, it's used with the last part.",
+            "type": "string"
+          },
+          "source": {
+            "description": "The app the transcript came from and that app's own ID for the meeting, only when you have both from it. Sending the same source again returns the existing note even if the title or transcript changed. Never make one up, including on a retry: an invented source creates a second note.",
+            "type": "object",
+            "properties": {
+              "app": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "description": "The source app's name in lowercase, e.g. \"wispr\"."
+              },
+              "meeting_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "description": "The source app's ID for this meeting."
+              }
+            },
+            "required": [
+              "app",
+              "meeting_id"
+            ]
+          },
+          "attendees": {
+            "description": "Source attendees. Only those with an email address are added to the note, alongside calendar attendees; speakers come from the transcript. Never guess emails from speaker names.",
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "maxLength": 320,
+                  "format": "email",
+                  "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                }
+              }
+            }
+          },
+          "calendar_event": {
+            "description": "Exact event reference from the importing user's synced Google or Outlook calendar. Use the occurrence ID for recurring meetings, not a Zoom or Wispr meeting ID. Omit when unavailable.",
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "google",
+                  "microsoft"
+                ]
+              },
+              "calendar_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "event_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            },
+            "required": [
+              "provider",
+              "calendar_id",
+              "event_id"
+            ]
+          },
+          "meeting_platform": {
+            "description": "Where the meeting took place, when the source says, e.g. Google Meet, Zoom, Teams, Webex, Slack huddle, phone or in person. Common spellings are recognized; anything else is recorded as other, never rejected.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "transcript"
+        ],
+        "additionalProperties": false
+      },
+      "description": {
+        "sha256": "e79bf2db2c93de3a66f802e376ca11b60cebb693c2110354386d3feec4d981a1",
+        "length": 2177,
+        "text": "Create a private Granola meeting note from transcript text you already have, such as a meeting transcript from another app. Send the title, start time and whole transcript, in one call or, if it is long, in parts as described below. If neither the user nor the transcript says when the meeting took place, ask the user before calling; never guess a date or time. The note is created before this returns: url opens it right away, and meeting_id works with the other Granola tools. Granola then writes the note's summary in the background. The result's transcript_read_as lists how many utterances and which speakers were read; if that doesn't match the transcript, tell the user. Retrying with the same source, or without one the same speakers and words and meeting_started_at to the minute, returns the same note with outcome already_imported instead of a duplicate, even if the title or timestamps changed, and does not count again toward the daily import limit. Include source, attendees and meeting_platform whenever you have them. If you know the meeting's event in the user's Google or Outlook calendar, for example from a calendar tool or the meeting invite, pass it as calendar_event: a new note is then linked to that event and gets its attendees. Retrying an import that already succeeded returns the existing note unchanged, without linking it. Never guess it; if Granola can't find the event, the call fails with code calendar_event_unavailable and nothing is imported. Calls for the same user run one at a time, so concurrent calls wait rather than fail. If the user has reached the daily import limit, the error has code import_limit_reached: stop and tell the user instead of retrying. Send at most 100,000 characters, about 15,000 words, per call. Send a transcript longer than that, or one you aren't sure is shorter, in parts of up to that size split at line boundaries: the first with the meeting details and more_parts: true, later ones with only upload_id, transcript and more_parts: true, and the last without more_parts; the summary is written after the last part. A resent part adds nothing; an overlapping one is rejected with the time to continue from."
+      }
+    },
+    {
+      "name": "generate_summary",
+      "title": "Generate meeting summary",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": false,
+        "idempotentHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meeting_id": {
+            "description": "Meeting UUID or public note ID (not_…).",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "Alias for meeting_id. If both are provided, they must refer to the same note (UUID and public note ID may differ).",
+            "type": "string"
+          },
+          "template_id": {
+            "description": "Template to apply, from list_templates. Omit for Granola's standard summary.",
+            "type": "string"
+          }
+        }
+      },
+      "description": {
+        "sha256": "8c188fdb73742014818f716a42ae27d8ba63d07fdb55a19c1cf431161af5ddcf",
+        "length": 646,
+        "text": "Start generating a new summary for a Granola meeting the user owns, from its transcript and notes, only when the user explicitly asks. Existing summaries are kept.\n\nTo use a template, find its ID with list_templates and pass it as template_id; otherwise Granola's standard summary is generated. For every meeting in a folder, find the folder with list_meeting_folders, discover its meetings with folder_id, and call this once per meeting.\n\nGeneration runs in the background for about 30 to 90 seconds; this returns as soon as it has started. Until it finishes, get_meetings returns the previous summary if one exists; then it returns the new one."
+      }
+    },
+    {
+      "name": "get_account_info",
+      "title": "Get account info",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "description": {
+        "sha256": "f840ff32dcde4a4bb9ba96ae2e1b3c3946b208a6d5e15da88105ad9aac8d7bf0",
+        "length": 1295,
+        "text": "Get the email, active workspace, joined workspaces (names and IDs) and effective note-access scopes for the Granola account connected to this MCP session.\n\nWorkspace membership does not imply MCP access to its meetings. mcp_plan is the effective plan for MCP access and limits.\n\nWhen to use:\n- 'Who am I signed in as?', 'which Granola account is this?', or the user suspects the wrong account is connected\n- Sign out or switch accounts: use sign_out, then reconnect Granola in this client; open sign_out_url in the browser only if it auto-selects the previous account\n- Which workspaces the user belongs to, or meeting results missing because the wrong workspace is active\n- Meeting results incomplete or empty because of the user's plan or workspace MCP access controls\n- Confirming identity before acting when the user references a specific account\n\nThis does not describe the user's role or work: use get_agent_brief for that.\n\nmcp_note_access.scopes lists what this connection can search: personal (notes the user owns, shared directly with them, or in private folders) and public (notes in workspace-visible Team Space folders). Scopes describe access, not who captured or attended a meeting.\n\ncurrent_time is the server's current time; use it to resolve relative dates such as \"last week\"."
+      }
+    },
+    {
+      "name": "get_agent_brief",
+      "title": "Get agent brief",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "description": "Omit for compact context and field availability; request one or more named sections, or ['all'] for the full profile.",
+            "minItems": 1,
+            "maxItems": 11,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "role_and_scope",
+                "responsibilities_and_decision_authority",
+                "active_work_and_current_focus",
+                "frequent_groups_and_meeting_rhythms",
+                "key_collaborators_and_stakeholders",
+                "recurring_obligations",
+                "glossary",
+                "working_style",
+                "communication_habits",
+                "scheduling_habits",
+                "all"
+              ]
+            }
+          }
+        }
+      },
+      "description": {
+        "sha256": "8218c058fd1a300137219fc2e50e01cb0294112eae123c963334142995c520b1",
+        "length": 2049,
+        "text": "Returns the user's work context from their Granola meeting history: role, responsibilities, recorded focus, key collaborators, recurring meetings, a glossary of internal terms and acronyms, and working habits. Fast; accepts optional field selection.\n\nCall it before answering about the user's own priorities, work updates or contributions, even when the request supplies a specific meeting, and whenever personal context would change advice or a draft, even if Granola isn't mentioned. For example:\n- The user refers to 'my team', 'our launch', 'my manager', internal project names, terms, acronyms or meeting names\n- Drafting on the user's behalf: emails, messages, status updates, docs\n- Advice, prioritization, planning or decisions about the user's work, or preparing for a meeting\n- Questions about the user: 'what am I working on?', 'who do I work with most?'\n\nSkip it for general questions, self-contained rewrites or summaries of supplied text, and requests not to personalize.\n\nRequest the fields you need in one call. Without fields, it returns compact context (seniority, functions, work areas) and a field_availability index, not section content; use fields: ['all'] for broad context. Reuse fetched fields during the conversation. Selected sections appear under fields as Markdown; a null field or false availability means that section is absent, not the whole profile; do not retry it or infer its content from other sections (available: false means the profile is unavailable, with reason and message giving the next step). The How to work with me guide and tone-of-voice profiles are not included.\n\nThe profile is background, not evidence of current priorities or progress: pair it with recent, dated meeting evidence, and when recent evidence is missing, present recorded work as unverified current status. Don't infer urgency or completed work from it alone, and don't recite it unless asked. It is regenerated periodically and may be outdated; updated_at says when. When it conflicts with what the user tells you, follow the user."
+      }
+    },
+    {
+      "name": "get_meeting_attachment",
+      "title": "View meeting attachments",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meeting_id": {
+            "description": "Meeting UUID or public note ID (not_…) that owns the attachments. Required unless note_id is provided, including when attachment_id or attachment_ids is set.",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "Alias for meeting_id. If both are provided, they must refer to the same note (UUID and public note ID may differ).",
+            "type": "string"
+          },
+          "attachment_id": {
+            "description": "Single attachment ID. Omit both attachment_id and attachment_ids to browse by meeting ID. If both are provided, they must refer to the same attachment.",
+            "type": "string"
+          },
+          "attachment_ids": {
+            "description": "Attachment IDs from the <attachment id=\"...\"> tags in get_meetings results, up to 5 per call; request more in further calls. Omit both attachment_id and attachment_ids to browse by meeting ID. If both are provided, they must refer to the same attachment.",
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "offset": {
+            "description": "Starting position in the viewable attachment list (default 0). Use pagination.next_offset to continue. Only valid when attachment IDs are omitted.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "limit": {
+            "description": "Attachments to attempt per page, only when attachment IDs are omitted; images may be deferred by the response size limit. Defaults to 5; values above 5 use 5.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": {
+        "sha256": "c280c8268738fe352cdb1b277e737ad382587b8399d497c1c8b55f86cd169c7d",
+        "length": 1409,
+        "text": "View up to 5 meeting attachments (screenshots of shared screens, or photos the user attached) as images in request order, each followed by its metadata including pixel width and height. Pass just meeting_id (or note_id) to browse its viewable attachments: described screenshots first in capture order, then photos; continue with pagination.next_offset as offset, and limit can request fewer. Or pass attachment_ids (or attachment_id) with the meeting_id or note_id they belong to, chosen from the <attachments> section of get_meetings results; browsing by meeting ID needs no get_meetings call first. A failed attachment returns an error with its ID without discarding the others. Thumbnail-sized or likely blank images carry an image_quality_notice instead of a description; do not use them as evidence. Each successful attachment includes a signed url and url_expires_at, valid for up to 10 minutes; offer it when the user asks to see or download the image (inline display depends on the client), and fetch again for a fresh link. Anyone holding the link can open it until it expires. A response holds about 6 MB of images, often only one to three screenshots; attachments that don't fit are listed in left_out_attachment_ids with a next_step, and pagination advances past the whole batch. Use this when a description alone does not answer the question, for example to read a slide, chart or code on screen."
+      }
+    },
+    {
+      "name": "get_meeting_transcript",
+      "title": "Read meeting transcript",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meeting_ids": {
+            "description": "Meeting UUIDs or public note IDs (max 10). With several IDs, offset applies to each meeting and the meetings share one size limit, so each returns up to max_chars or an equal share, whichever is smaller; use offsets to start meetings at different positions. A meeting that cannot be read gets an error entry and the others are still returned. Empty arrays are ignored.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note_ids": {
+            "description": "Alias for meeting_ids. If both are nonempty, they must refer to the same set of notes; order, duplicates, and UUID/public ID format may differ.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "meeting_id": {
+            "description": "Alias for meeting_ids with a single meeting. Every ID argument provided must name the same meetings.",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "Alias for meeting_ids with a single meeting. Every ID argument provided must name the same meetings.",
+            "type": "string"
+          },
+          "offset": {
+            "description": "Character offset; pass next_offset to continue, with the same include_timestamps as that page.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "max_chars": {
+            "description": "Maximum size of the transcript field as sent, in UTF-8 bytes (integer, at least 1,000), cut at the last utterance that fits, or inside the next one if that would leave over half of it unused; a page holds fewer characters when the text needs JSON escaping or uses a non-Latin script. Defaults to 40000; larger requests are capped at the size limit. Use next_offset to continue. Lower it if responses exceed your output limit.",
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 9007199254740991
+          },
+          "include_timestamps": {
+            "description": "Prefix each reliably timed block with [m:ss], minutes:seconds since the transcript's earliest timed block, not clock time; that block can predate the meeting when recording started early. Applies to every page; chunk_ids reads always include them. Adds about 7 characters per block, and offset, next_offset and total_chars count the text as rendered with it, so keep the same value when continuing from next_offset. When no block has timing, no prefixes are added and timestamps_unavailable says so.",
+            "type": "boolean"
+          },
+          "offsets": {
+            "description": "With meeting_ids only: character offset per meeting, keyed by meeting ID, e.g. {\"<id>\": 8000}. Pass each truncated meeting's next_offset to continue several transcripts in one call. Meetings not listed start at offset. Omit or pass {} when not needed.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "chunk_ids": {
+            "description": "Read up to ten finalized transcript chunks instead of the full transcript. Use chunk IDs from search_transcripts, or [0] to browse from the beginning. IDs past the last chunk are skipped and listed in ignored_chunk_ids; if none of the IDs exist the status is out_of_range. Chunks past the response size limit are listed in left_out_chunk_ids; read them in another call. Each chunk's transcript is verbatim text in the full read's format: one block per speaker turn, prefixed with [m:ss] (minutes:seconds since the transcript's earliest timed block, omitted when unknown) and the speaker label; preformatted transcripts keep their own text and labels. Also returns total_chunks and previous/next chunk IDs.",
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "transcript_version": {
+            "description": "With chunk_ids, reuse the version from search or a previous chunk read. If the transcript has changed since, the status is changed and the requested chunks come from the current version, which the response returns. Reads without chunk_ids return the current full transcript and ignore it.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        }
+      },
+      "description": {
+        "sha256": "1a6f710497baa235e438537823af92310de71c55fcea7b27a0fdf813383628a7",
+        "length": 1950,
+        "text": "Get the verbatim transcript of a Granola meeting by ID; no summaries or notes.\nReturns up to 40000 bytes per call by default (max_chars, capped), with total_chars, truncated and next_offset reported. A page ends at an utterance unless that wastes over half, else it has ends_mid_utterance and the next starts_mid_utterance.\nWith meeting_ids, meetings has one entry per distinct ID in request order, with the single-read fields or an error. The batch shares one size limit: each meeting returns up to max_chars or an equal share of that, whichever is smaller. Pass offsets to continue several meetings in one call.\nAn accessible meeting with no transcript returns transcript null (status \"unavailable\" for chunk reads) and transcript_unavailable with a reason: transcript_pending means retry in a few minutes; not_happened_yet means retry after the meeting; no_transcript and transcript_deleted are final. \"Meeting not found\" means the ID does not resolve or is not accessible.\nTranscript blocks separate audio source (Microphone/System audio) from speaker identity; mobile/imported transcripts may keep Speaker A/B labels. For native recordings, recording context identifies the document owner as the recorder, not necessarily the speaker; missing recorder data stays unknown.\nRequires access to the meeting and transcript access permitted by its workspace. For specific details or quotes, first use search_transcripts with meeting_ids (batch known meetings together). Use this tool when the excerpts are insufficient or the user needs the full conversation. Start with the most relevant meetings; a detail missing from summaries may still be in the transcript. If access is denied, report that and do not retry through another tool.\nKeep at most 5 get_meeting_transcript calls in flight, and only for calls you already need. On a rate_limit error, retry only the failed call after retry_after_seconds, one at a time, and not when retryable is false."
+      }
+    },
+    {
+      "name": "get_meetings",
+      "title": "Read meetings",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meeting_ids": {
+            "description": "Meeting UUIDs, public note IDs (not_…) or upcoming-meeting IDs (evt_…) (max 10). Provide at least one ID in meeting_ids or note_ids; empty arrays are ignored.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note_ids": {
+            "description": "Alias for meeting_ids. Empty arrays are ignored. If both are nonempty, they must refer to the same set of notes; order, duplicates, and UUID/public ID format may differ.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_participants": {
+            "description": "Maximum attendees to list per meeting, besides the note creator. Omit to list everyone. Set a small value (e.g. 10) for broad ranges or large meetings to keep responses small. When attendees are left out, known_participants has total and omitted attributes, e.g. <known_participants total=\"250\" omitted=\"240\">.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "attachments": {
+            "description": "Omit or pass \"list\" to list each meeting's viewable attachments with their IDs; when several meetings are returned, only the first 20 per meeting are listed and the attachments element says how many were left out. Pass \"count\" to get only an attachment_count attribute on each meeting that has attachments. Pass \"none\" to leave attachments out.",
+            "type": "string",
+            "enum": [
+              "list",
+              "count",
+              "none"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": {
+        "sha256": "8f24fdf55b5edba3c23df3fbab7490839035bd8265a1767ef929e00a9620d1b0",
+        "length": 2022,
+        "text": "Read one or more Granola meetings by ID: private notes, AI summary, attendees, metadata and note URLs. Use it when you have meeting IDs from discovery results or note URLs; batch up to 10 IDs per call.\nPrivate notes appear only for meetings the user owns (status \"empty\": no text; \"not_included\": another user owns the note).\nmeeting_at is the calendar event's scheduled start (created_at without an event), so it can differ from when the meeting was recorded.\nInvalid, missing and inaccessible IDs are reported separately; the other meetings are still returned.\nRecorded meetings come newest first, not in request order. Over the response size limit, the oldest go in omitted_meetings; read them in another call. The newest is always whole, so one long meeting can exceed it.\nThe note creator and participants are not necessarily the connected user: confirm the connected user's identity with get_account_info and match it to explicit ownership evidence before drafting in the user's voice or assigning them actions; first-person notes are not proof of the user's voice. Dated plans do not establish current progress.\nknown_participants comes from the calendar invite, attendees added by hand, and the note creator; anyone else who spoke appears only in the notes and transcript.\nDoes not return transcripts; notes can omit details that were discussed. If a detail is missing, use get_meeting_transcript where that workspace permits; if access is denied, report that rather than conclude it was never discussed.\nShared-screen screenshots appear in <attachments> with an ID, time offset and lossy description; for anything visual (designs, slides, charts, code), view them with get_meeting_attachment.\nAttached photos appear as <attachment type=\"photo\"> without a description; view them with get_meeting_attachment.\nKeep at most 5 get_meetings calls in flight, and only for calls you already need. On a rate_limit error, retry only the failed call after retry_after_seconds, one at a time, and not when retryable is false."
+      }
+    },
+    {
+      "name": "give_feedback",
+      "title": "Give feedback on Granola tools",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "In at most 2,000 Unicode characters, describe only the tool problem: the expected behavior, actual behavior, and any workaround, using generic examples. Never include customer queries, meeting content, names, or other private, confidential or personal information."
+          },
+          "category": {
+            "default": "other",
+            "type": "string",
+            "enum": [
+              "tool_error",
+              "missing_capability",
+              "confusing_output",
+              "documentation",
+              "other"
+            ]
+          },
+          "tool_name": {
+            "description": "The Granola tool that behaved unexpectedly.",
+            "type": "string",
+            "enum": [
+              "give_feedback",
+              "create_meeting_note_from_transcript",
+              "query_granola_meetings",
+              "list_meeting_folders",
+              "add_note_to_folder",
+              "remove_note_from_folder",
+              "create_folder",
+              "update_folder",
+              "generate_summary",
+              "list_templates",
+              "update_private_notes",
+              "get_meetings",
+              "get_meeting_transcript",
+              "get_meeting_attachment",
+              "sign_out",
+              "get_account_info",
+              "get_agent_brief",
+              "search_meetings",
+              "search_transcripts"
+            ]
+          },
+          "severity": {
+            "default": "medium",
+            "description": "high: blocked; medium: needed a workaround; low: minor friction.",
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "description": {
+        "sha256": "ce232e1cc2c2b955103f42353ce7e39859127734e01efebfa09d08e1450a7277",
+        "length": 679,
+        "text": "Report unexpected Granola tool behavior: confusing or incomplete output, ignored arguments, missing capabilities, unclear documentation and errors, even when a retry or workaround let you finish. Submit once per distinct problem, naming the affected tool in tool_name and describing the expected behavior, actual behavior and any workaround in message. Use generic examples and placeholders: reports are screened and rejected if they include meeting content, names, identifiers or what the user asked about. Accepted reports are stored by Granola under a 90-day retention policy; this tool does not provide support replies. If it fails, continue the user's task without retrying."
+      }
+    },
+    {
+      "name": "list_meeting_folders",
+      "title": "List meeting folders",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": null,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "description": "Folders per page. Defaults to 100; values above 100 use 100.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "offset": {
+            "description": "Number of folders to skip; pass next_offset to continue.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "description": {
+        "sha256": "727c07b0cb2a717a7b0fcdbfc99ca2e9cb570e25ba67536f0d18e2f5437af3b5",
+        "length": 700,
+        "text": "List the user's Granola meeting folders: ID, title, description, note count including nested folders, visibility (private or workspace) and who can see the notes.\n\nFolders nest one level: parent_folder_id is the containing folder, or null at top level. role is the user's access (owner, collaborator or viewer), including access inherited from a parent folder or the workspace; viewers can read a folder's notes but can't add notes.\n\nUse it when the user asks about their folders or wants meetings in a specific folder; pass a returned ID as folder_id to the meeting discovery tools. Returns at most 100 folders per call, ordered by ID; partial results include truncated, total_count and next_offset."
+      }
+    },
+    {
+      "name": "list_templates",
+      "title": "List summary templates",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "description": {
+        "sha256": "f03bb3c1fb36c0244800033eb5ee38a609364a93c3ac1176e94ab2d1a44a3fdf",
+        "length": 384,
+        "text": "List the note templates available for generating a meeting summary: Granola's built-in templates, the user's own, and those shared with their company, each with id, title, description, source (granola, yours or shared) and section headings. Pass a template's id as template_id to generate_summary; match the user's wording by title and description, and ask if more than one could fit."
+      }
+    },
+    {
+      "name": "query_granola_meetings",
+      "title": "Query meetings",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": null,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The query to run on Granola meeting notes"
+          },
+          "document_ids": {
+            "description": "Optional meeting UUIDs or public note IDs to limit context to (max 10).",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note_ids": {
+            "description": "Alias for document_ids (max 10). If both are provided, they must refer to the same set of notes; order, duplicates, and UUID/public ID format may differ.",
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "description": {
+        "sha256": "ff00d0e7cd0857396a45d4351f39b36d0e0a04b3d80ac9c2383ea12de1bfa217",
+        "length": 1740,
+        "text": "Query Granola about the user's meetings in natural language. Returns an answer with inline markdown citation links (e.g. [[1]](url)) to the source meeting notes; keep them in your response so the user can verify it. The citation URL https://notes.granola.ai/d/<meeting_id> gives the ID to pass to get_meetings (meeting_ids).\n\nThe answer is a summary that can leave out owners, numbers, dates and exact wording; when the question asks for those, read the cited meetings with get_meetings first.\n\nThis tool is slow: an agent behind it searches and reads the user's notes. Prefer a faster tool when it can answer:\n- Meeting discovery tools: find meetings by date range\n- get_meetings: read notes for meetings whose IDs you already have\n- search_meetings: find meetings by keyword, participant or company\n\nUse it for what was discussed, decided or assigned across meetings, follow-ups and commitments, or when the user references their 'Granola notes'.\n\nWhen NOT to use:\n- Scheduling meetings or changing calendar invites\n- A specific meeting by ID: use get_meetings\n\nFor the user's own priorities, updates or contributions, also call get_agent_brief: a meeting search does not replace that context, and the profile is background, not proof of current progress.\n\nIf a detail is missing, summaries may have omitted it: find the meetings with the discovery tools, read them with get_meetings, then use get_meeting_transcript where that workspace permits. If access is denied, report that; do not conclude it was never discussed.\nKeep at most 15 query_granola_meetings calls in flight, and only for calls you already need. On a rate_limit error, retry only the failed call after retry_after_seconds, one at a time, and not when retryable is false."
+      }
+    },
+    {
+      "name": "remove_note_from_folder",
+      "title": "Remove note from folder",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": false,
+        "idempotentHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "description": "Meeting UUID, public note ID (not_…) or Granola note link"
+          },
+          "folder_id": {
+            "type": "string",
+            "description": "Folder UUID"
+          }
+        },
+        "required": [
+          "note_id",
+          "folder_id"
+        ],
+        "additionalProperties": false
+      },
+      "description": {
+        "sha256": "2d49d95eeb06f94197fc5d3da3321cf2aba6505cecca002d88b33b014dc399c8",
+        "length": 292,
+        "text": "Remove a Granola note from a folder. Use list_meeting_folders for the folder ID and meeting discovery results for the note ID. Removing it may revoke folder-derived access for other people. The response confirms the outcome (removed or not_in_folder) and the folder's visibility and audience."
+      }
+    },
+    {
+      "name": "search_meetings",
+      "title": "Search meetings",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "description": "Opaque next_cursor from the previous response. Omit filters to reuse them, or repeat the same filters. Omit cursor or pass an empty string for the first page. Cursors expire after 15 minutes.",
+            "type": "string",
+            "maxLength": 2048
+          },
+          "folder_id": {
+            "description": "Only return meetings in this folder or its nested folders. Use list_meeting_folders to discover folder IDs.",
+            "type": "string"
+          },
+          "workspace_only": {
+            "description": "Set to true only when the user explicitly asks for Team Space, public workspace, or workspace-visible meetings. Omit or set to false to search every meeting the user is allowed to access. Combines with folder_id and include_shared using AND.",
+            "type": "boolean"
+          },
+          "keywords": {
+            "description": "Groups of words to search for in meeting titles, summaries, or your private notes. Transcript text is not searched. All words in one entry must appear within the same field, in any order or position. Entries are alternatives (OR): [\"MCP write tools\"] requires all three words; [\"write tools\", \"write access\"] matches either group. Pass at most 20 entries. Adjacent words in the supplied order get a relevance boost, but exact phrases are not required. A single comma-separated string is also accepted. Omit to browse meetings by date.",
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "max_participants": {
+            "description": "Maximum attendees to list per meeting, besides the note creator. Omit to list everyone. Set a small value (e.g. 10) for broad ranges or large meetings to keep responses small. When attendees are left out, known_participants has total and omitted attributes, e.g. <known_participants total=\"250\" omitted=\"240\">.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "participant": {
+            "description": "Filter by a whole name, email, company or domain in participant metadata or the meeting title, not a name prefix, nickname or part of an email address. Combines with keywords, dates, and folder using AND. Mentions in notes alone do not match. For broader questions about their work, account status, decisions, issue resolution, or preparation, also search the person/company and topic in keywords without this filter to include internal discussions.",
+            "type": "string",
+            "maxLength": 200
+          },
+          "limit": {
+            "description": "Requested meetings per page (positive integer). Defaults to 30, or the first page's limit with cursor; capped at 100. Larger ones use the cap. Duplicates, inaccessible matches or the size limit can make a page shorter.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "attended_only": {
+            "description": "Only notes the user captured or where their email is listed as a creator or attendee, and upcoming calendar meetings the user is invited to or organised. Approximates attendance; defaults to false.",
+            "type": "boolean"
+          },
+          "include_shared": {
+            "description": "Also search notes other people shared with the user. Defaults to true when omitted.",
+            "type": "boolean"
+          },
+          "from_date": {
+            "description": "Only meetings on or after this ISO date or time, using calendar start when available, otherwise note creation. Dates and offsetless times use the user's timezone (UTC if unavailable); explicit offsets are respected, so for a day in another timezone give both bounds as times with that timezone's offset.",
+            "type": "string"
+          },
+          "to_date": {
+            "description": "Only meetings on or before this ISO date or time. YYYY-MM-DD includes the whole day in the user's timezone (UTC if unavailable); explicit offsets are respected. Uses calendar start when available, otherwise note creation.",
+            "type": "string"
+          },
+          "updated_after": {
+            "description": "Only notes whose summary or content changed after this ISO date or time. Use it to pick up changes since a previous call. Combines with the other filters using AND; without from_date and to_date it covers all accessible meeting history (the last 30 days on the free plan) instead of the last 7 days. Offsetless values use the user's timezone (UTC if unavailable).",
+            "type": "string"
+          }
+        }
+      },
+      "description": {
+        "sha256": "09e68867e9a7b2d9d3505130c7a7f3a455b2430d1ad3ae1a0a9a9a29cdfeee71",
+        "length": 2378,
+        "text": "Find the user's meetings by keyword, participant/company, date, or a combination. Keyword searches cover meeting titles, summaries and your private notes. They do not search transcripts: an empty result does not mean a term was never spoken in a meeting. Returns metadata (title, date, participants, note headings, and a short match excerpt when the keyword isn't in the title), not what was said: read the relevant meetings with get_meetings before answering about their content, and use get_meetings directly for a meeting you already identified. With keywords or participant, results are ranked by relevance favouring recent meetings; with neither, newest first, defaulting to the last 7 days unless folder_id is set.\n\nPages can be short or empty; continue with next_cursor while it is present. completion_status incomplete means continuation is unavailable: narrow the search.\n\nWhen the searched dates reach past now, the first page starts with upcoming_meetings (not part of cursor pagination): up to limit (at most 50) matching calendar meetings in the next 14 days, soonest first, matched on their titles, attendees and organizer, and the user's notes for them. Each is listed only there until it ends or is summarized, under an evt_ ID that works as a meeting ID in other tools. When more match, it has next_from: call again with from_date set to it.\n\nparticipant matches participant metadata (names, emails, companies, domains) or the title, not mentions in notes, as an AND filter with the other inputs. For broader questions about a person or company, also search their name plus the topic in keywords with participant omitted: internal discussions may hold the answer.\n\nCaptures of the same calendar event are grouped, keeping the user's own note or else the newest; read other_ids in duplicate_recordings only for details the listed note lacks or when the user asks to compare attendees' notes. Use attended_only=true for 'my meetings'. list_meeting_folders gives folder_id values. Keyword matching is literal, so pass the user's words plus obvious synonyms. Meetings with viewable attachments carry an attachment_count attribute; get_meetings lists them.\nKeep at most 2 search_meetings calls in flight, and only for calls you already need. On a rate_limit error, retry only the failed call after retry_after_seconds, one at a time, and not when retryable is false."
+      }
+    },
+    {
+      "name": "search_transcripts",
+      "title": "Search transcripts",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "keywords": {
+            "description": "Required for a new search. Entries are alternatives (OR); all words within an entry must occur in one chunk, in any order. Pass at most 20 entries. Accepts an array or comma-separated string.",
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          "meeting_ids": {
+            "description": "Restrict to these meetings (UUIDs or public note IDs, max 100). Batch IDs sharing the same terms and filters. Omit to search all accessible indexed meetings.",
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cursor": {
+            "description": "Pass next_cursor from a previous result; other arguments must be omitted or unchanged. Omit for the first page. Cursors expire after 15 minutes.",
+            "type": "string"
+          },
+          "limit": {
+            "description": "Passages per page with meeting_ids; otherwise meetings per page. Default 10, capped at 20.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "from_date": {
+            "description": "Only meetings on or after this ISO date or time, using calendar start when available, otherwise note creation. Dates and offsetless times use the user's timezone (UTC if unavailable).",
+            "type": "string"
+          },
+          "to_date": {
+            "description": "Only meetings on or before this ISO date or time. YYYY-MM-DD includes the whole day in the user's timezone (UTC if unavailable). Uses calendar start when available, otherwise note creation.",
+            "type": "string"
+          },
+          "participant": {
+            "description": "Filter by a whole name, email, company or domain in participant metadata or speaker names, not a name prefix, nickname or part of an email address. Combines with the other filters using AND. Matched only as a speaker, it returns their chunks. Mentions in the transcript alone do not match.",
+            "type": "string",
+            "maxLength": 200
+          },
+          "attendee_emails": {
+            "description": "Only meetings whose invite list includes any of these emails, e.g. [\"alice@acme.com\"]",
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "attendee_domains": {
+            "description": "Only meetings whose invite list includes anyone at these email domains, including subdomains, e.g. [\"acme.com\"]",
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "description": {
+        "sha256": "7c62fb5d5d067d927cb65822b0aa4e26e9d85b4ed817ff3965a5667319449bd4",
+        "length": 1707,
+        "text": "Find specific words or quotes in accessible meeting transcripts in the active workspace. Returns ranked passages with approximate timestamps.\n\nSupply meeting_ids when known, batching meetings that share the same terms and filters. Matching is literal, in the script and spelling the transcript uses; put alternative words and spellings in one keywords array, e.g. [\"pricing\", \"price\", \"cost\"], since no match can mean the term was written differently, not that nobody said it. For what a person or company said, use participant (names/companies) or attendee_emails/attendee_domains (invite list). participant matches metadata or speaker names, both incomplete, as an AND filter with the rest, so for broader questions also search their name and the topic in keywords without it.\n\nKnown meetings with no indexed match are also searched in their current transcripts. Without meeting_ids, search relies on an asynchronously updated index and groups duplicate recordings; empty results do not prove a topic was never discussed.\n\nPages can be short or empty; continue with next_cursor while it is present. If completion_status is incomplete, narrow the search or read known transcripts.\n\nRead surrounding dialogue with get_meeting_transcript using meeting_id, the passage's chunk_ids and transcript_version; adjacent chunk IDs continue, and omitting chunk_ids reads the whole conversation.\n\ncounts is cumulative across pages; total_matching_chunks is a first-page estimate, null for direct search. Neither counts spoken mentions.\n\nUse another tool when:\n- The term is likely in the notes, or the user wants meetings about a topic: use search_meetings\n- You need the whole conversation: use get_meeting_transcript"
+      }
+    },
+    {
+      "name": "sign_out",
+      "title": "Sign out of Granola in this client",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": true,
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "description": {
+        "sha256": "874ad5987cff8ac9e8fe4f865ec905ab90bf8bc9dd77997b9a876bab624a363a",
+        "length": 441,
+        "text": "Revoke the connected Granola account's consent and refresh tokens for this MCP client; use only when the user asks to sign out, disconnect or switch accounts. It affects every connection using the same client authorization, and new requests are rejected immediately. No browser action is needed. To switch accounts, reconnect Granola in this client; open the returned sign_out_url in the browser only if it auto-selects the previous account."
+      }
+    },
+    {
+      "name": "update_folder",
+      "title": "Update folder",
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": false,
+        "idempotentHint": true,
+        "destructiveHint": true,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_id": {
+            "type": "string",
+            "description": "Folder UUID"
+          },
+          "title": {
+            "description": "New folder name.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": {
+            "description": "New description. An empty string clears it.",
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "folder_id"
+        ],
+        "additionalProperties": false
+      },
+      "description": {
+        "sha256": "c3407ce71d7ab0bedf586f51febf6007f92c3441edcc926a8640b24e33797da4",
+        "length": 301,
+        "text": "Rename a Granola folder or change its description, only when the user asks. Get the folder ID from list_meeting_folders. Pass title, description or both; anything omitted stays the same, and an empty description clears it. Requires owner or collaborator role on the folder. Returns the updated folder."
+      }
+    },
+    {
+      "name": "update_private_notes",
+      "title": "Add to meeting private notes",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "annotations": {
+        "readOnlyHint": false,
+        "idempotentHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meeting_id": {
+            "description": "Meeting UUID or public note ID (not_…).",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "Alias for meeting_id. If both are provided, they must refer to the same note (UUID and public note ID may differ).",
+            "type": "string"
+          },
+          "operations": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "append",
+                    "prepend"
+                  ],
+                  "description": "append: add at the end. prepend: add at the start."
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20000,
+                  "description": "Markdown to add."
+                }
+              },
+              "required": [
+                "op",
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Content to add, applied together in order."
+          },
+          "purpose": {
+            "description": "prep (default): background for the meeting, such as an agenda, context on attendees or open questions; the AI summary leaves it out. notes: content the AI summary should reflect, such as points the user asks you to record from the meeting.",
+            "type": "string",
+            "enum": [
+              "prep",
+              "notes"
+            ]
+          }
+        },
+        "required": [
+          "operations"
+        ]
+      },
+      "description": {
+        "sha256": "8d6ce2d8a42252a7ae08e94d8caebf20d6845cc785611bf27db9db1393dc1d4c",
+        "length": 1147,
+        "text": "Add content to the private notes of a Granola meeting the user owns (the notes they typed, not the AI summary), only when the user asks to add context or information. Existing notes are kept, and additions are stored as written by an agent so they stay distinguishable. Set purpose to notes when the AI summary should reflect what you add; the default, prep, keeps it out of the summary.\n\nFor an upcoming meeting on the user's calendar, such as one in upcoming_meetings, pass its evt_ ID, for example to add prep notes. If it has no note, this creates one (status created), only before it starts; if it has one, even with has_private_notes false, the status is updated.\n\nPass 1 to 20 operations, applied in order, each adding Markdown at the end (append) or start (prepend). Supported: paragraphs, # and ## headings, bullet and numbered lists, unchecked checkboxes, bold, italic and links; tables, code, quotes, images and deeper headings are flattened or dropped. Read the notes with get_meetings first to avoid repeating what's there. To refresh the AI summary after adding with purpose notes, call generate_summary afterwards if it's available."
+      }
+    }
+  ]
+}

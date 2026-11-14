@@ -24,7 +24,7 @@ const guarded = () => {
 function inputs(overrides: Partial<StatusInputs> = {}): StatusInputs {
   return {
     servers: [{ name: "granola", title: "Granola", status: { status: "connected" } }],
-    tools: ["granola_get_meetings", "granola_list_meetings", "granola_create_folder", "granola_export_markdown", "shell"].map((id) => ({ id })),
+    tools: ["granola_get_meetings", "granola_search_meetings", "granola_create_folder", "granola_export_markdown", "shell"].map((id) => ({ id })),
     agents: [guarded()],
     hidden: 1,
     exportDirectory: "/home/someone/Granola",

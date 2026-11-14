@@ -39,13 +39,14 @@ describe("default Granola rules", () => {
     expect(effect(rules, toolID("give_feedback"))).toBe("deny")
   })
 
-  it("match the tools Granola's server lists: ten reads, seven writes and the plugin's export", () => {
+  it("match the tools Granola's server lists: ten reads, eight writes and the plugin's export", () => {
     expect([...READ_TOOLS].sort()).toEqual([
-      "get_account_info", "get_meeting_attachment", "get_meeting_transcript", "get_meetings", "list_meeting_folders",
-      "list_meetings", "list_templates", "query_granola_meetings", "search_meetings", "search_transcripts",
+      "get_account_info", "get_agent_brief", "get_meeting_attachment", "get_meeting_transcript", "get_meetings",
+      "list_meeting_folders", "list_templates", "query_granola_meetings", "search_meetings", "search_transcripts",
     ])
     expect([...WRITE_TOOLS].sort()).toEqual([
-      "add_note_to_folder", "create_folder", "generate_summary", "give_feedback", "remove_note_from_folder", "update_folder", "update_private_notes",
+      "add_note_to_folder", "create_folder", "create_meeting_note_from_transcript", "generate_summary", "give_feedback",
+      "remove_note_from_folder", "update_folder", "update_private_notes",
     ])
     expect([...PLUGIN_TOOLS]).toEqual(["export_markdown"])
   })
@@ -120,7 +121,7 @@ describe("default Granola rules", () => {
     const user = [...rules, { action: "granola_create_folder", resource: "*", effect: "deny" as const }, { action: "granola_get_meetings", resource: "*", effect: "ask" as const }]
     expect(effect(user, "granola_create_folder")).toBe("deny")
     expect(effect(user, "granola_get_meetings")).toBe("ask")
-    expect(effect([...rules, { action: "granola_*", resource: "*", effect: "deny" }], "granola_list_meetings")).toBe("deny")
+    expect(effect([...rules, { action: "granola_*", resource: "*", effect: "deny" }], "granola_search_meetings")).toBe("deny")
   })
 
   it("keep stricter agents strict: a later deny still wins", () => {

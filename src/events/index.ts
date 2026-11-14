@@ -34,8 +34,8 @@ import { accountEmail, readMeetings, readMeetingsPage, resultText, type MeetingF
  * sign-in's cursor is refused. A meeting is listed once it started at least SETTLE_MS ago, when its notes are most
  * likely done; a meeting whose start moves before the cursor afterwards is not listed again.
  *
- * Granola's server has no list_meetings any more (its live list of 5 November 2026): search_meetings with no keywords
- * is its browse path, newest first, which is why each window is read whole and sorted here.
+ * search_meetings with no keywords is Granola's browse path (its live list of 14 November 2026 has no other)
+ * and lists newest first, which is why each window is read whole and sorted here.
  */
 
 /** The source every event names. */

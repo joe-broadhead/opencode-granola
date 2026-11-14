@@ -6,8 +6,8 @@ client.
 
 | Method | The tool | Class |
 | --- | --- | --- |
-| `get_account_info`, `list_meeting_folders`, `list_meetings`, `search_meetings`, `get_meetings`, `get_meeting_transcript`, `query_granola_meetings`, `get_meeting_attachment`, `list_templates`, `search_transcripts` | the ten reads | read |
-| `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` | Granola's writes | write |
+| `get_account_info`, `list_meeting_folders`, `search_meetings`, `get_meetings`, `get_meeting_transcript`, `query_granola_meetings`, `get_meeting_attachment`, `list_templates`, `search_transcripts`, `get_agent_brief` | the ten reads | read |
+| `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary`, `create_meeting_note_from_transcript` | Granola's writes | write |
 | `give_feedback` | sends to Granola's team | send |
 | `export_markdown` | the plugin's export: writes a Markdown file under the export folder | export |
 | `describe` | none: lists the methods, their classes, permission actions, whether OpenCode lists each tool now, and each tool's input as JSON Schema | – |
@@ -54,7 +54,7 @@ meetings, but not read transcripts or ask questions across meetings:
 ```sh
 opencode api post /api/session -d '{"title":"weekly meetings","agent":"build","location":{"directory":"/path/to/project"},"permissions":[
   {"action":"granola_*","resource":"*","effect":"deny"},
-  {"action":"granola_list_meetings","resource":"*","effect":"allow"},
+  {"action":"granola_search_meetings","resource":"*","effect":"allow"},
   {"action":"granola_get_meetings","resource":"*","effect":"allow"}
 ]}'
 ```
@@ -65,7 +65,7 @@ The body is `{"input": {"sessionID": "<session>", "input": <the tool's input>}}`
 key is allowed:
 
 ```sh
-opencode api post /api/rpc/granola.meetings.tools/list_meetings -H "x-opencode-directory:$PWD" -d '{"input":{"sessionID":"ses_…","input":{"limit":10}}}'
+opencode api post /api/rpc/granola.meetings.tools/search_meetings -H "x-opencode-directory:$PWD" -d '{"input":{"sessionID":"ses_…","input":{"limit":10}}}'
 ```
 
 The tool's input is Granola's: `describe` shows each tool's schema as OpenCode lists it now. Check it rather than guess a

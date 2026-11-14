@@ -17,7 +17,7 @@ Unofficial; not affiliated with Granola.
 ## Install
 
 ```sh
-opencode plugin add github:joe-broadhead/opencode-granola#v0.0.1
+opencode plugin add github:joe-broadhead/opencode-granola#v0.0.2
 ```
 
 This adds the plugin to your global OpenCode config. Run `opencode reload`, or restart OpenCode. Then run
@@ -28,12 +28,12 @@ The install takes the GitHub release tag. Its commit carries the built `dist/`, 
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
-{ "plugins": [{ "package": "github:joe-broadhead/opencode-granola#v0.0.1" }] }
+{ "plugins": [{ "package": "github:joe-broadhead/opencode-granola#v0.0.2" }] }
 ```
 
 ### Update
 
-Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-granola#v0.0.0`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-granola#v<version>`.
+Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-granola#v0.0.1`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-granola#v<version>`.
 
 ## Sign in
 
@@ -113,7 +113,7 @@ write changes what you keep, and an export writes a file outside the project. Re
    | `"read-only"` | the read tools | nothing: everything else is **denied** |
 
    ```json
-   { "plugins": [{ "package": "github:joe-broadhead/opencode-granola#v0.0.1", "options": { "access": "read-only" } }] }
+   { "plugins": [{ "package": "github:joe-broadhead/opencode-granola#v0.0.2", "options": { "access": "read-only" } }] }
    ```
 
 2. **An agent that asks, or reads only**, with rules of its own, later than the plugin's:
@@ -196,7 +196,7 @@ plugin in the system config, which outranks each member's own config: `/etc/open
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-granola#v0.0.1",
+      "package": "github:joe-broadhead/opencode-granola#v0.0.2",
       "options": { "exportDirectory": "<an absolute path>/Granola" }
     }
   ]
@@ -280,7 +280,7 @@ it cannot remove its sign-in, and `opencode auth list` stops showing it.
 
 1. Sign out of Granola: `opencode mcp logout granola`.
 2. Check: `opencode auth list` no longer lists **Granola**.
-3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-granola#v0.0.1`, then `opencode reload`.
+3. Remove the plugin: `opencode plugin remove github:joe-broadhead/opencode-granola#v0.0.2`, then `opencode reload`.
    `opencode mcp list` no longer lists `granola`.
 4. Remove any Granola rules you copied into your agents' own `permissions`.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { PLUGIN_READS, PLUGIN_TOOLS, READ_TOOLS, SERVER, WRITE_TOOLS, toolID } from "../src/known-tools.js"
+import { HIDDEN_TOOLS, PLUGIN_READS, PLUGIN_TOOLS, READ_TOOLS, SERVER, WRITE_TOOLS, toolID } from "../src/known-tools.js"
 import { defaultRules } from "../src/permissions.js"
 import { ACCESS_VALUES, parseOptions } from "../src/options.js"
 import { type Declaration, type DeclaredTool, declarationProblems, docProblems, effectFromRules, readPackage } from "./support/jelly-kit.js"
@@ -22,14 +22,19 @@ describe("the jelly declaration", () => {
     expect(declarationProblems(ROOT, { effectOf: effectFromRules(defaultRules()) })).toEqual([])
   })
 
-  it("declares every known read and the plugin's own read as read-only, and every write and the plugin's export as not", () => {
+  it("declares every known read and the plugin's own read as read-only, and every write, the hidden sign_out and the plugin's export as not", () => {
     const known = new Map<string, boolean>([
       ...[...READ_TOOLS, ...PLUGIN_READS].map((name): [string, boolean] => [toolID(name), true]),
-      ...[...WRITE_TOOLS, ...PLUGIN_TOOLS].map((name): [string, boolean] => [toolID(name), false]),
+      ...[...WRITE_TOOLS, ...HIDDEN_TOOLS, ...PLUGIN_TOOLS].map((name): [string, boolean] => [toolID(name), false]),
     ])
     const declared = new Map(jelly.tools.map((tool) => [tool.permission, tool.readOnly]))
     expect([...declared.keys()].sort()).toEqual([...known.keys()].sort())
     for (const [permission, readOnly] of known) expect(declared.get(permission), permission).toBe(readOnly)
+  })
+
+  it("notes on the hidden sign_out how to sign out instead", () => {
+    const signOut = jelly.tools.find((tool) => tool.permission === toolID("sign_out")) as DeclaredTool & { note?: string }
+    expect(signOut.note).toContain("opencode mcp logout granola")
   })
 
   it("declares the granola server's sign-in", () => {

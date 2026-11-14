@@ -113,12 +113,6 @@
         "readOnly": true
       },
       {
-        "name": "granola.list_meetings",
-        "permission": "granola_list_meetings",
-        "effect": "allow",
-        "readOnly": true
-      },
-      {
         "name": "granola.search_meetings",
         "permission": "granola_search_meetings",
         "effect": "allow",
@@ -157,6 +151,12 @@
       {
         "name": "granola.search_transcripts",
         "permission": "granola_search_transcripts",
+        "effect": "allow",
+        "readOnly": true
+      },
+      {
+        "name": "granola.get_agent_brief",
+        "permission": "granola_get_agent_brief",
         "effect": "allow",
         "readOnly": true
       },
@@ -207,6 +207,19 @@
         "permission": "granola_give_feedback",
         "effect": "allow",
         "readOnly": false
+      },
+      {
+        "name": "granola.create_meeting_note_from_transcript",
+        "permission": "granola_create_meeting_note_from_transcript",
+        "effect": "allow",
+        "readOnly": false
+      },
+      {
+        "name": "granola.sign_out",
+        "permission": "granola_sign_out",
+        "effect": "allow",
+        "readOnly": false,
+        "note": "Hidden from agents by the plugin. Sign out from this card, or with opencode mcp logout granola."
       },
       {
         "name": "granola.export_markdown",

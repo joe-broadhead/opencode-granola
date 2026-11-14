@@ -18,27 +18,15 @@ function files(directory: string): string[] {
     entry.isDirectory() ? files(`${directory}/${entry.name}`) : [`${directory}/${entry.name}`])
 }
 
-/** Each known tool's input parameters, from Granola's live schemas (reviewed 2026-11-05) and the plugin's export. */
-const LIVE_PARAMETERS: Readonly<Record<string, readonly string[]>> = {
-  get_account_info: [],
-  list_meeting_folders: ["limit", "offset"],
-  list_meetings: ["limit", "cursor", "time_range", "from_date", "to_date", "updated_after", "folder_id", "workspace_only", "involvement", "max_participants"],
-  search_meetings: ["cursor", "folder_id", "workspace_only", "keywords", "max_participants", "participant", "limit", "attended_only", "include_shared", "from_date", "to_date", "updated_after"],
-  get_meetings: ["meeting_ids", "note_ids", "max_participants", "attachments"],
-  get_meeting_transcript: ["meeting_ids", "note_ids", "meeting_id", "note_id", "offset", "max_chars", "include_timestamps", "offsets", "chunk_ids", "transcript_version"],
-  query_granola_meetings: ["query", "document_ids", "note_ids"],
-  get_meeting_attachment: ["meeting_id", "note_id", "attachment_id", "attachment_ids", "offset", "limit"],
-  list_templates: [],
-  search_transcripts: ["keywords", "meeting_ids", "cursor", "limit", "from_date", "to_date", "participant", "attendee_emails", "attendee_domains"],
-  create_folder: ["title", "description", "visibility"],
-  update_folder: ["folder_id", "title", "description"],
-  add_note_to_folder: ["note_id", "folder_id"],
-  remove_note_from_folder: ["note_id", "folder_id"],
-  update_private_notes: ["meeting_id", "note_id", "operations"],
-  generate_summary: ["meeting_id", "note_id", "template_id"],
-  give_feedback: ["message", "category", "tool_name", "severity"],
-  export_markdown: Object.keys(EXPORT_INPUT.properties),
-}
+/** Each known tool's input parameters, from Granola's live schemas (test/fixtures/live-tools.json) and the plugin's export. */
+const LIVE: { tools: { name: string; inputSchema?: { properties?: Record<string, unknown> } }[] } =
+  JSON.parse(readFileSync(new URL("./fixtures/live-tools.json", import.meta.url), "utf8"))
+const LIVE_PARAMETERS: Readonly<Record<string, readonly string[]>> = Object.fromEntries([
+  ...LIVE.tools
+    .filter((tool) => !(HIDDEN_TOOLS as readonly string[]).includes(tool.name))
+    .map((tool): [string, string[]] => [tool.name, Object.keys(tool.inputSchema?.properties ?? {})]),
+  ["export_markdown", Object.keys(EXPORT_INPUT.properties)],
+])
 
 /** Result fields the skills may name, from Granola's live results. */
 const RESULT_FIELDS = ["next_cursor", "next_offset", "read_chunk_ids", "chunk_id", "sign_out_url"]

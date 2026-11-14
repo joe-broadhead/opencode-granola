@@ -14,14 +14,15 @@ Granola's tools are `granola_<tool>`, or `tools.granola.<tool>` in Code Mode; be
 - **What a meeting was about:** `get_meetings`, up to 10 IDs in one call. It is enough; no transcript needed.
 - **What someone said, or a detail the notes lack:** `search_transcripts` first, with the meetings' `meeting_ids` and several keyword alternatives in one call. For more context, `get_meeting_transcript` with `meeting_id`, the passage's `read_chunk_ids` as `chunk_ids`, and `transcript_version`. A whole transcript is 25-50 KB and rarely needed.
 - **A question across chosen meetings:** `get_meetings` on their IDs usually answers it. `query_granola_meetings` is slow; to limit it, pass the IDs as `document_ids`. It ignores `meeting_ids` without an error and answers from every meeting.
-- **Nothing found:** `list_meetings` covers the last 7 days by default. Widen with `time_range: "custom"` and an earlier `from_date` before you say a meeting doesn't exist. Keep paging while a result has `next_cursor` (meetings, transcript search) or `next_offset` (folders, transcript pages).
+- **The user's own role, team, collaborators or internal terms:** `get_agent_brief`, with the `fields` you need in one call. It is background, not evidence of current work: pair it with dated meetings.
+- **Meetings in a period, or nothing found:** `search_meetings` with no `keywords` lists meetings newest first, and covers the last 7 days by default. Pass `from_date` and `to_date`, and widen with an earlier `from_date` before you say a meeting doesn't exist. Keep paging while a result has `next_cursor` (meetings, transcript search) or `next_offset` (folders, transcript pages).
 
 ## Call shapes
 
-Code Mode `search` can rank `list_meeting_folders` above `list_meetings`, so call these directly:
+Code Mode `search` can rank `list_meeting_folders` above `search_meetings`, so call these directly:
 
 ```js
-await tools.granola.list_meetings({ time_range: "custom", from_date: "2026-08-01", to_date: "2026-08-31" })
+await tools.granola.search_meetings({ from_date: "2026-08-01", to_date: "2026-08-31" })
 await tools.granola.search_meetings({ participant: "acme.com", keywords: ["pricing", "price"], from_date: "2026-06-01" })
 await tools.granola.get_meetings({ meeting_ids: [first, second] })
 await tools.granola.search_transcripts({ meeting_ids: [first, second], keywords: ["next steps", "follow up", "action items"] })
@@ -31,7 +32,7 @@ await tools.granola.query_granola_meetings({ query: "Which questions stayed open
 await tools.granola.get_account_info()
 ```
 
-Results today: `list_meetings`, `search_meetings` and `get_meetings` return XML-like text, so read meeting IDs from the `id` attributes and note links from `url`. `search_transcripts` and `query_granola_meetings` return text; `get_account_info`, `list_meeting_folders` and `get_meeting_transcript` return objects. Check the type before `JSON.parse`. In Code Mode, read transcript chunks whole: pass the `read_chunk_ids` from `search_transcripts` as `chunk_ids`, and return each of the result's `chunks` as its `chunk_id` and `transcript`, the field that holds its text (`text` is only on `search_transcripts` passages). Return at most about 8 chunks per `execute` result, counted across all the calls in it, because a larger result goes over the inline limit and spills to a file. Never slice a response by characters: that cuts chunks and makes you read them again.
+Results today: `search_meetings` and `get_meetings` return XML-like text, so read meeting IDs from the `id` attributes and note links from `url`. `search_transcripts` and `query_granola_meetings` return text; `get_account_info`, `list_meeting_folders` and `get_meeting_transcript` return objects. Check the type before `JSON.parse`. In Code Mode, read transcript chunks whole: pass the `read_chunk_ids` from `search_transcripts` as `chunk_ids`, and return each of the result's `chunks` as its `chunk_id` and `transcript`, the field that holds its text (`text` is only on `search_transcripts` passages). Return at most about 8 chunks per `execute` result, counted across all the calls in it, because a larger result goes over the inline limit and spills to a file. Never slice a response by characters: that cuts chunks and makes you read them again.
 
 ## Answer
 
@@ -52,7 +53,7 @@ Results today: `list_meetings`, `search_meetings` and `get_meetings` return XML-
 
 ## Changes
 
-Every tool is allowed by default, so at the default `access` no prompt appears: your sentence is the notice the user gets. Make a change only when the user asks, say first what it will do, and don't retry after a decline. The changes are `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and `export_markdown`. A folder with workspace visibility shares its notes with the whole workspace.
+Every tool is allowed by default, so at the default `access` no prompt appears: your sentence is the notice the user gets. Make a change only when the user asks, say first what it will do, and don't retry after a decline. The changes are `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary`, `create_meeting_note_from_transcript` (a new private note from a transcript the user already has; ask for the meeting's start time rather than guess it) and `export_markdown`. A folder with workspace visibility shares its notes with the whole workspace.
 
 `give_feedback` sends a report to Granola's team, although the user did not ask for one: send it only when the user asks to report a Granola problem. The plugin option `access` decides: `"ask-changes"` makes a change ask first, and `"read-only"` denies it. A `deny` rule also denies it.
 

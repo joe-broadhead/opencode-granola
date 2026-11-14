@@ -13,7 +13,7 @@ export type Route = "connected" | "needs-auth" | "sign-in" | "pending"
 
 /** Tool names by how the plugin treats them. `brand_new_tool` stands in for a tool this plugin version does not know. */
 export const TOOLS = {
-  read: ["get_account_info", "list_meetings", "search_meetings", "get_meetings", "get_meeting_transcript", "search_transcripts"],
+  read: ["get_account_info", "get_agent_brief", "search_meetings", "get_meetings", "get_meeting_transcript", "search_transcripts"],
   write: ["create_folder", "update_folder", "add_note_to_folder", "remove_note_from_folder"],
   hidden: ["sign_out"],
   unknown: ["brand_new_tool"],
@@ -67,7 +67,7 @@ const READ = { readOnlyHint: true, destructiveHint: false }
 const WRITE = { readOnlyHint: false, destructiveHint: true }
 const SCHEMAS: Record<string, object> = {
   get_account_info: object(),
-  list_meetings: object({ limit: { type: "integer", minimum: 1 } }),
+  get_agent_brief: object({ fields: { type: "array", items: { type: "string" } } }),
   search_meetings: object({ from_date: { type: "string" }, to_date: { type: "string" }, cursor: { type: "string" }, limit: { type: "integer", minimum: 1 }, attended_only: { type: "boolean" } }),
   get_meetings: object({ meeting_ids: { type: "array", items: { type: "string" }, maxItems: 10 } }),
   get_meeting_transcript: object({ meeting_id: { type: "string" }, offset: { type: "integer", minimum: 0 }, max_chars: { type: "integer", minimum: 1000 } }),
@@ -99,7 +99,7 @@ const text = (value: unknown) => ({ content: [{ type: "text", text: typeof value
 /** Granola's get_meetings markup for the one meeting it knows; for none of them, only a <not_found_hint>, as Granola does. */
 function meetings(ids: readonly string[]): string {
   const found = ids.filter((id) => id === MEETING)
-  if (!found.length) return "<not_found_hint>\nNo meeting matches the requested IDs. Check them with list_meetings or search_meetings.\n</not_found_hint>"
+  if (!found.length) return "<not_found_hint>\nNo meeting matches the requested IDs. Check them with search_meetings.\n</not_found_hint>"
   const body = found.map((id) => [
     `<meeting id="${id}" title="Weekly sync" meeting_at="${MEETING_AT}" url="https://notes.example.test/d/${id}">`,
     `<known_participants total="1"><participant name="Ada" /></known_participants>`,
@@ -114,8 +114,8 @@ function call(name: string, args: Record<string, unknown>) {
   switch (name) {
     case "get_account_info":
       return text({ email: EMAIL, active_workspace: { id: "w-1", display_name: WORKSPACE } })
-    case "list_meetings":
-      return text({ meetings: [{ id: MEETING, title: "Weekly sync" }] })
+    case "get_agent_brief":
+      return text({ role: "Synthetic role" })
     case "search_meetings": {
       // The one meeting, when it starts within the window; Granola's pagination element ends the page.
       const inside = Date.parse(String(args.from_date)) <= Date.parse(MEETING_AT) && Date.parse(MEETING_AT) <= Date.parse(String(args.to_date))

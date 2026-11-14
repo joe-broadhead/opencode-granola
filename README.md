@@ -87,7 +87,7 @@ export needs a prior explicit `allow` in the session's or the agent's rules, bec
 answer it. `sign_out` is not a method: the plugin removes it, and `opencode mcp logout granola` revokes the grant.
 
 ```sh
-opencode api post /api/rpc/granola.meetings.tools/list_meetings \
+opencode api post /api/rpc/granola.meetings.tools/search_meetings \
   -H "x-opencode-directory:$PWD" \
   -d '{"input":{"sessionID":"ses_…","input":{"limit":10}}}'
 ```
@@ -132,6 +132,7 @@ write changes what you keep, and an export writes a file outside the project. Re
    ```json
    { "permissions": [
      { "action": "granola_give_feedback", "resource": "*", "effect": "deny" },
+     { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "deny" },
      { "action": "granola_create_folder", "resource": "*", "effect": "ask" }
    ] }
    ```
@@ -144,7 +145,6 @@ The plugin inserts this block directly after each agent's base "allow everything
   { "action": "granola_*", "resource": "*", "effect": "allow" },
   { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },
   { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },
-  { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },
@@ -152,6 +152,7 @@ The plugin inserts this block directly after each agent's base "allow everything
   { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
   { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
@@ -160,6 +161,7 @@ The plugin inserts this block directly after each agent's base "allow everything
   { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },
+  { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "allow" },
   { "action": "granola_export_markdown", "resource": "*", "effect": "allow" }
 ]
 ```

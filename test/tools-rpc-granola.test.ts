@@ -84,8 +84,8 @@ describe("Granola's tools RPC", () => {
 
   it("runs a read as the session's agent and returns its structured content and text", async () => {
     const { call, ran } = await started()
-    expect(await call("list_meetings", { limit: 1 })).toEqual({ text: JSON.stringify({ ok: true }) })
-    expect(ran).toEqual(["list_meetings"])
+    expect(await call("search_meetings", { limit: 1 })).toEqual({ text: JSON.stringify({ ok: true }) })
+    expect(ran).toEqual(["search_meetings"])
   })
 
   it("records the workspace from an account read, as the hook does on the model path", async () => {
@@ -97,7 +97,7 @@ describe("Granola's tools RPC", () => {
 
   it("leaves results unchanged, and reads the workspace only from get_account_info", () => {
     const result = { output: { active_workspace: { display_name: "Other" } }, text: "" }
-    expect(shapeResult("list_meetings", result, { sessionID: "s", agent: "a", action: "x" })).toBe(result)
+    expect(shapeResult("search_meetings", result, { sessionID: "s", agent: "a", action: "x" })).toBe(result)
     expect(shapeResult("get_account_info", result, { sessionID: "s", agent: "a", action: "x" })).toBe(result)
   })
 
@@ -169,7 +169,7 @@ describe("Granola's tools RPC", () => {
 
   it("adopts the user's own granola server for the official URL", async () => {
     const { call } = await started({ servers: [["granola", { type: "remote", url: "https://mcp.granola.ai/mcp" }]] })
-    expect(await call("list_meetings")).toEqual({ text: JSON.stringify({ ok: true }) })
+    expect(await call("search_meetings")).toEqual({ text: JSON.stringify({ ok: true }) })
   })
 
   it("takes its next steps from Granola's connection table and status", () => {

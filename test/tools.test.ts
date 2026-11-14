@@ -114,7 +114,7 @@ describe("execute.after", () => {
     expect(state.workspace()).toBe("Acme")
     await after({ tool: "granola_get_account_info", status: "completed", result: { output: "not json" } })
     expect(state.workspace()).toBe("Acme")
-    await after({ tool: "granola_list_meetings", status: "completed", result: { output: { active_workspace: { display_name: "Other" } } } })
+    await after({ tool: "granola_search_meetings", status: "completed", result: { output: { active_workspace: { display_name: "Other" } } } })
     expect(state.workspace()).toBe("Acme")
   })
 })

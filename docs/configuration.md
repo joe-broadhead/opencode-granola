@@ -58,7 +58,6 @@ that has the base "allow everything" rule, directly after that rule:
   { "action": "granola_*", "resource": "*", "effect": "allow" },
   { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },
   { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },
-  { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },
@@ -66,6 +65,7 @@ that has the base "allow everything" rule, directly after that rule:
   { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
   { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
@@ -74,6 +74,7 @@ that has the base "allow everything" rule, directly after that rule:
   { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },
+  { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "allow" },
   { "action": "granola_export_markdown", "resource": "*", "effect": "allow" }
 ]
 ```
@@ -85,7 +86,6 @@ or, at `access: "ask-changes"`, this one:
   { "action": "granola_*", "resource": "*", "effect": "ask" },
   { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },
   { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },
-  { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },
@@ -93,6 +93,7 @@ or, at `access: "ask-changes"`, this one:
   { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
   { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_update_folder", "resource": "*", "effect": "ask" },
@@ -101,6 +102,7 @@ or, at `access: "ask-changes"`, this one:
   { "action": "granola_update_private_notes", "resource": "*", "effect": "ask" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "ask" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "ask" },
+  { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "ask" },
   { "action": "granola_export_markdown", "resource": "*", "effect": "ask" }
 ]
 ```
@@ -112,7 +114,6 @@ or, at `access: "read-only"`:
   { "action": "granola_*", "resource": "*", "effect": "deny" },
   { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },
   { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },
-  { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },
   { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },
@@ -120,6 +121,7 @@ or, at `access: "read-only"`:
   { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },
   { "action": "granola_list_templates", "resource": "*", "effect": "allow" },
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
+  { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_update_folder", "resource": "*", "effect": "deny" },
@@ -128,6 +130,7 @@ or, at `access: "read-only"`:
   { "action": "granola_update_private_notes", "resource": "*", "effect": "deny" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "deny" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "deny" },
+  { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "deny" },
   { "action": "granola_export_markdown", "resource": "*", "effect": "deny" }
 ]
 ```
@@ -137,7 +140,8 @@ So:
 
 - Granola's known reads run without a prompt at every `access` value.
 - At the default `"all"`, every other tool runs too: Granola's writes (`create_folder`, `update_folder`,
-  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes` and `generate_summary`), `give_feedback`
+  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and
+  `create_meeting_note_from_transcript`), `give_feedback`
   (which sends a report to Granola's team, and which Granola's own instructions tell the model to send unasked), the
   plugin's `export_markdown`, and any Granola tool this plugin version does not know yet.
 - `"ask-changes"` asks for those, and `"read-only"` denies them. A `deny` on `*` also hides the tool from the model.
@@ -178,7 +182,6 @@ For example, for an agent `reviewer`, when your top-level `permissions` allow `g
         { "action": "granola_*", "resource": "*", "effect": "allow" },,
         { "action": "granola_get_account_info", "resource": "*", "effect": "allow" },,
         { "action": "granola_list_meeting_folders", "resource": "*", "effect": "allow" },,
-        { "action": "granola_list_meetings", "resource": "*", "effect": "allow" },,
         { "action": "granola_search_meetings", "resource": "*", "effect": "allow" },,
         { "action": "granola_get_meetings", "resource": "*", "effect": "allow" },,
         { "action": "granola_get_meeting_transcript", "resource": "*", "effect": "allow" },,
@@ -186,6 +189,7 @@ For example, for an agent `reviewer`, when your top-level `permissions` allow `g
         { "action": "granola_get_meeting_attachment", "resource": "*", "effect": "allow" },,
         { "action": "granola_list_templates", "resource": "*", "effect": "allow" },,
         { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },,
+        { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },,
         { "action": "granola_create_folder", "resource": "*", "effect": "allow" },,
         { "action": "granola_update_folder", "resource": "*", "effect": "allow" },,
         { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },,
@@ -193,6 +197,7 @@ For example, for an agent `reviewer`, when your top-level `permissions` allow `g
         { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },,
         { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },,
         { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },,
+        { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "allow" },,
         { "action": "granola_export_markdown", "resource": "*", "effect": "allow" },
         // Then your top-level rules for Granola tools, so they keep winning:
         { "action": "granola_create_folder", "resource": "*", "effect": "allow" }
@@ -392,7 +397,7 @@ How it reads, through OpenCode's own Granola tools, each with its own permission
   a sign-in to another account an old cursor is refused.
 - `search_meetings`, one week at a time, with `from_date` and `to_date` as UTC times and `attended_only: true`:
   the meetings you captured or are listed on. Every page of a week is read, because Granola lists newest first.
-  Granola's server no longer offers `list_meetings`, so search with no keywords is its browse path.
+  Search with no keywords is Granola's browse path.
 - `get_meetings`, up to 10 at a time, for each listed meeting's start, link, attendees and AI summary.
 
 Each event is one meeting: kind `meeting`, the meeting ID, its start (`meeting_at`), its title, attendees as actors

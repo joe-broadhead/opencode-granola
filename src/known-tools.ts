@@ -8,7 +8,6 @@ export const SERVER = "granola"
 export const READ_TOOLS = [
   "get_account_info",
   "list_meeting_folders",
-  "list_meetings",
   "search_meetings",
   "get_meetings",
   "get_meeting_transcript",
@@ -16,6 +15,7 @@ export const READ_TOOLS = [
   "get_meeting_attachment",
   "list_templates",
   "search_transcripts",
+  "get_agent_brief",
 ] as const
 
 /** Writes and sends. */
@@ -27,9 +27,13 @@ export const WRITE_TOOLS = [
   "update_private_notes",
   "generate_summary",
   "give_feedback",
+  "create_meeting_note_from_transcript",
 ] as const
 
-/** sign_out revokes the grant OpenCode holds; `opencode mcp logout granola` does that instead. */
+/**
+ * sign_out revokes the grant OpenCode holds; `opencode mcp logout granola` does that instead. Granola serves it as a
+ * destructive change, so Jelly's declaration lists it as not read-only, and a read-only helper is never given it.
+ */
 export const HIDDEN_TOOLS = ["sign_out"] as const
 
 /** Tools this plugin adds to the granola namespace itself that write: the Markdown export, a local file. */

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { encodeBoundCursor, encodeCursor } from "@we-the-rebel-alliance/source-contract/cursor"
 import { EVENT_LIMITS, PAGE, assertEventsListConformance, probeResultProblems, resultProblems, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
 import { EventsFailure } from "../src/events/errors.js"
-import { accountEmail, accountScopes, connectedEmail, readMeetings, readMeetingsPage } from "../src/events/granola.js"
+import { accountEmail, accountScopes, connectedEmails, readMeetings, readMeetingsPage } from "../src/events/granola.js"
 import { EVENTS_INPUT, MAX_BYTES, SETTLE_MS, SOURCE, granolaProbe, listEvents } from "../src/events/index.js"
 import { TOOLS_RPC_ID } from "../src/tools-rpc.js"
 import { setup } from "../src/setup.js"
@@ -60,8 +60,11 @@ describe("Granola's text", () => {
     const text = granola.answer("get_meetings", { meeting_ids: ["m-01"] })
     const [meeting] = readMeetings(text)
     expect(meeting).toMatchObject({ id: "m-01", url: "https://notes.example.test/d/m-01", summary: "### Decisions\n- Start the pilot." })
-    expect(connectedEmail(text)).toBe(EMAIL)
-    expect(connectedEmail("<meetings_data count=\"0\" />")).toBeUndefined()
+    expect(connectedEmails(text)).toEqual([EMAIL])
+    expect(connectedEmails('<meetings_data connected_user_email="ADA@example.test" count="0" />')).toEqual([EMAIL])
+    expect(connectedEmails(`<connected_user_email>${EMAIL}</connected_user_email><meetings_data connected_user_email="lin@example.test" />`)).toEqual([EMAIL, "lin@example.test"])
+    expect(connectedEmails('<meetings_data count="0" />')).toEqual([])
+    expect(connectedEmails("No meetings.")).toEqual([])
   })
 
   it("reads the signed-in email and the note-access scopes from get_account_info, or the email from Granola's markup", () => {
@@ -221,6 +224,34 @@ describe("events_list", () => {
 
   it("refuses with ACCOUNT_MISMATCH when Granola names another signed-in account, and lists nothing of it", async () => {
     expect(await code(list(syntheticGranola({ email: "someone@example.test" }))({ account: EMAIL, since: SINCE }))).toBe("ACCOUNT_MISMATCH")
+  })
+
+  /** The synthetic account, with get_meetings' preamble rewritten by `answer`. */
+  const rewritten = (email: string, answer: (text: string) => string) => {
+    const granola = syntheticGranola({ email })
+    return async (tool: string, args: Record<string, unknown>) => {
+      if (tool !== "get_meetings") return granola.read(tool, args)
+      return { content: [{ type: "text", text: answer(granola.answer(tool, args)) }] } as never
+    }
+  }
+  const preamble = (email: string) => `<connected_user_email>${email}</connected_user_email>\n`
+
+  it("reads the account from get_meetings' meetings_data attribute too, and refuses another one there", async () => {
+    const attribute = (email: string) => (text: string) => text.replace(preamble(email), "").replace("<meetings_data ", `<meetings_data connected_user_email="${email}" `)
+    const mine = (await listEvents(rewritten(EMAIL, attribute(EMAIL)), { account: EMAIL, since: SINCE, limit: 2 }, NOW)) as EventsListResult
+    expect(mine.events.map((event) => event.external_id)).toEqual(EXPECTED.slice(0, 2))
+    const other = "someone@example.test"
+    expect(await code(listEvents(rewritten(other, attribute(other)), { account: EMAIL, since: SINCE }, NOW))).toBe("ACCOUNT_MISMATCH")
+  })
+
+  it("never lists meetings get_meetings gives without naming the account: UNAVAILABLE", async () => {
+    const unnamed = rewritten(EMAIL, (text) => text.replace(preamble(EMAIL), ""))
+    expect(await code(listEvents(unnamed, { account: EMAIL, since: SINCE }, NOW))).toBe("UNAVAILABLE")
+  })
+
+  it("lists nothing when no get_meetings answer named the account, even one that gave no meeting", async () => {
+    const empty = rewritten(EMAIL, () => "<not_found_hint>No meeting matches the requested IDs.</not_found_hint>")
+    expect(await code(listEvents(empty, { account: EMAIL, since: SINCE }, NOW))).toBe("UNAVAILABLE")
   })
 
   it("stops with UNAVAILABLE when Granola cannot list a whole week", async () => {

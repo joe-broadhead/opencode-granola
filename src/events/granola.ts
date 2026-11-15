@@ -145,12 +145,18 @@ export function accountEmail(result: { readonly output?: unknown; readonly conte
   return undefined
 }
 
-/** The signed-in account a get_meetings answer names in its `<connected_user_email>` preamble; undefined without one. */
-export function connectedEmail(text: string): string | undefined {
-  if (!isMarkup(text)) return undefined
-  const element = findAll(parse(text), "connected_user_email")[0]
-  const email = element ? textContent(element).trim().toLowerCase() : undefined
-  return email && EMAIL.test(email) ? email : undefined
+/**
+ * Every signed-in account a get_meetings answer names, lowercase, in either form Granola writes it: a
+ * `<connected_user_email>` element, or a `connected_user_email` attribute of `<meetings_data>`. Empty when it names none.
+ */
+export function connectedEmails(text: string): string[] {
+  if (!isMarkup(text)) return []
+  const root = parse(text)
+  const named = [
+    ...findAll(root, "connected_user_email").map((element) => textContent(element)),
+    ...findAll(root, "meetings_data").flatMap((data) => (data.attributes.connected_user_email === undefined ? [] : [data.attributes.connected_user_email])),
+  ]
+  return [...new Set(named.map((email) => email.trim().toLowerCase()).filter((email) => EMAIL.test(email)))]
 }
 
 /** The note-access scopes get_account_info names (`mcp_note_access.scopes`), at most 64 of at most 256 characters. */

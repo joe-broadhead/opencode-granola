@@ -27,13 +27,14 @@ import {
   EventsFailure,
   accountMismatch,
   accountRequired,
+  accountUnnamed,
   cursorInvalid,
   invalidInput,
   ownerUnknown,
   readFailed,
   sourceUnknown,
 } from "./errors.js"
-import { accountEmail, accountScopes, connectedEmail, readMeetings, readMeetingsPage, resultText, type MeetingFacts } from "./granola.js"
+import { accountEmail, accountScopes, connectedEmails, readMeetings, readMeetingsPage, resultText, type MeetingFacts } from "./granola.js"
 
 /**
  * Granola's side of the source contract (`@we-the-rebel-alliance/source-contract`, declared in `package.json`'s
@@ -46,8 +47,10 @@ import { accountEmail, accountScopes, connectedEmail, readMeetings, readMeetings
  * - `events_list` never asks who is signed in. Every listing names its account, the email probe answers, and the page's
  *   owner is that account's. search_meetings lists the meetings of one window at a time (`from_date` and `to_date` as
  *   UTC times, `attended_only`), every page of it while `<pagination>` has a `next_cursor`; get_meetings, up to 10 at a
- *   time, gives the meetings on the page their start, link, attendees and summary, and names the signed-in account in
- *   its `<connected_user_email>` preamble, which must be the listing's account.
+ *   time, gives the meetings on the page their start, link, attendees and summary, and names the signed-in account
+ *   (`<connected_user_email>`, or the attribute of `<meetings_data>`), which must be the listing's account. An answer
+ *   that holds meetings and names no account is UNAVAILABLE, and a page lists nothing unless at least one answer named
+ *   the account: the check never passes for want of an answer.
  *
  * The cursor is bound to the plugin, the source and the account, and holds the (start, id) of the last meeting listed.
  * A meeting is listed once it started at least SETTLE_MS ago, when its notes are most likely done; a meeting whose
@@ -302,20 +305,28 @@ function positionOf(cursor: string, account: string): Key {
 const isoFloor = (time: number) => new Date(Math.floor(time / 1000) * 1000).toISOString()
 const isoCeil = (time: number) => new Date(Math.ceil(time / 1000) * 1000).toISOString()
 
-/** One listing's reads: the reader, the account it reads, and what get_meetings has given so far. */
+/** One listing's reads: the reader, the account it reads, what get_meetings has given so far, and whether it named the account. */
 interface Listing {
   readonly read: Read
   readonly account: string
   readonly details: Map<string, MeetingFacts>
   readonly tried: Set<string>
+  verified: boolean
 }
 
-/** get_meetings for a batch, refusing an answer that names another signed-in account than the listing's. */
+/**
+ * get_meetings for a batch. An answer that names another signed-in account than the listing's is ACCOUNT_MISMATCH; one
+ * that holds meetings and names no account is UNAVAILABLE, since they cannot be told to be the account's. An answer
+ * with no meeting labels nothing, so it needs no name.
+ */
 async function getMeetings(listing: Listing, ids: readonly string[]): Promise<MeetingFacts[]> {
   const text = resultText(await listing.read("get_meetings", { meeting_ids: ids, max_participants: MAX_PARTICIPANTS, attachments: "none" }))
-  const named = connectedEmail(text)
-  if (named !== undefined && named !== listing.account) throw new EventsFailure(accountMismatch(listing.account, "signed-in"))
-  return readMeetings(text)
+  const named = connectedEmails(text)
+  if (named.some((email) => email !== listing.account)) throw new EventsFailure(accountMismatch(listing.account, "signed-in"))
+  const meetings = readMeetings(text)
+  if (named.length === 0 && meetings.length > 0) throw new EventsFailure(accountUnnamed())
+  if (named.length > 0) listing.verified = true
+  return meetings
 }
 
 /** Meetings by ID from get_meetings, into the listing's details. An ID Granola leaves out of a batch is asked for once more alone. */
@@ -409,7 +420,7 @@ export async function listEvents(read: Read, input: unknown, now: number): Promi
   const after: Key = request.cursor !== undefined ? positionOf(request.cursor, account) : { t: startTime(request, now), i: "" }
   const end = now - SETTLE_MS
 
-  const listing: Listing = { read, account, details: new Map(), tried: new Set() }
+  const listing: Listing = { read, account, details: new Map(), tried: new Set(), verified: false }
   const found = new Map<string, Dated>()
   let scanned = after.t
   for (let from = after.t, windows = 0; from <= end && windows < MAX_WINDOWS && found.size <= request.limit; windows++) {
@@ -425,6 +436,8 @@ export async function listEvents(read: Read, input: unknown, now: number): Promi
   const ordered = [...found.values()].sort((a, b) => compare({ t: a.time, i: a.id }, { t: b.time, i: b.id }))
   const chosen = ordered.slice(0, request.limit)
   await readDetails(listing, chosen.map((meeting) => meeting.id))
+  // Every chosen meeting went to get_meetings; a page lists nothing unless an answer named the listing's account.
+  if (chosen.length > 0 && !listing.verified) throw new EventsFailure(accountUnnamed())
   const all = chosen.map((meeting) => toEvent(account, { ...merged(meeting, listing.details.get(meeting.id)), time: meeting.time }))
   // A meeting whose title or summary holds a secret is refused for good; the rest fill the page up to its size.
   const screened = screenEvents(all)

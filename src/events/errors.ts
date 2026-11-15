@@ -51,6 +51,14 @@ export function accountMismatch(account: string, why: "cursor" | "signed-in"): P
       }
 }
 
+export function accountUnnamed(): Problem {
+  return {
+    code: "UNAVAILABLE",
+    message: "Granola's get_meetings did not name the signed-in account, so its meetings cannot be listed as this account's.",
+    next: "Call events_list again with the same cursor; if it keeps failing, run /granola-status.",
+  }
+}
+
 export function sourceUnknown(): Problem {
   return {
     code: "SOURCE_UNKNOWN",

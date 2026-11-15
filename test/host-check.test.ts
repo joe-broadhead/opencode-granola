@@ -3,15 +3,15 @@ import { GranolaError } from "../src/errors.js"
 import { checkHost, satisfies } from "../src/host-check.js"
 import { TESTED_HOSTS } from "../src/hosts.js"
 
-const tested = ">=2.2.3 <2.3.0"
+const tested = ">=2.2.3 <2.4.0"
 
 describe("supported OpenCode range", () => {
   it("accepts releases inside the line", () => {
-    for (const version of ["2.2.3", "2.2.4", "2.2.6"]) expect(satisfies(version, tested), version).toBe(true)
+    for (const version of ["2.2.3", "2.2.4", "2.2.6", "2.2.7", "2.3.0", "2.3.9"]) expect(satisfies(version, tested), version).toBe(true)
   })
 
   it("rejects releases outside the line", () => {
-    for (const version of ["2.2.2", "2.3.0", "3.0.0", "1.19.5"]) expect(satisfies(version, tested), version).toBe(false)
+    for (const version of ["2.2.2", "2.4.0", "3.0.0", "1.19.5"]) expect(satisfies(version, tested), version).toBe(false)
   })
 
   it("rejects dev builds, prereleases and malformed versions", () => {
@@ -26,12 +26,12 @@ describe("supported OpenCode range", () => {
 })
 
 describe("checkHost", () => {
-  it("names 2.2.3, 2.2.4, 2.2.5 and 2.2.6 as the tested releases, all inside the range", () => {
-    expect(TESTED_HOSTS).toEqual(["2.2.3", "2.2.4", "2.2.5", "2.2.6"])
+  it("names 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 as the tested releases, all inside the range", () => {
+    expect(TESTED_HOSTS).toEqual(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0"])
     for (const version of TESTED_HOSTS) expect(satisfies(version, tested), version).toBe(true)
   })
 
-  it.each(["2.2.3", "2.2.4", "2.2.5", "2.2.6"])("passes the tested release %s with no warning", (version) => {
+  it.each(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0"])("passes the tested release %s with no warning", (version) => {
     expect(checkHost(version, tested, false)).toEqual({ version, range: tested, tested: true })
   })
 
@@ -39,7 +39,7 @@ describe("checkHost", () => {
     expect(checkHost("2.2.99", tested, false)).toEqual({ version: "2.2.99", range: tested, tested: false })
   })
 
-  it.each(["2.3.0", "0.0.0-dev-202610301200"])("refuses %s with HOST_UNTESTED and the override hint", (version) => {
+  it.each(["2.4.0", "0.0.0-dev-202610301200"])("refuses %s with HOST_UNTESTED and the override hint", (version) => {
     let error: unknown
     try { checkHost(version, tested, false) } catch (caught) { error = caught }
     expect(error).toBeInstanceOf(GranolaError)
@@ -49,11 +49,11 @@ describe("checkHost", () => {
   })
 
   it("loads an untested host with a warning when allowUntestedHost is set", () => {
-    expect(checkHost("2.3.0", tested, true)).toEqual({
-      version: "2.3.0",
+    expect(checkHost("2.4.0", tested, true)).toEqual({
+      version: "2.4.0",
       range: tested,
       tested: false,
-      warning: "outside the supported range >=2.2.3 <2.3.0; it runs because allowUntestedHost is true",
+      warning: "outside the supported range >=2.2.3 <2.4.0; it runs because allowUntestedHost is true",
     })
   })
 })

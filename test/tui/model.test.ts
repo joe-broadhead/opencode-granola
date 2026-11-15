@@ -20,7 +20,7 @@ function status(overrides: Partial<Status> = {}): Status {
     exportDirectory: "/home/someone/Granola",
     access: "all",
     version: VERSION,
-    host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
+    host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
     nextStep: "Nothing to do.",
     ...overrides,
   }
@@ -58,7 +58,7 @@ describe("status dialog view", () => {
     expect(row(details, "Connection")).toEqual({ label: "Connection", text: "connected (Granola)", tone: "ok" })
     expect(row(details, "Account")!.text).toBe("workspace Acme")
     expect(row(details, "Tools")!.text).toBe("17 available, 1 hidden, 2 unknown, running too: brand_new_tool")
-    expect(row(details, "OpenCode")!.text).toBe(`2.2.3 (tested; supported range >=2.2.3 <2.3.0), plugin ${VERSION}`)
+    expect(row(details, "OpenCode")!.text).toBe(`2.2.3 (tested; supported range >=2.2.3 <2.4.0), plugin ${VERSION}`)
     expect(view(details).next).toBe("Nothing to do.")
   })
 
@@ -90,13 +90,13 @@ describe("status dialog view", () => {
       state: "conflict",
       title: undefined,
       conflict: "your OpenCode config defines mcp.servers.granola for a different server",
-      host: { version: "2.3.0", range: ">=2.2.3 <2.3.0", tested: false },
+      host: { version: "2.4.0", range: ">=2.2.3 <2.4.0", tested: false },
       hostWarning: "outside the supported range",
     })
     expect(row(details, "Connection")).toEqual({ label: "Connection", text: "conflict: your OpenCode config defines mcp.servers.granola for a different server", tone: "warning" })
-    expect(row(details, "OpenCode")).toEqual({ label: "OpenCode", text: `2.3.0 (host untested: outside the supported range), plugin ${VERSION}`, tone: "warning" })
-    const untested = ready({ host: { version: "2.2.99", range: ">=2.2.3 <2.3.0", tested: false } })
-    expect(row(untested, "OpenCode")).toEqual({ label: "OpenCode", text: `2.2.99 (untested; supported range >=2.2.3 <2.3.0), plugin ${VERSION}`, tone: "info" })
+    expect(row(details, "OpenCode")).toEqual({ label: "OpenCode", text: `2.4.0 (host untested: outside the supported range), plugin ${VERSION}`, tone: "warning" })
+    const untested = ready({ host: { version: "2.2.99", range: ">=2.2.3 <2.4.0", tested: false } })
+    expect(row(untested, "OpenCode")).toEqual({ label: "OpenCode", text: `2.2.99 (untested; supported range >=2.2.3 <2.4.0), plugin ${VERSION}`, tone: "info" })
   })
 
   it("says when the status method itself could not read the status", () => {

@@ -8,8 +8,8 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 ## Rules
 
 - **Public APIs only:** `@opencode/plugin` 2.2.3 in `src`, plus `@opencode/sdk` and `@opencode/client` in tests. The
-  supported range is `opencode.host` in `package.json`, exactly `>=2.2.3 <2.3.0`; the host check reads it from there.
-  `TESTED_HOSTS` in `src/hosts.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5 and 2.2.6); status calls only those
+  supported range is `opencode.host` in `package.json`, exactly `>=2.2.3 <2.4.0`; the host check reads it from there.
+  `TESTED_HOSTS` in `src/hosts.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0); status calls only those
   tested, and the host and pack tests run on each.
 - **Greenfield.** No migration code, compatibility paths or dead code, exports, dependencies, docs or tests. Delete
   rather than deprecate.

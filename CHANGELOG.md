@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.4] - 2026-11-15
+
+### Changed
+
+- Admits OpenCode 2.3: the supported range is `>=2.2.3 <2.4.0` (`opencode.host` in `package.json`).
+  The plugin is tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0: `TESTED_HOSTS` in `src/hosts.ts` is that list,
+  and the host and pack tests install every release in it, so CI now runs stock OpenCode 2.2.7 and 2.3.0 too. The out-of-range example in the docs
+  and tests is now 2.4.0.
+- The host test waits until `granola.meetings` has activated in every test project, and until the `plan` agent is
+  listed, before any case runs: stock 2.2.7 and 2.3.0 answer a location's first requests before its plugins have
+  loaded, where 2.2.6 waited.
+- What OpenCode 2.3 changes does not reach this plugin: it runs no subagents and does not subscribe to
+  `session.tool.failed` (it listens only for `integration.updated` and `mcp.status.changed`), and it has no use for the
+  new `session.fork` hook. The long-running tools, the Markdown export and `events_list`, already stop when the
+  person presses Stop and the tool's signal aborts.
+
 ## [0.0.3] - 2026-11-15
 
 ### Added

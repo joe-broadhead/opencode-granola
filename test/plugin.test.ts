@@ -41,7 +41,7 @@ describe("plugin definition", () => {
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
     expect(result).toMatchObject({
       version: pkg.version,
-      host: { version: "2.2.3", range: ">=2.2.3 <2.3.0", tested: true },
+      host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
       state: "connecting",
       exportDirectory: "/data/Granola",
       nextStep: "Retry in a few seconds.",
@@ -58,7 +58,7 @@ describe("plugin definition", () => {
     expect(result.hostWarning).toBeUndefined()
   })
 
-  it.each(["2.3.0", "2.2.2", "0.0.0-dev-202610301200"])("refuses OpenCode %s with HOST_UNTESTED before registering anything", async (version) => {
+  it.each(["2.4.0", "2.2.2", "0.0.0-dev-202610301200"])("refuses OpenCode %s with HOST_UNTESTED before registering anything", async (version) => {
     const host = fakeHost({ version })
     const error = await rejection(Promise.resolve(setup(host.ctx, host.toolsRpc)))
     expect(error.code).toBe("HOST_UNTESTED")
@@ -67,14 +67,14 @@ describe("plugin definition", () => {
   })
 
   it("loads on an untested host with allowUntestedHost and warns in status", async () => {
-    const host = fakeHost({ version: "2.3.0", options: { allowUntestedHost: true } })
+    const host = fakeHost({ version: "2.4.0", options: { allowUntestedHost: true } })
     await setup(host.ctx, host.toolsRpc)
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
-    expect(result.hostWarning).toContain("outside the supported range >=2.2.3 <2.3.0")
-    expect(result.host).toEqual({ version: "2.3.0", range: ">=2.2.3 <2.3.0", tested: false })
+    expect(result.hostWarning).toContain("outside the supported range >=2.2.3 <2.4.0")
+    expect(result.host).toEqual({ version: "2.4.0", range: ">=2.2.3 <2.4.0", tested: false })
     host.listed.servers = [{ name: "granola", status: { status: "connected" } }]
     const connected = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
-    expect(connected).toMatchObject({ state: "connected", nextStep: "If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5 or 2.2.6." })
+    expect(connected).toMatchObject({ state: "connected", nextStep: "If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0." })
   })
 
   it("fails setup with one error that names a bad option", async () => {
@@ -88,7 +88,7 @@ describe("plugin definition", () => {
 describe("package metadata", () => {
   it("reads the version and the tested OpenCode line from package.json", () => {
     expect(readPackageInfo()).toEqual({ version: pkg.version, hostRange: pkg.opencode.host })
-    expect(pkg.opencode.host).toBe(">=2.2.3 <2.3.0")
+    expect(pkg.opencode.host).toBe(">=2.2.3 <2.4.0")
   })
 
   it("refuses a package.json without the tested line", () => {

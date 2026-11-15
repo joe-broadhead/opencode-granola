@@ -7,7 +7,7 @@ import { AGENT_FIX, CONFLICT_NEXT, UNTESTED_HOST_NEXT, buildStatus, createStatus
 import { agent, fakeHost } from "./fakes.js"
 
 const VERSION = readPackageInfo().version
-const RANGE = ">=2.2.3 <2.3.0"
+const RANGE = ">=2.2.3 <2.4.0"
 
 const BUNDLED = [
   { name: "granola", path: "/plugin/skills/granola/SKILL.md" },
@@ -147,13 +147,13 @@ describe("status model", () => {
   it("labels a config conflict, makes its removal the next step, and marks a host outside the range", () => {
     const status = buildStatus(inputs({
       conflict: "your OpenCode config defines mcp.servers.granola for a different server, so the plugin left it unchanged",
-      host: { version: "2.3.0", range: RANGE, tested: false, warning: "outside the supported range >=2.2.3 <2.3.0; it runs because allowUntestedHost is true" },
+      host: { version: "2.4.0", range: RANGE, tested: false, warning: "outside the supported range >=2.2.3 <2.4.0; it runs because allowUntestedHost is true" },
     }))
     expect(status.nextStep).toBe(CONFLICT_NEXT)
-    expect(status.host).toEqual({ version: "2.3.0", range: RANGE, tested: false })
+    expect(status.host).toEqual({ version: "2.4.0", range: RANGE, tested: false })
     const text = formatStatus(status)
     expect(text).toContain("Connection: conflict: your OpenCode config defines mcp.servers.granola for a different server")
-    expect(text).toContain(`OpenCode: 2.3.0 (host untested: outside the supported range >=2.2.3 <2.3.0; it runs because allowUntestedHost is true), plugin ${VERSION}`)
+    expect(text).toContain(`OpenCode: 2.4.0 (host untested: outside the supported range >=2.2.3 <2.4.0; it runs because allowUntestedHost is true), plugin ${VERSION}`)
   })
 
   it("calls a tested release tested, and another release in the range untested without changing the state or next step", () => {
@@ -164,9 +164,9 @@ describe("status model", () => {
   })
 
   it("gives a host outside the range, running because of allowUntestedHost, its own next step when nothing else is needed", () => {
-    const host = { version: "2.3.0", range: RANGE, tested: false, warning: "outside the supported range >=2.2.3 <2.3.0; it runs because allowUntestedHost is true" }
+    const host = { version: "2.4.0", range: RANGE, tested: false, warning: "outside the supported range >=2.2.3 <2.4.0; it runs because allowUntestedHost is true" }
     expect(buildStatus(inputs({ host })).nextStep).toBe(UNTESTED_HOST_NEXT)
-    expect(UNTESTED_HOST_NEXT).toBe("If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5 or 2.2.6.")
+    expect(UNTESTED_HOST_NEXT).toBe("If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0.")
     // Anything else to do comes first.
     expect(buildStatus(inputs({ host, agents: [agent("reviewer")] })).nextStep).toBe(AGENT_FIX)
   })
@@ -209,7 +209,7 @@ describe("status model", () => {
   it("only uses fields the output schema declares", () => {
     const properties = Object.keys(STATUS_SCHEMA.properties)
     const statuses = [
-      buildStatus(inputs({ workspace: "Acme", conflict: "c", agents: [agent("reviewer")], host: { version: "2.3.0", range: RANGE, tested: false, warning: "w" } })),
+      buildStatus(inputs({ workspace: "Acme", conflict: "c", agents: [agent("reviewer")], host: { version: "2.4.0", range: RANGE, tested: false, warning: "w" } })),
       buildStatus(inputs({ servers: [] })),
     ]
     for (const status of statuses) {

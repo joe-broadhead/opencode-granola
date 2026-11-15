@@ -8,7 +8,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Granola's meetings as a source under the shared source contract, `@we-the-rebel-alliance/source-contract` v0.1.0:
   `package.json`'s new top-level `sources` key declares `granola.meetings`, an `events` source of kind `meeting` read
-  with `events_list` (input `source` `granola`), private, `cost.class: "free"`, `maxBytes` 65,536, with exactly the
+  with `events_list` (input `source` `granola`), with named accounts (`accounts.named: true`: every read names the
+  signed-in email, which `probe` answers), private, `cost.class: "free"`, `maxBytes` 65,536, with exactly the
   Granola tools its reads call as its operations (`get_account_info`, `search_meetings`, `get_meetings`),
   `get_account_info` as its one identity operation, the tools RPC `granola.meetings.tools` and the probe action
   `granola_probe`. Memory and jelly read the declaration from the installed package, with the contract's `descriptor`.
@@ -29,9 +30,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - For Memory and every consumer, required input: every `events_list` call names `account`, the signed-in Granola
   email that `probe` answers (any case; pages name it lowercase). A listing without it is refused with
-  `INPUT_INVALID`. `events_list` never reads `get_account_info` any more: the page's account and owner are the account
-  it names, and every `get_meetings` answer's `<connected_user_email>` must be that account, or the call is refused
-  with `ACCOUNT_MISMATCH` and lists nothing.
+  `INPUT_INVALID`, and so is `default`, which a consumer fills for an unnamed source. `events_list` never reads
+  `get_account_info` any more: the page's account and owner are the account it names, and every `get_meetings`
+  answer must name that account, as a `<connected_user_email>` element or a `connected_user_email` attribute of
+  `<meetings_data>`. Another account is `ACCOUNT_MISMATCH`; an answer that holds meetings and names none is
+  `UNAVAILABLE`, and a page lists nothing unless at least one answer named the account, so the check never passes for
+  want of an answer.
 - For Memory, a cursor restart: the account every page and event names is now the signed-in email instead of
   `default`, and the cursor is the contract's bound cursor (plugin `granola`, source `granola`, the account). A cursor
   an earlier version issued is refused with `CURSOR_INVALID`; start again with `since`. A cursor passed with another
@@ -46,8 +50,12 @@ All notable changes to this project are documented here. The format follows [Kee
   `src/host/tools-rpc.ts` and `src/host/events-list.ts` are deleted, and so are their `check-copies` pins. Granola's
   part of the RPC is `src/tools-rpc.ts`. The RPC id `granola.meetings.tools`, its methods and their answers are
   unchanged apart from `events_list`'s above, and `probe` is new.
-- For jelly: nothing to do. The declared tools, sign-in and settings are unchanged; `probe` is a tools RPC method, not
-  a tool, so it is not in `jelly.tools`. The default rules gain `granola_probe` (allow) at every `access`.
+- For jelly: the declared tools, sign-in and settings are unchanged; `probe` is a tools RPC method, not a tool, so it
+  is not in `jelly.tools`, and the default rules gain `granola_probe` (allow) at every `access`. Jelly does not see the
+  source yet: its broker on master reads `sources` with its own check (`backend/host/src/sources/contract.ts`,
+  `readItem`), which drops an item whose `permission.events` is not dotted, such as `granola_events_list`, the
+  contract's form for an MCP-backed source. Jelly sees `granola.meetings` once it reads declarations through the
+  source contract package (`descriptor`).
 
 ## [0.0.2] - 2026-11-14
 

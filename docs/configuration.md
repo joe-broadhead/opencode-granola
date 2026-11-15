@@ -11,7 +11,7 @@ Options go in the plugin's entry in `plugins`. Both are optional.
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-granola#v0.0.3",
+      "package": "github:joe-broadhead/opencode-granola#v0.0.4",
       "options": {
         "exportDirectory": "<an absolute path>/Granola",
         "allowUntestedHost": false

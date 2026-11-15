@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-granola",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "description": "Unofficial OpenCode plugin for Granola meeting notes, through Granola's official MCP server",
   "keywords": [
@@ -66,6 +66,43 @@
       "domain": "granola.ai"
     }
   },
+  "sources": {
+    "contractVersion": 1,
+    "rpc": "granola.meetings.tools",
+    "probe": {
+      "action": "granola_probe"
+    },
+    "items": [
+      {
+        "id": "granola.meetings",
+        "kind": "events",
+        "reads": "meeting",
+        "tool": "events_list",
+        "input": {
+          "source": "granola"
+        },
+        "accounts": {
+          "named": true
+        },
+        "permission": {
+          "events": "granola_events_list",
+          "operations": [
+            "get_account_info",
+            "search_meetings",
+            "get_meetings"
+          ],
+          "identity": [
+            "get_account_info"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "free"
+        },
+        "maxBytes": 65536
+      }
+    ]
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tui.json --noEmit && tsc -p test/tsconfig.json",
     "build": "node scripts/build.mjs",
@@ -89,6 +126,7 @@
     "@opentui/core": "0.8.0",
     "@opentui/solid": "0.8.0",
     "@types/node": "22.20.5",
+    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.1.0",
     "babel-preset-solid": "1.9.16",
     "esbuild": "0.28.2",
     "solid-js": "1.9.16",

@@ -24,7 +24,7 @@ changes nothing in Jelly.
 - Everything else runs, as the plugin's own rules let it. That includes `granola_give_feedback`, which sends a report to
   Granola's team and which Granola's own instructions tell the model to send unasked, and
   `granola_export_markdown`, which writes a file outside the project. A Jelly admin turns either into an ask, or off,
-  in Jelly's own tool settings; in OpenCode the same is a rule, or the `access` option. `granola_events_list` is the plugin's own read for Memory's collector, which runs it unattended, so it never asks.
+  in Jelly's own tool settings; in OpenCode the same is a rule, or the `access` option. `granola_events_list` is the plugin's own read for Memory's collector, which runs it unattended, so it never asks; its `probe`, a tools RPC method rather than a tool, is not declared here.
 
 `granola_sign_out` is declared, not read-only, with a note: Granola serves it as a destructive change (it revokes the
 sign-in for every connection that shares it), so a read-only helper is never given it. The plugin removes it from the
@@ -68,4 +68,4 @@ not know declared choices yet refuses the whole declaration, so this needs a Jel
 Jelly's curated catalogue pins an exact version. Each release is published under a new version, so a review in
 Jelly can tell the two apart.
 
-The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit, the shared part of the tools RPC (`src/host/tools-rpc.ts`) and the events_list source contract (`src/host/events-list.ts`) equal to the copies every plugin carries.
+The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit equal to the copy every plugin carries. The tools RPC and the source contract come from the pinned `@we-the-rebel-alliance/source-contract` package, bundled into `dist/index.js`; `package.json`'s `sources` declares `granola.meetings`, which Jelly reads from the installed package.

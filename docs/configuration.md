@@ -11,7 +11,7 @@ Options go in the plugin's entry in `plugins`. Both are optional.
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-granola#v0.0.2",
+      "package": "github:joe-broadhead/opencode-granola#v0.0.3",
       "options": {
         "exportDirectory": "<an absolute path>/Granola",
         "allowUntestedHost": false
@@ -67,6 +67,7 @@ that has the base "allow everything" rule, directly after that rule:
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
   { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
+  { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
@@ -95,6 +96,7 @@ or, at `access: "ask-changes"`, this one:
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
   { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
+  { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_update_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "ask" },
@@ -123,6 +125,7 @@ or, at `access: "read-only"`:
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
   { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
+  { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_update_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "deny" },
@@ -191,6 +194,7 @@ For example, for an agent `reviewer`, when your top-level `permissions` allow `g
         { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
         { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
         { "action": "granola_events_list", "resource": "*", "effect": "allow" },
+        { "action": "granola_probe", "resource": "*", "effect": "allow" },
         { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
@@ -374,42 +378,62 @@ recipe above.
 
 ## Events list
 
-`granola_events_list` (`tools.granola.events_list` in Code Mode, and the tools RPC method `events_list`) is Granola's
-side of Memory's sources funnel: the shared `events_list` contract, `src/host/events-list.ts`, which every source
-plugin carries unchanged. It lists the meetings you took part in since a cursor, as normalised events, oldest first.
-It only reads, never asks and calls no model, so Memory's collector can run it unattended.
+`package.json`'s `sources` declares one source under source-contract version 1, `granola.meetings`
+(`@we-the-rebel-alliance/source-contract`): `granola_events_list` (`tools.granola.events_list` in Code Mode, and the
+tools RPC method `events_list`) lists the meetings you took part in since a cursor, as normalised events, oldest first,
+and the tools RPC method `probe` names who is signed in. Both only read, never ask and call no model, so a consumer
+such as Memory's collector can run them unattended.
 
 ```
-events_list({ since?, cursor?, limit?, account?, source? })
-  → { source: "granola", account: "default", owner: { id, label }, events, cursor, more, trust: "untrusted" }
+probe({ source?, account? })
+  → { source: "granola", account: "<email>", owner: { id: "mailto:<email>", label: "<email>" }, scopes?, trust: "untrusted" }
+
+events_list({ account, since?, cursor?, limit?, source? })
+  → { source: "granola", account: "<email>", owner: { id, label }, events, cursor, more, refused?, plugin, asOf, trust: "untrusted" }
 ```
+
+The descriptor declares `accounts.named: true`: every read names its account, the signed-in Granola email. A consumer
+learns it from `probe`, which needs no account, and passes it to every `events_list` call; `default`, the account an
+unnamed source takes, is refused (`INPUT_INVALID` from `events_list`, `ACCOUNT_MISMATCH` from `probe`).
+
+`probe` reads `get_account_info`, the source's one identity operation, and nothing else: the account is the signed-in
+email, the owner `mailto:` and that email, and `scopes` what the connection can search as Granola names it (`personal`,
+`public`). Given an `account`, it refuses any other signed-in account with `ACCOUNT_MISMATCH`.
 
 | Input | Meaning |
 | --- | --- |
+| `account` | Required: the signed-in Granola email, as `probe` and every result name it. |
 | `since` | Where to start without a cursor: an ISO date (a UTC day) or date-time with `Z` or an offset. Default: 24 hours ago. |
-| `cursor` | The previous result's cursor. It wins over `since`. |
-| `limit` | Most events, 1 to 500; 100 by default. A result also stops before 900,000 bytes of JSON. |
-| `account` | `default`, Granola's one account. |
+| `cursor` | The previous result's cursor, for the same account. It wins over `since`. |
+| `limit` | Most events, 1 to 500; 100 by default. A result also stops before 64 KiB of JSON. |
 | `source` | `granola`, the one source. |
 
 How it reads, through OpenCode's own Granola tools, each with its own permission:
 
-- `get_account_info` names the owner: `mailto:` and the signed-in email. The cursor holds a digest of it, so after
-  a sign-in to another account an old cursor is refused.
 - `search_meetings`, one week at a time, with `from_date` and `to_date` as UTC times and `attended_only: true`:
   the meetings you captured or are listed on. Every page of a week is read, because Granola lists newest first.
   Search with no keywords is Granola's browse path.
-- `get_meetings`, up to 10 at a time, for each listed meeting's start, link, attendees and AI summary.
+- `get_meetings`, up to 10 at a time, for each listed meeting's start, link, attendees and AI summary. Its answer names
+  the signed-in account (`<connected_user_email>`, or a `connected_user_email` attribute of `<meetings_data>`):
+  another account than the listing's is refused with `ACCOUNT_MISMATCH`, and an answer that holds meetings and names
+  no account with `UNAVAILABLE`. A page lists nothing unless at least one answer named the account.
+
+`events_list` never reads `get_account_info`: the page's owner is the account it names. The cursor is bound to the
+plugin, the source and that account, so a cursor passed with another account is refused with `ACCOUNT_MISMATCH`
+before any read, and one this source did not issue for the account, an earlier version's included, with
+`CURSOR_INVALID`: start again with `since`.
 
 Each event is one meeting: kind `meeting`, the meeting ID, its start (`meeting_at`), its title, attendees as actors
 (`mailto:` and the email, or `name:` and the name when Granola has no email), Granola's AI summary cut to 4,096
-characters, and its link. Private notes and transcripts are not read. A meeting is listed once it started 2 hours ago,
-so its notes are most likely done; a meeting whose notes change afterwards is not listed again. The cursor is the
-(start, ID) of the last meeting listed: calling again with it lists what follows, and an older cursor lists the same
-meetings again.
+characters, and its link. Private notes and transcripts are not read. A meeting whose title or summary holds a
+secret, such as a password in a link, is never listed: `refused` names it with the reason `secret`, and the cursor
+moves past it. A meeting is listed once it started 2 hours ago, so its notes are most likely done; a meeting whose
+notes change afterwards is not listed again. The cursor is the (start, ID) of the last meeting listed: calling again
+with it lists what follows, and an older cursor lists the same meetings again.
 
-The default rules allow `granola_events_list`. Its reads, `granola_get_account_info`, `granola_search_meetings` and
-`granola_get_meetings`, must be allowed too for the agent of the session that runs it.
+The default rules allow `granola_events_list` and `granola_probe`. Their reads, `granola_search_meetings` and
+`granola_get_meetings` for `events_list`, and `granola_get_account_info` for `probe`, must be allowed too for the agent
+of the session that runs them. A consumer's grant names exactly those operations, from `sources`.
 
 ## Host check
 
@@ -507,11 +531,10 @@ The export's next steps are written for the model, which passes them on to you.
 
 | Code | Message | Next step |
 | --- | --- | --- |
-| `EVENTS_INVALID_INPUT` | The events_list input is invalid: *problems*. | Pass only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
-| `EVENTS_CURSOR_INVALID` | The cursor was not issued by Granola's events_list for this account and its signed-in user. | Pass a cursor from a previous result of the same account, or start again with since. |
-| `EVENTS_ACCOUNT_UNKNOWN` | Granola has one account, default. | Leave account out, or pass "default". |
-| `EVENTS_SOURCE_UNKNOWN` | This plugin lists one source, granola. | Leave source out, or pass "granola". |
-| `EVENTS_OWNER_UNKNOWN` | Granola did not name the signed-in account's email. | Run /granola-status, and sign in to Granola again if it shows a problem. |
-| `EVENTS_READ_FAILED` | Granola's *tool* failed: *reason*. | Call events_list again with the same cursor; if it keeps failing, run /granola-status. |
+| `INPUT_INVALID` | The events_list (or probe) input is invalid: *problems*; or a listing names no account. | Pass account, the signed-in Granola email that probe answers, and only since, cursor, limit (1 to 500) and source besides. |
+| `CURSOR_INVALID` | The cursor was not issued by Granola's events_list for this account. | Pass a cursor from a previous result for the same account, or start again with since. |
+| `ACCOUNT_MISMATCH` | The cursor is for another Granola account, or Granola is signed in to another account than the one named. | Pass the cursor with its own account, or sign in to Granola as that account (/connect, Granola), or read as the account probe names. |
+| `SOURCE_UNKNOWN` | This plugin lists one source, granola. | Leave source out, or pass "granola". |
+| `UNAVAILABLE` | Granola's *tool* failed: *reason*; or Granola did not name the signed-in account's email. | Call events_list (or probe) again; if it keeps failing, run /granola-status. |
 
 Through the tools RPC, a script gets the same code and next step as the RPC error `failed`.

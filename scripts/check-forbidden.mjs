@@ -66,13 +66,12 @@ function chain(node) {
 const endsWith = (text, suffix) => text === suffix || text?.endsWith(`.${suffix}`)
 
 /**
- * The one allowed evaluate hook: the tools RPC's. It turns an ask on one of the RPC's own script calls in flight into
- * a deny, because no one is there to answer it; it only tightens, and leaves every other call alone.
+ * No evaluate hook here: the one the plugin registers is the source contract's tools RPC module's, bundled into
+ * dist/index.js from the pinned package. It turns an ask on one of the RPC's own script calls in flight into a deny,
+ * because no one is there to answer it; it only tightens, and leaves every other call alone.
  */
-const EVALUATE_ALLOWED = `${root}src/host/tools-rpc.ts`
 const evaluateHook = (node) => ts.isCallExpression(node) && endsWith(chain(node.expression), "hook") && node.arguments[0]
   && ts.isStringLiteralLike(node.arguments[0]) && /evaluate/.test(node.arguments[0].text)
-let allowedHooks = 0
 const propertyName = (node) => (node.name && (ts.isIdentifier(node.name) || ts.isStringLiteralLike(node.name)) ? node.name.text : undefined)
 
 /**
@@ -92,8 +91,8 @@ const API_RULES = [
     && "tool options.mcp delegation belongs to the retired host fork",
   (node) => ts.isPropertyAccessExpression(node) && node.name.text === "evaluate" && endsWith(chain(node.expression), "permission")
     && "a permission evaluate hook; insert default rules with ctx.agent.transform instead",
-  (node, _shipped, file) => evaluateHook(node) && file !== EVALUATE_ALLOWED
-    && "a permission evaluate hook outside the tools RPC; insert default rules with ctx.agent.transform instead",
+  (node) => evaluateHook(node)
+    && "a permission evaluate hook; the tools RPC's one comes from the source contract package, and default rules go in with ctx.agent.transform",
   (node) => ts.isCallExpression(node) && endsWith(chain(node.expression), "permission.assert") && node.arguments.length !== 1
     && "call ctx.permission.assert(input) with the input only: no signal or other options",
   (node, shipped) => (ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node) || ts.isMethodDeclaration(node))
@@ -124,7 +123,6 @@ function scan(file, { shipped }) {
       && node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])) {
       specifier(node.arguments[0], node.arguments[0].text)
     }
-    if (file === EVALUATE_ALLOWED && evaluateHook(node)) allowedHooks++
     for (const rule of API_RULES) {
       const message = rule(node, shipped, file)
       if (message) report(file, node, message)
@@ -169,7 +167,6 @@ const tooling = ["test", "scripts"].flatMap((directory) => walk(`${root}${direct
 for (const file of shipped) scan(file, { shipped: true })
 for (const file of tooling) scan(file, { shipped: false })
 checkManifest()
-if (allowedHooks !== 1) problems.push(`${relative(root, EVALUATE_ALLOWED)}: expected exactly one permission evaluate hook, found ${allowedHooks}`)
 
 if (problems.length > 0) {
   console.error(`check-forbidden: ${problems.length} problem${problems.length === 1 ? "" : "s"}`)

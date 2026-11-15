@@ -42,16 +42,22 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
   neither, or when the README's Troubleshooting table or docs/scripting.md's refusal table drifts from it.
 - **Scripts.** The tools RPC, `granola.meetings.tools`, makes every known tool a method with its class: the reads,
   Granola's writes, `give_feedback` (a send) and the plugin's `export_markdown` (an export, confined to the export
-  root), and the plugin's own read `events_list`. `sign_out` is not a tool this plugin offers, and an unknown tool never is. A call resolves the rule before
-  dispatch: only an allow runs, an ask or a deny is refused with no tool call, and `describe` reports each class, plus
-  each method's permission when given a session. Only the `PLUGIN-SPECIFIC` block changes. `src/host/tools-rpc.ts` is a copy of a module shared by
-  several plugins: change only its block between the `PLUGIN-SPECIFIC` markers here, and the rest in the shared copy
-  first. The executor it calls skips tool hooks, so it applies the hook's work itself.
-- **Events list.** `granola_events_list` is Granola's side of Memory's sources funnel. `src/host/events-list.ts` is the
-  shared `events_list` contract every source plugin carries unchanged (`scripts/check-copies.mjs` pins its hash):
-  change it in every source plugin at once. `src/events/` reads Granola's text and lists the events; its tests run the
-  contract's conformance check on a synthetic Granola. It is the plugin's one read (`PLUGIN_READS`), allowed by
-  default and an owned tools RPC method.
+  root), and the plugin's own reads `events_list` and `probe`. `sign_out` is not a tool this plugin offers, and an
+  unknown tool never is. A call resolves the rule before dispatch: only an allow runs, an ask or a deny is refused with
+  no tool call, and `describe` reports each class, plus each method's permission when given a session. The transport is
+  the source contract's `tools-rpc` module (`@we-the-rebel-alliance/source-contract`, a devDependency pinned to a tag
+  and bundled into `dist/index.js`); `src/tools-rpc.ts` is Granola's part of it, one `ToolsRpcPlugin` value and the
+  method table. The executor it calls skips tool hooks, so `shapeResult` applies the hook's work itself.
+- **Sources.** `package.json`'s `sources` declares one source under source-contract version 1, `granola.meetings`:
+  `events_list` (`granola_events_list`, a tool and a tools RPC method) lists the meetings the user took part in, and
+  `probe` (`granola_probe`, a tools RPC method only) names who is signed in. `src/events/` reads Granola's text and
+  implements both with the package's `events` and `cursor` modules. `probe` alone reads `get_account_info`, the
+  source's identity operation; a listing never does: it names its account, the signed-in email `probe` answers, and
+  get_meetings' `<connected_user_email>` (element or attribute) must be that account, and an answer that holds
+  meetings and names none is `UNAVAILABLE`. The descriptor's accounts are named (`accounts.named: true`). The declared operations are exactly the Granola tools
+  the reads call. `test/conformance.test.ts` runs the package's conformance kit over the declaration on a synthetic
+  Granola and writes `reports/conformance-report.json`. Both reads are allowed by default (`PLUGIN_READS`,
+  `PLUGIN_METHODS`).
 - **Text** in skills, errors and status is plain language with no process terms (`test/ux.test.ts`). Docs describe
   what the code does now. No tokens, sign-in links, meeting content or personal data anywhere; test data is invented.
 - **Releases** come only from `.github/workflows/release.yml` ("Releasing" in [CONTRIBUTING.md](CONTRIBUTING.md)). A
@@ -79,8 +85,8 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 
 - `ui.slot` in `src`;
 - the deprecated `ctx.generate.text` and `experimental.policies`, and the experimental `experimental.artifact`;
-- a permission `evaluate` hook, except exactly one in `src/host/tools-rpc.ts`: it turns an ask on one of the tools
-  RPC's own script calls in flight into a deny, because no one can answer it, and touches nothing else;
+- a permission `evaluate` hook: the tools RPC's one, which turns an ask on one of its own script calls in flight into a
+  deny because no one can answer it, comes from the source contract package;
 - a second argument to `permission.assert`;
 - `Plugin.image`;
 - imports of private host source, paths inside `@opencode/*` packages, `@opencode/ai`, other private host packages,

@@ -1,4 +1,4 @@
-import { registerToolsRpc } from "../src/host/tools-rpc.js"
+import { registerToolsRpc } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import type { Rule } from "../src/permissions.js"
 import type { SetupContext, ToolsRpc } from "../src/setup.js"
 

@@ -7,7 +7,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { EXPORT_INPUT } from "../src/export/index.js"
-import { METHODS, TOOLS_RPC_ID } from "../src/host/tools-rpc.js"
+import { METHODS, TOOLS_RPC_ID } from "../src/tools-rpc.js"
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url))
 const FILES = ["docs/scripting.md", "README.md"]

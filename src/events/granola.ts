@@ -8,7 +8,8 @@ import { findAll, isMarkup, parse, textContent, type Element } from "../export/m
  *   `<pagination has_more=… completion_status=… next_cursor=… />`;
  * - get_meetings: a `<connected_user_email>` preamble, then `<meetings_data>` with each `<meeting id title meeting_at
  *   url>`, its `<known_participants>` (`<participant name email />`) and its `<summary>`;
- * - get_account_info: a JSON object with the signed-in `email`.
+ * - get_account_info: a JSON object with the signed-in `email` and `mcp_note_access.scopes`, what the connection can
+ *   search (`personal`, `public`).
  *
  * Every reader tolerates a missing optional part, and returns nothing rather than guess.
  */
@@ -38,6 +39,9 @@ export interface MeetingsPage {
   /** Granola said the listing cannot continue (`completion_status="incomplete"`). */
   readonly incomplete: boolean
 }
+
+/** An email, as Granola names the signed-in account. */
+const EMAIL = /^[^\s@]+@[^\s@]+$/
 
 const record = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value)
 
@@ -129,14 +133,49 @@ export function accountEmail(result: { readonly output?: unknown; readonly conte
     if (!record(value)) continue
     const nested = [value, value.user, value.account].find((entry) => record(entry) && typeof entry.email === "string") as Record<string, unknown> | undefined
     const email = nested && typeof nested.email === "string" ? nested.email.trim().toLowerCase() : undefined
-    if (email && /^[^\s@]+@[^\s@]+$/.test(email)) return email
+    if (email && EMAIL.test(email)) return email
   }
   if (isMarkup(text)) {
     const root = parse(text)
     const element = findAll(root, "connected_user_email")[0]
     const attribute = findAll(root, "meetings_data").map((data) => data.attributes.connected_user_email).find(Boolean)
     const email = (element ? textContent(element) : attribute)?.trim().toLowerCase()
-    if (email && /^[^\s@]+@[^\s@]+$/.test(email)) return email
+    if (email && EMAIL.test(email)) return email
+  }
+  return undefined
+}
+
+/**
+ * Every signed-in account a get_meetings answer names, lowercase, in either form Granola writes it: a
+ * `<connected_user_email>` element, or a `connected_user_email` attribute of `<meetings_data>`. Empty when it names none.
+ */
+export function connectedEmails(text: string): string[] {
+  if (!isMarkup(text)) return []
+  const root = parse(text)
+  const named = [
+    ...findAll(root, "connected_user_email").map((element) => textContent(element)),
+    ...findAll(root, "meetings_data").flatMap((data) => (data.attributes.connected_user_email === undefined ? [] : [data.attributes.connected_user_email])),
+  ]
+  return [...new Set(named.map((email) => email.trim().toLowerCase()).filter((email) => EMAIL.test(email)))]
+}
+
+/** The note-access scopes get_account_info names (`mcp_note_access.scopes`), at most 64 of at most 256 characters. */
+export function accountScopes(result: { readonly output?: unknown; readonly content?: unknown }): string[] | undefined {
+  const candidates: unknown[] = [result.output]
+  const text = resultText(result).trim()
+  if (text.startsWith("{")) {
+    try {
+      candidates.push(JSON.parse(text))
+    } catch {
+      // Not JSON: no scopes.
+    }
+  }
+  for (const value of candidates) {
+    const access = record(value) ? value.mcp_note_access : undefined
+    const scopes = record(access) ? access.scopes : undefined
+    if (!Array.isArray(scopes)) continue
+    const named = scopes.filter((scope): scope is string => typeof scope === "string" && scope.trim() !== "" && scope.length <= 256).map((scope) => scope.trim())
+    return [...new Set(named)].slice(0, 64)
   }
   return undefined
 }

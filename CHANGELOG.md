@@ -2,6 +2,61 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.3] - 2026-11-15
+
+### Added
+
+- Granola's meetings as a source under the shared source contract, `@we-the-rebel-alliance/source-contract` v0.1.0:
+  `package.json`'s new top-level `sources` key declares `granola.meetings`, an `events` source of kind `meeting` read
+  with `events_list` (input `source` `granola`), with named accounts (`accounts.named: true`: every read names the
+  signed-in email, which `probe` answers), private, `cost.class: "free"`, `maxBytes` 65,536, with exactly the
+  Granola tools its reads call as its operations (`get_account_info`, `search_meetings`, `get_meetings`),
+  `get_account_info` as its one identity operation, the tools RPC `granola.meetings.tools` and the probe action
+  `granola_probe`. Memory and jelly read the declaration from the installed package, with the contract's `descriptor`.
+- For Memory and jelly: the tools RPC method `probe` (action `granola_probe`, allowed by the default rules at every
+  `access`) answers who is signed in, `{ source, account, owner, scopes, trust }`, from one `get_account_info` read:
+  the account is the signed-in email, the owner `mailto:` and that email (labelled with the email, as on every page),
+  and `scopes` Granola's note-access scopes (`personal`, `public`). It refuses another account with
+  `ACCOUNT_MISMATCH`.
+- A page also carries `plugin`, `asOf` and `refused[]`: a meeting whose title or summary holds a secret is refused for
+  good with `reason: "secret"`, and the cursor moves past it.
+- The conformance kit runs over the declared source in `npm run check` (in `npm test`, `test/conformance.test.ts`), on
+  the synthetic Granola with no Granola call, and writes `reports/conformance-report.json` (git-ignored, the same bytes
+  every run) for a release to attach. Every check that applies passes. The report stays incomplete on the kit's
+  expired-cursor check: a cursor is a meeting's start and ID, which never expire, and a listing cannot tell when the
+  free plan's 30-day window hides older meetings, so it never answers `CURSOR_EXPIRED` (the README's Known limits).
+
+### Changed
+
+- For Memory and every consumer, required input: every `events_list` call names `account`, the signed-in Granola
+  email that `probe` answers (any case; pages name it lowercase). A listing without it is refused with
+  `INPUT_INVALID`, and so is `default`, which a consumer fills for an unnamed source. `events_list` never reads
+  `get_account_info` any more: the page's account and owner are the account it names, and every `get_meetings`
+  answer must name that account, as a `<connected_user_email>` element or a `connected_user_email` attribute of
+  `<meetings_data>`. Another account is `ACCOUNT_MISMATCH`; an answer that holds meetings and names none is
+  `UNAVAILABLE`, and a page lists nothing unless at least one answer named the account, so the check never passes for
+  want of an answer.
+- For Memory, a cursor restart: the account every page and event names is now the signed-in email instead of
+  `default`, and the cursor is the contract's bound cursor (plugin `granola`, source `granola`, the account). A cursor
+  an earlier version issued is refused with `CURSOR_INVALID`; start again with `since`. A cursor passed with another
+  account is refused with `ACCOUNT_MISMATCH` before any read. The owner is unchanged: `mailto:` and the email,
+  labelled with the email.
+- The error codes of `events_list` are the source contract's: `INPUT_INVALID`, `CURSOR_INVALID`, `ACCOUNT_MISMATCH`,
+  `SOURCE_UNKNOWN` and `UNAVAILABLE` (Granola's own failure) replace `EVENTS_INVALID_INPUT`, `EVENTS_CURSOR_INVALID`,
+  `EVENTS_ACCOUNT_UNKNOWN`, `EVENTS_SOURCE_UNKNOWN`, `EVENTS_OWNER_UNKNOWN` and `EVENTS_READ_FAILED`.
+- A page holds at most 64 KiB of JSON (the contract's default and the host's RPC cap), instead of 900,000 bytes, so a
+  run of long summaries takes more pages.
+- The tools RPC and the events contract are the source contract's, bundled into `dist/index.js` from the pinned tag;
+  `src/host/tools-rpc.ts` and `src/host/events-list.ts` are deleted, and so are their `check-copies` pins. Granola's
+  part of the RPC is `src/tools-rpc.ts`. The RPC id `granola.meetings.tools`, its methods and their answers are
+  unchanged apart from `events_list`'s above, and `probe` is new.
+- For jelly: the declared tools, sign-in and settings are unchanged; `probe` is a tools RPC method, not a tool, so it
+  is not in `jelly.tools`, and the default rules gain `granola_probe` (allow) at every `access`. Jelly does not see the
+  source yet: its broker on master reads `sources` with its own check (`backend/host/src/sources/contract.ts`,
+  `readItem`), which drops an item whose `permission.events` is not dotted, such as `granola_events_list`, the
+  contract's form for an MCP-backed source. Jelly sees `granola.meetings` once it reads declarations through the
+  source contract package (`descriptor`).
+
 ## [0.0.2] - 2026-11-14
 
 ### Added

@@ -59,9 +59,7 @@ describe("model-visible copy", () => {
   })
 
   it("strings in src carry no test status or internal jargon", () => {
-    // The shared events_list contract is carried unchanged; its conformance messages are for each source's tests.
-    const shared = resolve(root, "src/host/events-list.ts")
-    const files = walk(resolve(root, "src")).filter((file) => /\.tsx?$/.test(file) && file !== shared)
+    const files = walk(resolve(root, "src")).filter((file) => /\.tsx?$/.test(file))
     expect(files.length).toBeGreaterThan(0)
     const hits = files.flatMap((file) => copy(file, readFileSync(file, "utf8")).flatMap(({ line, text }) => {
       const term = banned(text)

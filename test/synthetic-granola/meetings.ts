@@ -1,7 +1,8 @@
 // A synthetic Granola account for events_list: invented meetings, answered in the shapes Granola's live tools use
 // (5 November 2026). search_meetings filters by from_date and to_date and attended_only, lists newest first, and pages
 // with a <pagination next_cursor> element; get_meetings opens with a <connected_user_email> preamble and leaves out a
-// meeting when a batch is too large for it; get_account_info is a JSON object. Every name and address is made up.
+// meeting when a batch is too large for it; get_account_info is a JSON object, its note-access scopes as its own
+// description gives them (mcp_note_access.scopes). Every name and address is made up.
 
 export const EMAIL = "ada@example.test"
 
@@ -52,19 +53,20 @@ export interface Call {
 }
 
 /** The text a tool answers with, as OpenCode's executor returns it, for the synthetic account. */
-export function syntheticGranola(options: { readonly email?: string; readonly pageSize?: number } = {}) {
+export function syntheticGranola(options: { readonly email?: string; readonly pageSize?: number; readonly meetings?: readonly SyntheticMeeting[] } = {}) {
   const calls: Call[] = []
   const pageSize = options.pageSize ?? 2
+  const meetings = options.meetings ?? MEETINGS
   const answer = (tool: string, args: Record<string, unknown>): string => {
     calls.push({ tool, args })
     switch (tool) {
       case "get_account_info":
-        return JSON.stringify({ email: options.email ?? EMAIL, active_workspace: { id: "w-1", display_name: "Synthetic" } })
+        return JSON.stringify({ email: options.email ?? EMAIL, active_workspace: { id: "w-1", display_name: "Synthetic" }, mcp_note_access: { scopes: ["personal", "public"] } })
       case "search_meetings": {
         const offset = typeof args.cursor === "string" ? Number(args.cursor.replace(/^c-/, "")) : 0
         const from = Date.parse(String(args.from_date))
         const to = Date.parse(String(args.to_date))
-        const matching = MEETINGS.filter((meeting) => {
+        const matching = meetings.filter((meeting) => {
           const at = Date.parse(meeting.at)
           return at >= from && at <= to && (args.attended_only !== true || meeting.attended)
         }).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
@@ -83,7 +85,7 @@ export function syntheticGranola(options: { readonly email?: string; readonly pa
       }
       case "get_meetings": {
         const ids = Array.isArray(args.meeting_ids) ? args.meeting_ids.map(String) : []
-        const found = MEETINGS.filter((meeting) => ids.includes(meeting.id) && !(meeting.omittedInBatch && ids.length > 1))
+        const found = meetings.filter((meeting) => ids.includes(meeting.id) && !(meeting.omittedInBatch && ids.length > 1))
         const body = found.map((meeting) => [
           `<meeting id="${meeting.id}" title="${escape(meeting.title)}" meeting_at="${meeting.at}" url="https://notes.example.test/d/${meeting.id}">`,
           participants(meeting),

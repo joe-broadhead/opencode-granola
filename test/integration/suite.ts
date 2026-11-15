@@ -9,7 +9,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { connectionProblem, toolUnavailable } from "../../src/errors.js"
 import { SIGN_IN_MESSAGE } from "../../src/integration.js"
-import { METHODS, TOOLS_RPC_ID } from "../../src/host/tools-rpc.js"
+import { METHODS, TOOLS_RPC_ID } from "../../src/tools-rpc.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
 import { Granola, type Status } from "../../src/rpc/contract.js"
 import { AGENT_FIX, CONFLICT_NEXT, formatStatus, shadowedFix } from "../../src/status.js"
@@ -511,7 +511,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         const { value } = await script("main", "describe", {})
         expect(value.id).toBe(TOOLS_RPC_ID)
         expect(Object.fromEntries(value.methods.map((method: { name: string; class: string }) => [method.name, method.class]))).toEqual(
-          Object.fromEntries([...METHODS.map(method => [method.name, method.class]), ["export_markdown", "export"], ["events_list", "read"]]),
+          Object.fromEntries([...METHODS.map(method => [method.name, method.class]), ["export_markdown", "export"], ["events_list", "read"], ["probe", "read"]]),
         )
         // An MCP method is available exactly when the connected server lists it.
         for (const method of value.methods.filter((entry: { kind: string }) => entry.kind === "mcp")) {
@@ -567,19 +567,29 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(session.tokens).toMatchObject({ input: 0, output: 0 })
       })
 
-      test("events_list lists the meeting as Memory's event, with the signed-in email as its owner", async () => {
+      test("probe names the signed-in email as the account and owner, from get_account_info alone", async () => {
         const calls = received()
-        const result = await call("build", "events_list", { since: "2026-10-01" })
+        const result = await call("build", "probe", {})
+        expect(result.value).toEqual({ source: "granola", account: EMAIL, owner: { id: `mailto:${EMAIL}`, label: EMAIL }, trust: "untrusted" })
+        expect(calls()).toEqual(["get_account_info"])
+        expect(await call("build", "probe", { account: "other@example.test" })).toMatchObject({ type: "failed", code: "ACCOUNT_MISMATCH" })
+      })
+
+      test("events_list lists the meeting as an event of the account probe names, without asking who is signed in", async () => {
+        const calls = received()
+        const result = await call("build", "events_list", { account: EMAIL, since: "2026-10-01" })
         expect(result.value).toMatchObject({
           source: "granola",
-          account: "default",
+          account: EMAIL,
           owner: { id: `mailto:${EMAIL}`, label: EMAIL },
-          events: [{ source: "granola", external_id: MEETING, kind: "meeting", occurred_at: new Date(MEETING_AT).toISOString(), title: "Weekly sync", url: `https://notes.example.test/d/${MEETING}` }],
+          events: [{ source: "granola", account: EMAIL, external_id: MEETING, kind: "meeting", occurred_at: new Date(MEETING_AT).toISOString(), title: "Weekly sync", url: `https://notes.example.test/d/${MEETING}` }],
           trust: "untrusted",
         })
         expect(result.value.events[0].text).toContain("Ship the export")
-        expect(new Set(calls())).toEqual(new Set(["get_account_info", "search_meetings", "get_meetings"]))
-        expect(await call("build", "events_list", { cursor: "not-a-cursor" })).toMatchObject({ type: "failed", code: "EVENTS_CURSOR_INVALID" })
+        expect(new Set(calls())).toEqual(new Set(["search_meetings", "get_meetings"]))
+        expect(await call("build", "events_list", { account: EMAIL, cursor: "not-a-cursor" })).toMatchObject({ type: "failed", code: "CURSOR_INVALID" })
+        expect(await call("build", "events_list", { account: "other@example.test", cursor: result.value.cursor })).toMatchObject({ type: "failed", code: "ACCOUNT_MISMATCH" })
+        expect(await call("build", "events_list", { since: "2026-10-01" })).toMatchObject({ type: "failed", code: "INPUT_INVALID" })
       })
 
       test("an account read records the workspace that status shows, as the model path does", async () => {

@@ -18,6 +18,8 @@ function walk(directory: string): string[] {
 const SERVER = new Set([
   "@opencode/plugin", "@opencode/plugin/promise/tool", "@opencode/plugin/rpc",
   "node:fs", "node:fs/promises", "node:path", "node:os", "node:url", "node:crypto", "node:buffer",
+  // The source contract, pinned as a devDependency and bundled into dist/index.js: its transport, events and cursor.
+  "@we-the-rebel-alliance/source-contract/tools-rpc", "@we-the-rebel-alliance/source-contract/events", "@we-the-rebel-alliance/source-contract/cursor",
 ])
 const TUI = new Set(["@opencode/plugin", "@opencode/plugin/tui", "@opencode/plugin/rpc", "@opentui/core", "@opentui/solid", "solid-js", "solid-js/store"])
 
@@ -57,10 +59,10 @@ describe("production architecture", () => {
     for (const file of files) expect(readFileSync(file, "utf8"), relative(root, file)).not.toMatch(forbidden)
   })
 
-  it("hooks permission evaluation only in the tools RPC, exactly once", () => {
+  it("hooks permission evaluation nowhere in src: the tools RPC's one hook is the source contract package's", () => {
     // It turns an ask on one of the RPC's own script calls in flight into a deny, because no one can answer it.
     const hooks = files.map((file) => [relative(root, file), readFileSync(file, "utf8").match(/hook\("evaluate"/g)?.length ?? 0] as const)
-    expect(hooks.filter(([, count]) => count > 0)).toEqual([["src/host/tools-rpc.ts", 1]])
+    expect(hooks.filter(([, count]) => count > 0)).toEqual([])
   })
 
   it("rejects bypasses rather than only today's source text", () => {

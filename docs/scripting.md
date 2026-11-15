@@ -10,6 +10,7 @@ client.
 | `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary`, `create_meeting_note_from_transcript` | Granola's writes | write |
 | `give_feedback` | sends to Granola's team | send |
 | `export_markdown` | the plugin's export: writes a Markdown file under the export folder | export |
+| `events_list`, `probe` | the plugin's own reads, the `granola.meetings` source: the meetings you took part in as events, and who is signed in ([Events list](configuration.md#events-list)) | read |
 | `describe` | none: lists the methods, their classes, permission actions, whether OpenCode lists each tool now, and each tool's input as JSON Schema | – |
 
 The class is the worst thing a tool can do. It never decides whether a call runs: the rules do, and at the default
@@ -146,8 +147,8 @@ A refusal or failure is the RPC error `failed`, with a message `CODE: what happe
 OpenCode itself answers `rpc.method_not_found` for a method that does not exist, such as a tool Granola adds later,
 `rpc.unavailable` when the plugin did not register the tools RPC or the call reached another location, and
 `rpc.invalid_input` for a body that is not the envelope above, with one message per problem.
-`events_list` also gives its own codes, such as `EVENTS_CURSOR_INVALID` and `EVENTS_READ_FAILED`, with the next steps in
-the [configuration guide](configuration.md#events-list-1).
+`events_list` and `probe` also give the source contract's own codes, such as `INPUT_INVALID`, `CURSOR_INVALID`,
+`ACCOUNT_MISMATCH` and `UNAVAILABLE`, with the next steps in the [configuration guide](configuration.md#events-list-1).
 
 
 ## What scripts cannot do

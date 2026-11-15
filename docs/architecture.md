@@ -19,7 +19,7 @@ OpenCode 2.2.x
 │    commands         /granola-status
 │    skills           granola, granola-meeting-brief
 │    rpc              granola.meetings/status
-│    tools RPC        granola.meetings.tools: describe, every known tool and events_list, for scripts
+│    tools RPC        granola.meetings.tools: describe, every known tool, events_list and probe, for scripts
 └─ TUI part "granola.meetings.tui"   (dist/tui.js, one bundle)
      status dialog: palette entry "Granola: Status", slash /granola
 ```
@@ -47,10 +47,9 @@ OpenCode 2.2.x
 | `src/export/` | `export_markdown`: input, paths, Granola reads, rendering and its errors. |
 | `src/io/markdown-export.ts` | The atomic file writer. |
 | `src/rpc/` | The RPC contract, shared by the server and the TUI part, and its registration. It also carries the `access` type, so the TUI part names it without importing option parsing. |
-| `src/events/` | `events_list`: Granola's text read into meetings, the listing, its cursor and its errors. |
-| `src/host/events-list.ts` | The shared `events_list` contract, carried unchanged: the event type, input, cursors, checks and conformance. |
+| `src/events/` | The `granola.meetings` source: Granola's text read into meetings, `events_list` with its bound cursor, `probe`, and their errors, on the source contract's `events` and `cursor` modules. |
 | `src/tui/` | The terminal UI status dialog, bundled into `dist/tui.js`. |
-| `src/host/tools-rpc.ts` | The tools RPC for scripts. A copy of a module shared by several plugins; only its marked block is Granola's. |
+| `src/tools-rpc.ts` | Granola's part of the tools RPC for scripts: the method table, the next steps and the result shaper, as the one `ToolsRpcPlugin` value the source contract's `tools-rpc` module takes. |
 
 ## Permissions
 
@@ -99,12 +98,22 @@ OpenCode's tool hooks, so the export maps connection failures to the plugin's er
 
 ## Events list
 
-`events_list` asserts `granola_events_list`, then reads through the executors of OpenCode's own
-`granola_get_account_info`, `granola_search_meetings` and `granola_get_meetings`, which check their own permissions:
-the owner first, then each week from the cursor's position to 2 hours ago, every page of it, sorted by (start, ID), and
-the summaries of the meetings that make the page. Those executors skip OpenCode's tool hooks, so it maps connection
-failures to the plugin's error codes itself, and Granola's own failures to `EVENTS_READ_FAILED`. The tools RPC runs the
-same function as an owned method; `pluginError` turns its errors into the script's code and next step.
+`package.json`'s `sources` declares `granola.meetings` under source-contract version 1, which the plugin implements
+with the package's `events` and `cursor` modules, bundled into `dist/index.js`.
+
+`probe` asserts `granola_probe`, then reads `granola_get_account_info`, the source's one identity operation: the
+account is the signed-in email, the owner `mailto:` and that email, with Granola's note-access scopes.
+
+`events_list` asserts `granola_events_list`, checks its input, the account it names and its cursor before any read,
+then reads through the executors of OpenCode's own `granola_search_meetings` and `granola_get_meetings`, which check
+their own permissions: each week from the cursor's position to 2 hours ago, every page of it, sorted by (start, ID),
+and the summaries of the meetings that make the page. It never asks who is signed in: the page's owner is the account's,
+and every get_meetings answer must name that account (`<connected_user_email>`, element or attribute); one that
+holds meetings and names none is `UNAVAILABLE`. A meeting whose title or summary holds a
+secret is refused for good, and a page holds at most 64 KiB. The cursor is bound to the plugin, the source and the
+account. Those executors skip OpenCode's tool hooks, so both map connection failures to the plugin's error codes
+themselves, and Granola's own failures to `UNAVAILABLE`. The tools RPC runs the same functions as owned methods;
+`pluginError` turns their errors into the script's code and next step.
 
 ## Scripts
 
@@ -112,7 +121,8 @@ The tools RPC, `granola.meetings.tools`, lets a script call every known Granola 
 ([Scripting](scripting.md)). Each call names a session; the session's agent and rules decide, exactly as for the
 model. The RPC resolves the method's action against the agent's and the session's rules before dispatch, so only an
 allow runs (every tool at the default `access`), and then calls the tool's executor from `ctx.tool.list()`, which checks the agent's rules, the session's
-rules and saved approvals. A permission `evaluate` hook turns an inner ask on one of the RPC's own calls in flight into
+rules and saved approvals. The transport is the source contract's `tools-rpc` module; `src/tools-rpc.ts` is Granola's
+part. A permission `evaluate` hook turns an inner ask on one of the RPC's own calls in flight into
 a deny, since no one can answer it. Every known tool is a method, with its class: the list is `src/known-tools.ts`, and
 the plugin's export is built in setup, where it has the export folder.
 

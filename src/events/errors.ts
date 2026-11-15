@@ -1,8 +1,9 @@
 import { describe, shortReason, type Problem } from "../errors.js"
 
-// events_list's failures, in the same code, message and next-step form as the connection errors.
+// events_list's and probe's failures, in the same code, message and next-step form as the connection errors. The codes
+// are the source contract's own (`ERROR_CODES` in its `events` module), so a consumer reads them without a mapping.
 
-/** A failure of events_list. The tool shows it as a Tool.Error; the tools RPC as the script's code and next step. */
+/** A failure of events_list or probe. The tool shows it as a Tool.Error; the tools RPC as the script's code and next step. */
 export class EventsFailure extends Error {
   constructor(readonly problem: Problem) {
     super(describe(problem))
@@ -10,33 +11,57 @@ export class EventsFailure extends Error {
   }
 }
 
-export function invalidInput(problems: readonly string[]): Problem {
+export function invalidInput(method: string, problems: readonly string[]): Problem {
   return {
-    code: "EVENTS_INVALID_INPUT",
-    message: `The events_list input is invalid: ${shortReason(problems.join("; "))}.`,
-    next: "Pass only since, cursor, limit (1 to 500), account and source, as the tool's schema describes.",
+    code: "INPUT_INVALID",
+    message: `The ${method} input is invalid: ${shortReason(problems.join("; "))}.`,
+    next: method === "probe"
+      ? "Pass only source and account, as probe's schema describes."
+      : "Pass account (the signed-in Granola email, as probe names it), and only since, cursor, limit (1 to 500) and source besides, as the tool's schema describes.",
+  }
+}
+
+export function accountRequired(): Problem {
+  return {
+    code: "INPUT_INVALID",
+    message: "A listing of Granola meetings names the account it reads, and this events_list call names none.",
+    next: "Pass account, the signed-in Granola email that probe answers, with since or the previous result's cursor.",
   }
 }
 
 export function cursorInvalid(): Problem {
   return {
-    code: "EVENTS_CURSOR_INVALID",
-    message: "The cursor was not issued by Granola's events_list for this account and its signed-in user.",
-    next: "Pass a cursor from a previous result of the same account, or start again with since.",
+    code: "CURSOR_INVALID",
+    message: "The cursor was not issued by Granola's events_list for this account.",
+    next: "Pass a cursor from a previous result for the same account, or start again with since.",
   }
 }
 
-export function accountUnknown(): Problem {
+export function accountMismatch(account: string, why: "cursor" | "signed-in"): Problem {
+  return why === "cursor"
+    ? {
+        code: "ACCOUNT_MISMATCH",
+        message: `The cursor is for another Granola account than ${account}.`,
+        next: "Pass the cursor with the account it was issued for, or start again for this account with since.",
+      }
+    : {
+        code: "ACCOUNT_MISMATCH",
+        message: `Granola is signed in to another account than ${account}.`,
+        next: "Sign in to Granola as that account (/connect, Granola), or read as the account probe names.",
+      }
+}
+
+export function accountUnnamed(): Problem {
   return {
-    code: "EVENTS_ACCOUNT_UNKNOWN",
-    message: "Granola has one account, default.",
-    next: 'Leave account out, or pass "default".',
+    code: "UNAVAILABLE",
+    message: "Granola's get_meetings did not name the signed-in account, so its meetings cannot be listed as this account's.",
+    next: "Call events_list again with the same cursor; if it keeps failing, run /granola-status.",
   }
 }
 
 export function sourceUnknown(): Problem {
   return {
-    code: "EVENTS_SOURCE_UNKNOWN",
+    code: "SOURCE_UNKNOWN",
     message: "This plugin lists one source, granola.",
     next: 'Leave source out, or pass "granola".',
   }
@@ -44,16 +69,16 @@ export function sourceUnknown(): Problem {
 
 export function ownerUnknown(): Problem {
   return {
-    code: "EVENTS_OWNER_UNKNOWN",
+    code: "UNAVAILABLE",
     message: "Granola did not name the signed-in account's email.",
     next: "Run /granola-status, and sign in to Granola again if it shows a problem.",
   }
 }
 
-export function readFailed(tool: string, reason: string): Problem {
+export function readFailed(tool: string, reason: string, method: string): Problem {
   return {
-    code: "EVENTS_READ_FAILED",
+    code: "UNAVAILABLE",
     message: `Granola's ${tool} failed: ${shortReason(reason)}.`,
-    next: "Call events_list again with the same cursor; if it keeps failing, run /granola-status.",
+    next: `Call ${method} again${method === "events_list" ? " with the same cursor" : ""}; if it keeps failing, run /granola-status.`,
   }
 }

@@ -392,6 +392,10 @@ events_list({ account, since?, cursor?, limit?, source? })
   → { source: "granola", account: "<email>", owner: { id, label }, events, cursor, more, refused?, plugin, asOf, trust: "untrusted" }
 ```
 
+The descriptor declares `accounts.named: true`: every read names its account, the signed-in Granola email. A consumer
+learns it from `probe`, which needs no account, and passes it to every `events_list` call; `default`, the account an
+unnamed source takes, is refused (`INPUT_INVALID` from `events_list`, `ACCOUNT_MISMATCH` from `probe`).
+
 `probe` reads `get_account_info`, the source's one identity operation, and nothing else: the account is the signed-in
 email, the owner `mailto:` and that email, and `scopes` what the connection can search as Granola names it (`personal`,
 `public`). Given an `account`, it refuses any other signed-in account with `ACCOUNT_MISMATCH`.
@@ -410,8 +414,9 @@ How it reads, through OpenCode's own Granola tools, each with its own permission
   the meetings you captured or are listed on. Every page of a week is read, because Granola lists newest first.
   Search with no keywords is Granola's browse path.
 - `get_meetings`, up to 10 at a time, for each listed meeting's start, link, attendees and AI summary. Its answer names
-  the signed-in account (`<connected_user_email>`); another account than the listing's is refused with
-  `ACCOUNT_MISMATCH`, and nothing it read is listed.
+  the signed-in account (`<connected_user_email>`, or a `connected_user_email` attribute of `<meetings_data>`):
+  another account than the listing's is refused with `ACCOUNT_MISMATCH`, and an answer that holds meetings and names
+  no account with `UNAVAILABLE`. A page lists nothing unless at least one answer named the account.
 
 `events_list` never reads `get_account_info`: the page's owner is the account it names. The cursor is bound to the
 plugin, the source and that account, so a cursor passed with another account is refused with `ACCOUNT_MISMATCH`

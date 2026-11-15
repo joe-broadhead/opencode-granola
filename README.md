@@ -68,8 +68,9 @@ transcripts are not available on your Granola plan.
 
 It also declares one source, `granola.meetings`, under the source contract (`package.json`'s `sources`), for Memory's
 collector and other scripts, not for answering questions: `events_list` (`granola_events_list`) lists the meetings you
-took part in since a cursor, as normalised events with their summaries, oldest first, for the account it names, and
-the tools RPC method `probe` names who is signed in. Both only read, and never ask. See [Events list](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md#events-list).
+took part in since a cursor, as normalised events with their summaries, oldest first, for the account it names (the
+source's accounts are named: the signed-in email), and the tools RPC method `probe` names who is signed in, which is
+how a consumer learns that email. Both only read, and never ask. See [Events list](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md#events-list).
 
 To see the connection, the workspace, the tools and the next step:
 

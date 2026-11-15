@@ -82,7 +82,7 @@
           "source": "granola"
         },
         "accounts": {
-          "named": false
+          "named": true
         },
         "permission": {
           "events": "granola_events_list",

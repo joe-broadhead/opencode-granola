@@ -98,6 +98,17 @@ describe("the source contract's conformance kit", () => {
     expect(sources.items.map((item) => [item.id, item.kind])).toEqual([[SOURCE_ID, "events"]])
   })
 
+  it("the descriptor and the read agree: the account is named, it is the email probe answers, and no read takes another", async () => {
+    const source = sources.items.find((item) => item.id === SOURCE_ID)!
+    expect(source.accounts).toEqual({ named: true })
+    const probed = (await probeMethod(context(open.permission)).run({}, call())) as { account: string }
+    expect(probed.account).toBe(EMAIL)
+    expect(await list({ account: probed.account, since: SINCE, limit: 1 })).toMatchObject({ account: probed.account })
+    // A consumer that fills "default", as for an unnamed source, or names no account, is refused.
+    for (const input of [{ since: SINCE }, { account: "default", since: SINCE }]) await expect(list(input)).rejects.toThrow("INPUT_INVALID")
+    await expect(probeMethod(context(open.permission)).run({ account: "default" }, call())).rejects.toThrow("ACCOUNT_MISMATCH")
+  })
+
   it(`${SOURCE_ID} keeps the contract`, async () => {
     const source = sources.items.find((item) => item.id === SOURCE_ID)!
     const report = await sourceConformance({

@@ -108,7 +108,8 @@ account is the signed-in email, the owner `mailto:` and that email, with Granola
 then reads through the executors of OpenCode's own `granola_search_meetings` and `granola_get_meetings`, which check
 their own permissions: each week from the cursor's position to 2 hours ago, every page of it, sorted by (start, ID),
 and the summaries of the meetings that make the page. It never asks who is signed in: the page's owner is the account's,
-and every get_meetings answer's `<connected_user_email>` must be that account. A meeting whose title or summary holds a
+and every get_meetings answer must name that account (`<connected_user_email>`, element or attribute); one that
+holds meetings and names none is `UNAVAILABLE`. A meeting whose title or summary holds a
 secret is refused for good, and a page holds at most 64 KiB. The cursor is bound to the plugin, the source and the
 account. Those executors skip OpenCode's tool hooks, so both map connection failures to the plugin's error codes
 themselves, and Granola's own failures to `UNAVAILABLE`. The tools RPC runs the same functions as owned methods;

@@ -39,8 +39,14 @@ export const HIDDEN_TOOLS = ["sign_out"] as const
 /** Tools this plugin adds to the granola namespace itself that write: the Markdown export, a local file. */
 export const PLUGIN_TOOLS = ["export_markdown"] as const
 
-/** Tools this plugin adds to the granola namespace itself that only read: events_list, Memory's source of meetings. */
+/** Tools this plugin adds to the granola namespace itself that only read: events_list, the meetings source's listing. */
 export const PLUGIN_READS = ["events_list"] as const
+
+/**
+ * The plugin's own reads that are tools RPC methods only, never a tool: probe, who is signed in, for a consumer binding
+ * the meetings source. Its action, granola_probe, is allowed like the reads.
+ */
+export const PLUGIN_METHODS = ["probe"] as const
 
 type ToolClass = "read" | "write" | "hidden" | "plugin" | "unknown"
 

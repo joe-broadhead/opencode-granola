@@ -67,6 +67,7 @@ that has the base "allow everything" rule, directly after that rule:
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
   { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
+  { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
@@ -95,6 +96,7 @@ or, at `access: "ask-changes"`, this one:
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
   { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
+  { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_update_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "ask" },
@@ -123,6 +125,7 @@ or, at `access: "read-only"`:
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
   { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
+  { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_update_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "deny" },
@@ -191,6 +194,7 @@ For example, for an agent `reviewer`, when your top-level `permissions` allow `g
         { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
         { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
         { "action": "granola_events_list", "resource": "*", "effect": "allow" },
+        { "action": "granola_probe", "resource": "*", "effect": "allow" },
         { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
@@ -507,11 +511,10 @@ The export's next steps are written for the model, which passes them on to you.
 
 | Code | Message | Next step |
 | --- | --- | --- |
-| `EVENTS_INVALID_INPUT` | The events_list input is invalid: *problems*. | Pass only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
-| `EVENTS_CURSOR_INVALID` | The cursor was not issued by Granola's events_list for this account and its signed-in user. | Pass a cursor from a previous result of the same account, or start again with since. |
-| `EVENTS_ACCOUNT_UNKNOWN` | Granola has one account, default. | Leave account out, or pass "default". |
-| `EVENTS_SOURCE_UNKNOWN` | This plugin lists one source, granola. | Leave source out, or pass "granola". |
-| `EVENTS_OWNER_UNKNOWN` | Granola did not name the signed-in account's email. | Run /granola-status, and sign in to Granola again if it shows a problem. |
-| `EVENTS_READ_FAILED` | Granola's *tool* failed: *reason*. | Call events_list again with the same cursor; if it keeps failing, run /granola-status. |
+| `INPUT_INVALID` | The events_list (or probe) input is invalid: *problems*; or a listing names no account. | Pass account, the signed-in Granola email that probe answers, and only since, cursor, limit (1 to 500) and source besides. |
+| `CURSOR_INVALID` | The cursor was not issued by Granola's events_list for this account. | Pass a cursor from a previous result for the same account, or start again with since. |
+| `ACCOUNT_MISMATCH` | The cursor is for another Granola account, or Granola is signed in to another account than the one named. | Pass the cursor with its own account, or sign in to Granola as that account (/connect, Granola), or read as the account probe names. |
+| `SOURCE_UNKNOWN` | This plugin lists one source, granola. | Leave source out, or pass "granola". |
+| `UNAVAILABLE` | Granola's *tool* failed: *reason*; or Granola did not name the signed-in account's email. | Call events_list (or probe) again; if it keeps failing, run /granola-status. |
 
 Through the tools RPC, a script gets the same code and next step as the RPC error `failed`.

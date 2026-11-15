@@ -105,7 +105,7 @@ export const NEXT_STEPS: NextSteps = {
   CANCELLED: "Call the method again if you still need the result.",
 }
 
-/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step: events_list's. */
+/** The plugin's own errors, thrown by plugin-owned specs, as a code, what happened and the next step: events_list's and probe's. */
 export function pluginError(error: unknown): Failure | undefined {
   if (!(error instanceof EventsFailure)) return undefined
   const { code, message, next } = error.problem

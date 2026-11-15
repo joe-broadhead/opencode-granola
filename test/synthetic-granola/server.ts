@@ -107,7 +107,7 @@ function meetings(ids: readonly string[]): string {
     `<private_notes>Follow up next week.</private_notes>`,
     `</meeting>`,
   ].join("\n"))
-  return [`<meetings_data count="${found.length}">`, ...body, `</meetings_data>`].join("\n")
+  return [`<connected_user_email>${EMAIL}</connected_user_email>`, `<meetings_data count="${found.length}">`, ...body, `</meetings_data>`].join("\n")
 }
 
 function call(name: string, args: Record<string, unknown>) {

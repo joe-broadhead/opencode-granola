@@ -154,6 +154,7 @@ The plugin inserts this block directly after each agent's base "allow everything
   { "action": "granola_search_transcripts", "resource": "*", "effect": "allow" },
   { "action": "granola_get_agent_brief", "resource": "*", "effect": "allow" },
   { "action": "granola_events_list", "resource": "*", "effect": "allow" },
+  { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
@@ -225,12 +226,11 @@ exactly one `Next step`. Every error the plugin raises has a code and a next ste
 | `STATUS_UNAVAILABLE` | Status could not be read. | Run `/granola-status` again in a few seconds. |
 | `SKILLS_INVALID` | A bundled skill file is missing or broken. | Reinstall the plugin. |
 | `PACKAGE_INVALID` | The plugin's `package.json` is inconsistent. | Reinstall the plugin. |
-| `EVENTS_INVALID_INPUT` | The events_list input is invalid: *problems*. | Pass only since, cursor, limit (1 to 500), account and source, as the tool's schema describes. |
-| `EVENTS_CURSOR_INVALID` | The cursor was not issued by Granola's events_list for this account and its signed-in user. | Pass a cursor from a previous result of the same account, or start again with since. |
-| `EVENTS_ACCOUNT_UNKNOWN` | Granola has one account, default. | Leave account out, or pass "default". |
-| `EVENTS_SOURCE_UNKNOWN` | This plugin lists one source, granola. | Leave source out, or pass "granola". |
-| `EVENTS_OWNER_UNKNOWN` | Granola did not name the signed-in account's email. | Run /granola-status, and sign in to Granola again if it shows a problem. |
-| `EVENTS_READ_FAILED` | Granola's *tool* failed: *reason*. | Call events_list again with the same cursor; if it keeps failing, run /granola-status. |
+| `INPUT_INVALID` | The events_list (or probe) input is invalid: *problems*; or a listing names no account. | Pass account, the signed-in Granola email that probe answers, and only since, cursor, limit (1 to 500) and source besides. |
+| `CURSOR_INVALID` | The cursor was not issued by Granola's events_list for this account. | Pass a cursor from a previous result for the same account, or start again with since. |
+| `ACCOUNT_MISMATCH` | The cursor is for another Granola account, or Granola is signed in to another account than the one named. | Pass the cursor with its own account, or sign in to Granola as that account (/connect, Granola), or read as the account probe names. |
+| `SOURCE_UNKNOWN` | This plugin lists one source, granola. | Leave source out, or pass "granola". |
+| `UNAVAILABLE` | Granola's *tool* failed: *reason*; or Granola did not name the signed-in account's email. | Call events_list (or probe) again; if it keeps failing, run /granola-status. |
 | `EXPORT_INVALID_INPUT` | The export request is malformed. | Pass `meeting_ids` (1 to 20) and `content` (`notes`, `transcript` or `both`), and only `path` and `overwrite` besides. |
 | `EXPORT_INVALID_PATH` | The export path is not allowed. | Use a relative path inside the export folder, without `..`, a leading `/` or links. |
 | `EXPORT_EXISTS` | The file already exists. | Choose another path, or export again with `overwrite: true` after asking. |

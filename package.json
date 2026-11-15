@@ -66,6 +66,43 @@
       "domain": "granola.ai"
     }
   },
+  "sources": {
+    "contractVersion": 1,
+    "rpc": "granola.meetings.tools",
+    "probe": {
+      "action": "granola_probe"
+    },
+    "items": [
+      {
+        "id": "granola.meetings",
+        "kind": "events",
+        "reads": "meeting",
+        "tool": "events_list",
+        "input": {
+          "source": "granola"
+        },
+        "accounts": {
+          "named": false
+        },
+        "permission": {
+          "events": "granola_events_list",
+          "operations": [
+            "get_account_info",
+            "search_meetings",
+            "get_meetings"
+          ],
+          "identity": [
+            "get_account_info"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "free"
+        },
+        "maxBytes": 65536
+      }
+    ]
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tui.json --noEmit && tsc -p test/tsconfig.json",
     "build": "node scripts/build.mjs",

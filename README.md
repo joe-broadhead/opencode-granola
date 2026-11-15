@@ -66,9 +66,10 @@ before it writes. Its inputs are `meeting_ids`, `content` (`notes`, `transcript`
 the export folder, and `overwrite`. When your plan has no transcripts, the file holds the notes and says that
 transcripts are not available on your Granola plan.
 
-It also adds `events_list` (`granola_events_list`), for Memory's collector and other scripts, not for answering
-questions: the meetings you took part in since a cursor, as normalised events with their summaries, oldest first. It
-only reads, and never asks. See [Events list](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md#events-list).
+It also declares one source, `granola.meetings`, under the source contract (`package.json`'s `sources`), for Memory's
+collector and other scripts, not for answering questions: `events_list` (`granola_events_list`) lists the meetings you
+took part in since a cursor, as normalised events with their summaries, oldest first, for the account it names, and
+the tools RPC method `probe` names who is signed in. Both only read, and never ask. See [Events list](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md#events-list).
 
 To see the connection, the workspace, the tools and the next step:
 
@@ -293,6 +294,8 @@ Files you exported stay in your export folder.
 - **Exports are bounded.** An export takes 1 to 20 meetings and at most 8 MB; a transcript that does not fit is cut with a note. The file goes outside the project, so OpenCode also asks for `external_directory`.
 - **`give_feedback` reaches Granola's team.** It is allowed by default, and the skill tells the model to send it only when the user asks.
 - **No retries.** The plugin does not retry a failed call. The error names the next step.
+- **The meetings source sees what Granola's MCP sees.** Granola's MCP reads only the active workspace, and on the free (Basic) plan only notes from the last 30 days; its rate limits vary by plan and tool and average about 100 requests per minute across all tools ([Granola MCP](https://docs.granola.ai/help-center/sharing/integrations/mcp)). A listing reads `search_meetings` once per page of each week, and `get_meetings` once per 10 meetings. A cursor never expires, and a listing cannot tell when the plan hides older meetings, so it never reports a gap: a cursor older than 30 days on the free plan lists only what the plan still shows. Switching the active workspace changes what a listing reads under the same account.
+- **The meetings source's test data is invented.** The conformance kit runs on a synthetic Granola whose answers follow the shapes Granola's live tools returned when last checked, and the note-access scopes as `get_account_info`'s own description gives them; their content is made up, modelled on the provider's docs, not live-verified. Its report is incomplete on one check, the expired cursor, because the source never answers `CURSOR_EXPIRED`.
 - **Hosts and platforms.** The plugin is tested on 2.2.3, 2.2.4, 2.2.5 and 2.2.6, and runs on macOS or Linux. A later 2.2 release starts and is reported as untested.
 - In Jelly, the `access` setting is drawn as a choice of three, which needs a Jelly that reads declared choices: an
   older Jelly refuses the plugin's whole declaration.

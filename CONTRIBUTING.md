@@ -42,7 +42,7 @@ npm run check
 | lint | `npm run lint` | `scripts/check-forbidden.mjs`: forbidden APIs and imports in `src/`, `test/` and `scripts/`, and the package shape in `package.json` |
 | build | `npm run build` | `scripts/build.mjs`: deletes `dist/`, then esbuild bundles the server into `dist/index.js` and the TUI, compiled with Solid's Babel transform, into `dist/tui.js`. Each file is self-contained. |
 | icons | `npm run icons` | `node scripts/check-icons.mjs`: the three icons, the manifest's declarations and the tarball's `files` against the family icon contract |
-| unit | `npm test` | Vitest: `test/*.test.ts` and `test/tui/*.test.ts`. The TUI render test runs the built `dist/tui.js` under Bun, so build first. |
+| unit | `npm test` | Vitest: `test/*.test.ts` and `test/tui/*.test.ts`. The TUI render test runs the built `dist/tui.js` under Bun, so build first. It includes `test/conformance.test.ts`: the source contract's conformance kit over `package.json`'s `sources` on a synthetic Granola, which writes `reports/conformance-report.json` (the same bytes every run) for a release to attach. |
 | host | `npm run test:host` | `bun test ./test/integration`: the plugin from `dist/` in three OpenCode hosts, with Granola's URL routed to the loopback server in `test/synthetic-granola/` |
 | pack | `npm run test:pack` | `node test/pack-smoke.mjs`: builds, packs and installs the package, then loads it in stock OpenCode |
 | actionlint | `npm run actionlint` | `node scripts/check-workflows.mjs`: `actionlint` parses the workflows as workflows when it is on `PATH`; otherwise it prints a notice, and CI's own `workflows` job runs it |

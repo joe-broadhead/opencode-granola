@@ -2,12 +2,6 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Changed
-
-- The icon is now Granola's own mark, Granola's swirl on Granola's lime, as in Granola's own app icon, in place of the family's drawn mark; `opencode.vendor.mark` is `true`, and the README says Granola is a trademark of Granola, Inc.
-
 ## [0.0.4] - 2026-11-15
 
 ### Changed
@@ -23,6 +17,7 @@ All notable changes to this project are documented here. The format follows [Kee
   `session.tool.failed` (it listens only for `integration.updated` and `mcp.status.changed`), and it has no use for the
   new `session.fork` hook. The long-running tools, the Markdown export and `events_list`, already stop when the
   person presses Stop and the tool's signal aborts.
+- The icon is now Granola's own mark, Granola's swirl on Granola's lime, as in Granola's own app icon, in place of the family's drawn mark; `opencode.vendor.mark` is `true`, and the README says Granola is a trademark of Granola, Inc.
 
 ## [0.0.3] - 2026-11-15
 

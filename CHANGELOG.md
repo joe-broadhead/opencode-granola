@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The icon is now Granola's own mark, Granola's swirl on Granola's lime, as in Granola's own app icon, in place of the family's drawn mark; `opencode.vendor.mark` is `true`, and the README says Granola is a trademark of Granola, Inc.
+
 ## [0.0.4] - 2026-11-15
 
 ### Changed

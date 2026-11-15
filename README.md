@@ -5,6 +5,8 @@ Granola's official MCP server.
 
 Unofficial; not affiliated with Granola.
 
+Granola is a trademark of Granola, Inc.; this unofficial plugin is not endorsed by them.
+
 ## Requirements
 
 - OpenCode `>=2.2.3 <2.4.0`, tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0. Another release inside that range runs, and status

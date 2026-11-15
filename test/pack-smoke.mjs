@@ -149,7 +149,7 @@ test("its package.json states the tested OpenCode line, and has no dependencies,
   const manifest = JSON.parse(readFileSync(join(alone.installed, "package.json"), "utf8"))
   assert.equal(manifest.opencode?.host, SUPPORTED_RANGE)
   assert.deepEqual(manifest.opencode?.icons?.map((icon) => icon.src), ["assets/icon.svg", "assets/icon-128.png", "assets/icon-256.png"])
-  assert.deepEqual(manifest.opencode?.vendor, { id: "granola", name: "Granola", domain: "granola.ai" })
+  assert.deepEqual(manifest.opencode?.vendor, { id: "granola", name: "Granola", domain: "granola.ai", mark: true })
   assert.equal(manifest.jelly?.icon, "assets/icon.svg")
   for (const field of UNDECLARED) assert.equal(manifest[field], undefined, field)
   assert.deepEqual(Object.keys(manifest.scripts ?? {}).filter((name) => INSTALL_SCRIPTS.includes(name)), [])

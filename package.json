@@ -63,7 +63,8 @@
     "vendor": {
       "id": "granola",
       "name": "Granola",
-      "domain": "granola.ai"
+      "domain": "granola.ai",
+      "mark": true
     }
   },
   "sources": {

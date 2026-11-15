@@ -1,9 +1,10 @@
-// Granola's part of the tools RPC: the plugin-specific block of src/host/tools-rpc.ts, and how setup registers it. The
-// shared part is tested in tools-rpc.test.ts.
+// Granola's part of the tools RPC: src/tools-rpc.ts, the plugin value the source contract's transport takes, and how
+// setup registers it. The shared part is tested in tools-rpc.test.ts.
 import { Error as ToolError } from "@opencode/plugin/promise/tool"
 import { describe, expect, it } from "vitest"
 import { connectionProblem, toolUnavailable } from "../src/errors.js"
-import { METHODS, NEXT_STEPS, shapeResult, TOOLS_RPC_ID } from "../src/host/tools-rpc.js"
+import { PLUGIN_ID } from "../src/meta.js"
+import { METHODS, NEXT_STEPS, PLUGIN, shapeResult, TOOLS_RPC_ID } from "../src/tools-rpc.js"
 import { HIDDEN_TOOLS, READ_TOOLS, WRITE_TOOLS } from "../src/known-tools.js"
 import { Granola } from "../src/rpc/contract.js"
 import { setup } from "../src/setup.js"
@@ -51,6 +52,8 @@ async function hookError(host: FakeHost, tool: string, message: string) {
 describe("Granola's tools RPC", () => {
   it("is granola.meetings.tools, with every known tool a method and its class", async () => {
     expect(TOOLS_RPC_ID).toBe("granola.meetings.tools")
+    expect(PLUGIN.id).toBe(PLUGIN_ID)
+    expect(PLUGIN.nextSteps).toBe(NEXT_STEPS)
     expect(METHODS.map(method => [method.name, method.class])).toEqual([
       ...READ_TOOLS.map(name => [name, "read"]),
       ...WRITE_TOOLS.map(name => [name, name === "give_feedback" ? "send" : "write"]),

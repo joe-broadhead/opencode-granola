@@ -12,13 +12,12 @@ import { PLUGIN_CODES, RPC_CODES } from "../src/errors.js"
 
 const SRC = fileURLToPath(new URL("../src/", import.meta.url))
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8")
-const TOOLS_RPC = join("host", "tools-rpc.ts")
 
-function sources(directory: string, base = directory): string[] {
+function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name)
-    if (entry.isDirectory()) return sources(path, base)
-    return /\.tsx?$/.test(entry.name) && path.slice(base.length) !== TOOLS_RPC ? [path] : []
+    if (entry.isDirectory()) return sources(path)
+    return /\.tsx?$/.test(entry.name) ? [path] : []
   })
 }
 
@@ -59,7 +58,7 @@ describe("error tables", () => {
   })
 
   it("the tools RPC gives a script a code the model also gets, and the shared table names them", () => {
-    const block = /const NEXT_STEPS[^{]*\{([\s\S]*?)\n\}/.exec(read("src/host/tools-rpc.ts"))?.[1] ?? ""
+    const block = /const NEXT_STEPS[^{]*\{([\s\S]*?)\n\}/.exec(read("src/tools-rpc.ts"))?.[1] ?? ""
     const raised = [...block.matchAll(/^\s+([A-Z][A-Z_]+):/gm)].map((match) => match[1]!)
     expect(raised.length).toBeGreaterThan(5)
     expect(sorted(raised)).toEqual(sorted(RPC_CODES))

@@ -14,7 +14,7 @@ import {
   parseEventsListInput,
   startTime,
 } from "../host/events-list.js"
-import type { OwnedMethod, ToolCall } from "../host/tools-rpc.js"
+import type { OwnedMethod, ToolCall } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import { SERVER, toolID } from "../known-tools.js"
 import { UNAVAILABLE, unavailableProblem } from "../tools.js"
 import { EventsFailure, accountUnknown, cursorInvalid, invalidInput, ownerUnknown, readFailed, sourceUnknown } from "./errors.js"

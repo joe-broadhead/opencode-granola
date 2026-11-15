@@ -6,7 +6,7 @@ Read [AGENTS.md](AGENTS.md) first: it lists the rules for this repository and th
 ## Set up
 
 You need Node.js 24 or later, npm, and [Bun](https://bun.sh). CI and releases use Node.js 24 and Bun 1.4.4, the Bun inside stock
-OpenCode 2.2.3, 2.2.4, 2.2.5 and 2.2.6.
+OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0.
 
 ```sh
 npm ci --ignore-scripts
@@ -48,7 +48,7 @@ npm run check
 | actionlint | `npm run actionlint` | `node scripts/check-workflows.mjs`: `actionlint` parses the workflows as workflows when it is on `PATH`; otherwise it prints a notice, and CI's own `workflows` job runs it |
 
 The host stage runs the same cases in the public `@opencode/sdk` 2.2.3, embedded in the test process, and in stock
-`opencode serve` 2.2.3, 2.2.4, 2.2.5 and 2.2.6 (`TESTED_HOSTS` in `src/hosts.ts`, the one list of tested releases) through
+`opencode serve` 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 (`TESTED_HOSTS` in `src/hosts.ts`, the one list of tested releases) through
 `@opencode/client`. It needs Bun and a prior `npm run build`,
 because OpenCode loads the plugin from `dist/`. It covers registration, the default rules, prompts and saved
 approvals, the per-agent fix, status in each connection state, the export, runs where nobody is present and
@@ -58,7 +58,7 @@ The pack stage builds explicitly, packs the package and installs the tarball alo
 scripts off. It checks that the tarball holds exactly the `files` whitelist, with no source or JSX and under 1 MB, that
 it installs no dependencies, and that `dist/` holds only `index.js` and `tui.js`, with no relative, dynamic or
 `require()` import and nothing but modules OpenCode provides. It then loads the installed
-package in stock `opencode serve` 2.2.3, 2.2.4, 2.2.5 and 2.2.6, and imports `.` and `./tui` under Bun next to the host
+package in stock `opencode serve` 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0, and imports `.` and `./tui` under Bun next to the host
 packages, which it installs from the npm registry. It needs npm, Bun and network access to the npm registry.
 
 ### Environment variables
@@ -73,6 +73,7 @@ For example:
 ```sh
 OPENCODE_BIN_2_2_3=/path/to/opencode-2.2.3 OPENCODE_BIN_2_2_4=/path/to/opencode-2.2.4 \
   OPENCODE_BIN_2_2_5=/path/to/opencode-2.2.5 OPENCODE_BIN_2_2_6=/path/to/opencode-2.2.6 \
+  OPENCODE_BIN_2_2_7=/path/to/opencode-2.2.7 OPENCODE_BIN_2_3_0=/path/to/opencode-2.3.0 \
   VITEST_MAX_WORKERS=2 npm run check
 ```
 
@@ -196,7 +197,7 @@ Before the approval, the workflow:
 - **verifies** on a fresh runner: the commit's identity, one parent on `master`, `package.json` exactly the parent's
   without the lifecycle scripts, only regular files in the allowed paths, no `package.json` under `dist/`, and a second,
   independent build of the parent (its own job) equal to the committed `dist/` byte for byte;
-- **installs** the release commit with `plugin add` on each stock OpenCode host (2.2.3 to 2.2.6);
+- **installs** the release commit with `plugin add` on each stock OpenCode host (2.2.3 to 2.2.7, and 2.3.0);
 - **packs** the commit before installing anything and keeps that tarball, then runs the pack stage against a copy;
 - **stages** the Release: verifies the attested native files, writes `SHA256SUMS` and the notes (the version's CHANGELOG
   section), and shows them all in the run summary with the sha256 of `SHA256SUMS`.

@@ -209,18 +209,35 @@ export async function globalPaths(client: Pick<Client, "agent" | "server">, loca
 /** Fails before any case runs if OpenCode resolved its home or tmp folder outside the temp root. */
 async function isolated(client: Pick<Client, "agent" | "server">, root: Root): Promise<void> {
   let paths: Awaited<ReturnType<typeof globalPaths>>
-  // The first request for a location waits for its plugins, which can time out while the machine is busy.
+  // The first request for a location waits for its plugins, which can time out while the machine is busy. From 2.2.7 it
+  // can also answer with no agents yet, so no plan rule and no home: ask again until the plan agent is listed.
   for (const deadline = Date.now() + 120_000; ;) {
     try {
       paths = await globalPaths(client, { directory: root.directory("main") })
-      break
+      if (paths.home !== undefined || Date.now() > deadline) break
     } catch (error) {
       if (Date.now() > deadline) throw error
-      await sleep(500)
     }
+    await sleep(500)
   }
   const inside = (path: string | undefined) => path !== undefined && path.startsWith(root.path + sep)
   if (!inside(paths.home) || !inside(paths.tmp)) throw new Error(`OpenCode resolved its paths outside ${root.path}: ${JSON.stringify(paths)}`)
+}
+
+/**
+ * Waits until granola.meetings has finished activating, or failed to, in every project. From 2.2.7 a location answers
+ * before its plugins have loaded, so a first status or RPC call there would find no granola.meetings yet.
+ */
+async function activatedEverywhere(client: Pick<Client, "plugin">, root: Root): Promise<void> {
+  const deadline = Date.now() + 120_000
+  for (const project of PROJECTS) {
+    for (;;) {
+      const plugin = (await client.plugin.list({ location: { directory: root.directory(project) } }).catch(() => undefined))?.data.find((entry) => entry.id === "granola.meetings")
+      if (plugin?.state.status === "active" || plugin?.state.status === "failed") break
+      if (Date.now() > deadline) throw new Error(`granola.meetings did not finish activating in ${project}: ${JSON.stringify(plugin?.state)}`)
+      await sleep(250)
+    }
+  }
 }
 
 const hostFields = (root: Root) => ({
@@ -403,6 +420,7 @@ export async function startBinary(version: string, fake: SyntheticGranola): Prom
   }
   try {
     await isolated(client, root)
+    await activatedEverywhere(client, root)
   } catch (error) {
     await close()
     throw error

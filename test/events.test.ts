@@ -206,6 +206,19 @@ describe("events_list", () => {
     expect(await code(list()({ account: EMAIL, scope: { folders: ["x"] } }))).toBe("INPUT_INVALID")
   })
 
+  it("keeps two accounts' overlapping listings apart: each page and cursor is its own account's, and a cursor never crosses", async () => {
+    const OTHER = "lin@example.test"
+    const other = syntheticGranola({ email: OTHER, meetings: MEETINGS.map((meeting) => ({ ...meeting, id: `o-${meeting.id}` })) })
+    const [mine, theirs] = (await Promise.all([list()({ account: EMAIL, since: SINCE, limit: 2 }), list(other)({ account: OTHER, since: SINCE, limit: 2 })])) as EventsListResult[]
+    expect(mine).toMatchObject({ account: EMAIL, owner: OWNER })
+    expect(theirs).toMatchObject({ account: OTHER, owner: { id: `mailto:${OTHER}`, label: OTHER } })
+    expect(mine!.events.every((event) => event.account === EMAIL && event.external_id.startsWith("m-"))).toBe(true)
+    expect(theirs!.events.every((event) => event.account === OTHER && event.external_id.startsWith("o-"))).toBe(true)
+    const [next, crossed] = await Promise.all([list()({ account: EMAIL, cursor: mine!.cursor, limit: 2 }), code(list(other)({ account: OTHER, cursor: mine!.cursor }))])
+    expect((next as EventsListResult).events.map((event) => event.external_id)).toEqual(EXPECTED.slice(2, 4))
+    expect(crossed).toBe("ACCOUNT_MISMATCH")
+  })
+
   it("refuses with ACCOUNT_MISMATCH when Granola names another signed-in account, and lists nothing of it", async () => {
     expect(await code(list(syntheticGranola({ email: "someone@example.test" }))({ account: EMAIL, since: SINCE }))).toBe("ACCOUNT_MISMATCH")
   })

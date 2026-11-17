@@ -55,9 +55,12 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
   implements both with the package's `events` and `cursor` modules. `probe` alone reads `get_account_info`, the
   source's identity operation; a listing never does: it names its account, the signed-in email `probe` answers, and
   get_meetings' `<connected_user_email>` (element or attribute) must be that account, and an answer that holds
-  meetings and names none is `UNAVAILABLE`. The descriptor's accounts are named (`accounts.named: true`). The declared operations are exactly the Granola tools
+  meetings and names none is `UNAVAILABLE`. `probe` records the account's plan (`mcp_plan`) in memory; a listing on the
+  free plan, or with none recorded, that starts before the plan's 30 days answers a `window-truncated` gap once and
+  restarts at the window (never read `get_account_info` from a listing: that needs `readsIdentity`, a key v0.1.x
+  consumers refuse). The descriptor's accounts are named (`accounts.named: true`). The declared operations are exactly the Granola tools
   the reads call. `test/conformance.test.ts` runs the package's conformance kit over the declaration on a synthetic
-  Granola and writes `reports/conformance-report.json`. Both reads are allowed by default (`PLUGIN_READS`,
+  Granola on the free plan, so the gap is exercised, and writes `reports/conformance-report.json`. Both reads are allowed by default (`PLUGIN_READS`,
   `PLUGIN_METHODS`).
 - **Text** in skills, errors and status is plain language with no process terms (`test/ux.test.ts`). Docs describe
   what the code does now. No tokens, sign-in links, meeting content or personal data anywhere; test data is invented.

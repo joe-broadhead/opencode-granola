@@ -389,7 +389,7 @@ probe({ source?, account? })
   → { source: "granola", account: "<email>", owner: { id: "mailto:<email>", label: "<email>" }, scopes?, trust: "untrusted" }
 
 events_list({ account, since?, cursor?, limit?, source? })
-  → { source: "granola", account: "<email>", owner: { id, label }, events, cursor, more, refused?, plugin, asOf, trust: "untrusted" }
+  → { source: "granola", account: "<email>", owner: { id, label }, events, cursor, more, refused?, gap?, plugin, asOf, trust: "untrusted" }
 ```
 
 The descriptor declares `accounts.named: true`: every read names its account, the signed-in Granola email. A consumer
@@ -398,7 +398,9 @@ unnamed source takes, is refused (`INPUT_INVALID` from `events_list`, `ACCOUNT_M
 
 `probe` reads `get_account_info`, the source's one identity operation, and nothing else: the account is the signed-in
 email, the owner `mailto:` and that email, and `scopes` what the connection can search as Granola names it (`personal`,
-`public`). Given an `account`, it refuses any other signed-in account with `ACCOUNT_MISMATCH`.
+`public`). Given an `account`, it refuses any other signed-in account with `ACCOUNT_MISMATCH`. It also records, in
+memory for that account, the plan `get_account_info` names (`mcp_plan`), which `events_list` uses (below); the answer
+does not carry it.
 
 | Input | Meaning |
 | --- | --- |
@@ -430,6 +432,14 @@ secret, such as a password in a link, is never listed: `refused` names it with t
 moves past it. A meeting is listed once it started 2 hours ago, so its notes are most likely done; a meeting whose
 notes change afterwards is not listed again. The cursor is the (start, ID) of the last meeting listed: calling again
 with it lists what follows, and an older cursor lists the same meetings again.
+
+The cursor never expires, but Granola's free (Basic) plan shows only the last 30 days of meetings. On the free plan,
+or for an account `probe` has not read a plan for (or whose plan it does not know), a listing whose cursor or `since`
+is more than 29 days old (a day's margin inside the window) answers `gap: { reason: "window-truncated", since }`, where
+`since` is the cursor's position or the `since` given: meetings from then to the page's first event may be lost. It
+lists from where the window begins, and the cursor it answers is inside the window, so the next page of the read has
+no gap. A paid plan (`plus`, `business` or `enterprise`) has no window and no gap. Call `probe` before listing, so a
+paid account is not answered a gap it does not need; a needless gap only makes a consumer resync.
 
 The default rules allow `granola_events_list` and `granola_probe`. Their reads, `granola_search_meetings` and
 `granola_get_meetings` for `events_list`, and `granola_get_account_info` for `probe`, must be allowed too for the agent

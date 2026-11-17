@@ -7,17 +7,19 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Changed
 
 - Source contract `@we-the-rebel-alliance/source-contract` v0.2.0 (was v0.1.0), a devDependency bundled into `dist/`
-  (no runtime dependency). The declaration, the pages and the probe answer are unchanged: the plugin sends none of
+  (no runtime dependency). The declaration and the probe answer are unchanged: the plugin sends none of
   v0.2.0's new keys (`removals[]`, `owner.verified`, `permission.identityRules`, `accounts.server`,
   `permission.readsIdentity`, a price's `conditions` or `min`, an empty `permission.identity`), which a consumer still
   on v0.1.x refuses.
-- The conformance report is complete and ok. The kit's `gap-and-cursor-expired` check is now not applicable, with its
-  reason in the report (`noExpiry`): a cursor holds its whole position, a meeting's start time and ID, and no state on
-  Granola's side, so it never expires and the source never answers `CURSOR_EXPIRED`; Granola's free plan showing only
-  the last 30 days limits what a listing finds, not the cursor (README, Known limits). `failed-holds-cursor` stays not
-  applicable for the reason it already gave (`atomicPages`): a failed read fails the whole listing, so no meeting fails
-  on its own. Every other check that applies runs, including v0.2.0's `gap-once-per-read` and `removals-are-final`,
-  which do not apply because the source answers no gap and removes nothing.
+- The conformance report is complete and ok. The synthetic account is now on Granola's free plan and the first
+  listing starts before its 30 days, so the kit's `gap-once-per-read` runs on the `window-truncated` gap (below). The
+  kit's `gap-and-cursor-expired` check is not applicable, with its reason in the report (`noExpiry`): it takes only
+  `CURSOR_EXPIRED` or an `expired` gap, and the source answers neither on any plan, since a cursor holds its whole
+  position (a meeting's start time and ID) with no state on Granola's side; a paid plan hides no history, and the free
+  plan's lost history is the window gap. `failed-holds-cursor` stays not applicable (`atomicPages`), its reason now
+  naming every path: a meeting `get_meetings` leaves out is listed from `search_meetings`' facts for good, and a failed
+  read, a rate limit or an incomplete listing fails the whole call. `removals-are-final` does not apply: the source
+  removes nothing.
 - `npm run conformance` (`vitest run test/conformance.test.ts`) runs the kit alone and writes
   `reports/conformance-report.json`, which a release attaches.
 - The release kit is revision 4.1 (`1f452e5`), the family's: a plugin that declares sources releases with its
@@ -27,6 +29,20 @@ All notable changes to this project are documented here. The format follows [Kee
   `cost` and `admin` lines.
 - CI can be run by hand on any branch (`workflow_dispatch`), with the full matrix, macOS included; the event is part of
   the concurrency group, so a run by hand on `master` never cancels the push run a release stands on.
+
+### Fixed
+
+- On Granola's free (Basic) plan, which shows only the last 30 days, a listing whose cursor or `since` was older than
+  that lost the meetings in between with no sign: it walked through the hidden weeks, listed only what the plan still
+  showed, and moved the cursor past the rest. Released v0.0.3 and v0.0.4 have this bug. `probe` now records, in memory
+  for the signed-in account, the plan `get_account_info` names (`mcp_plan`); on the free plan, or for an account with no
+  plan recorded or a plan the plugin does not know, a listing that starts more than 29 days back (a day's margin inside
+  the window) answers `gap: { reason: "window-truncated", since }` once, on that page, with `since` the cursor's
+  position or the `since` given, and lists from the window's start; the cursor it answers is inside the window, so the
+  read's next page carries no gap. A paid plan (`plus`, `business`, `enterprise`) has no window and no gap. Call `probe`
+  before listing: a paid account with no plan recorded gets a needless gap, which only makes a consumer resync.
+  `events_list` still never reads `get_account_info` (that would need `permission.readsIdentity`, which a consumer on
+  source-contract v0.1.x refuses), and the probe answer does not carry the plan. `gap` is a v0.1.0 key.
 
 ## [0.0.4] - 2026-11-15
 

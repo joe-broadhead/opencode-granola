@@ -576,6 +576,8 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
       })
 
       test("events_list lists the meeting as an event of the account probe names, without asking who is signed in", async () => {
+        // probe records the account's paid plan, so a start older than the free plan's 30 days answers no gap.
+        await call("build", "probe", {})
         const calls = received()
         const result = await call("build", "events_list", { account: EMAIL, since: "2026-10-01" })
         expect(result.value).toMatchObject({
@@ -586,6 +588,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
           trust: "untrusted",
         })
         expect(result.value.events[0].text).toContain("Ship the export")
+        expect(result.value.gap).toBeUndefined()
         expect(new Set(calls())).toEqual(new Set(["search_meetings", "get_meetings"]))
         expect(await call("build", "events_list", { account: EMAIL, cursor: "not-a-cursor" })).toMatchObject({ type: "failed", code: "CURSOR_INVALID" })
         expect(await call("build", "events_list", { account: "other@example.test", cursor: result.value.cursor })).toMatchObject({ type: "failed", code: "ACCOUNT_MISMATCH" })

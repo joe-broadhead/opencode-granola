@@ -8,8 +8,8 @@ import { findAll, isMarkup, parse, textContent, type Element } from "../export/m
  *   `<pagination has_more=… completion_status=… next_cursor=… />`;
  * - get_meetings: a `<connected_user_email>` preamble, then `<meetings_data>` with each `<meeting id title meeting_at
  *   url>`, its `<known_participants>` (`<participant name email />`) and its `<summary>`;
- * - get_account_info: a JSON object with the signed-in `email` and `mcp_note_access.scopes`, what the connection can
- *   search (`personal`, `public`).
+ * - get_account_info: a JSON object with the signed-in `email`, `mcp_note_access.scopes`, what the connection can
+ *   search (`personal`, `public`), and `mcp_plan`, "the effective plan for MCP access and limits".
  *
  * Every reader tolerates a missing optional part, and returns nothing rather than guess.
  */
@@ -176,6 +176,29 @@ export function accountScopes(result: { readonly output?: unknown; readonly cont
     if (!Array.isArray(scopes)) continue
     const named = scopes.filter((scope): scope is string => typeof scope === "string" && scope.trim() !== "" && scope.length <= 256).map((scope) => scope.trim())
     return [...new Set(named)].slice(0, 64)
+  }
+  return undefined
+}
+
+/**
+ * The plan get_account_info names (`mcp_plan`, "the effective plan for MCP access and limits"), trimmed and lowercase,
+ * at most 64 characters: a string, or an object's `name`, `id` or `plan`. Undefined when it names none.
+ */
+export function accountPlan(result: { readonly output?: unknown; readonly content?: unknown }): string | undefined {
+  const candidates: unknown[] = [result.output]
+  const text = resultText(result).trim()
+  if (text.startsWith("{")) {
+    try {
+      candidates.push(JSON.parse(text))
+    } catch {
+      // Not JSON: no plan.
+    }
+  }
+  for (const value of candidates) {
+    const plan = record(value) ? value.mcp_plan : undefined
+    const named = typeof plan === "string" ? plan : record(plan) ? [plan.name, plan.id, plan.plan].find((entry) => typeof entry === "string") : undefined
+    const clean = typeof named === "string" ? named.trim().toLowerCase() : ""
+    if (clean !== "" && clean.length <= 64) return clean
   }
   return undefined
 }

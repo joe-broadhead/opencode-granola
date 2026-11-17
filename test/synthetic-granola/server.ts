@@ -113,7 +113,7 @@ function meetings(ids: readonly string[]): string {
 function call(name: string, args: Record<string, unknown>) {
   switch (name) {
     case "get_account_info":
-      return text({ email: EMAIL, active_workspace: { id: "w-1", display_name: WORKSPACE } })
+      return text({ email: EMAIL, active_workspace: { id: "w-1", display_name: WORKSPACE }, mcp_plan: "business" })
     case "get_agent_brief":
       return text({ role: "Synthetic role" })
     case "search_meetings": {

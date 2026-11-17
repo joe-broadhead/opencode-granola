@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.5] - 2026-11-17
 
 ### Changed
 
@@ -29,6 +29,8 @@ All notable changes to this project are documented here. The format follows [Kee
   `cost` and `admin` lines.
 - CI can be run by hand on any branch (`workflow_dispatch`), with the full matrix, macOS included; the event is part of
   the concurrency group, so a run by hand on `master` never cancels the push run a release stands on.
+- Tested hosts unchanged: OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 (`TESTED_HOSTS` in `src/hosts.ts`), in the
+  supported range `>=2.2.3 <2.4.0`.
 
 ### Fixed
 

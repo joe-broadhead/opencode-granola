@@ -399,8 +399,8 @@ unnamed source takes, is refused (`INPUT_INVALID` from `events_list`, `ACCOUNT_M
 `probe` reads `get_account_info`, the source's one identity operation, and nothing else: the account is the signed-in
 email, the owner `mailto:` and that email, and `scopes` what the connection can search as Granola names it (`personal`,
 `public`). Given an `account`, it refuses any other signed-in account with `ACCOUNT_MISMATCH`. It also records, in
-memory for that account, the plan `get_account_info` names (`mcp_plan`), which `events_list` uses (below); the answer
-does not carry it.
+memory for that account, the plan `get_account_info` names (`mcp_plan`), which `events_list` uses for a day (below);
+the answer does not carry it.
 
 | Input | Meaning |
 | --- | --- |
@@ -434,12 +434,20 @@ notes change afterwards is not listed again. The cursor is the (start, ID) of th
 with it lists what follows, and an older cursor lists the same meetings again.
 
 The cursor never expires, but Granola's free (Basic) plan shows only the last 30 days of meetings. On the free plan,
-or for an account `probe` has not read a plan for (or whose plan it does not know), a listing whose cursor or `since`
-is more than 29 days old (a day's margin inside the window) answers `gap: { reason: "window-truncated", since }`, where
-`since` is the cursor's position or the `since` given: meetings from then to the page's first event may be lost. It
-lists from where the window begins, and the cursor it answers is inside the window, so the next page of the read has
-no gap. A paid plan (`plus`, `business` or `enterprise`) has no window and no gap. Call `probe` before listing, so a
-paid account is not answered a gap it does not need; a needless gap only makes a consumer resync.
+or for an account `probe` has not read a plan for in the last day (or whose plan it does not know), a listing whose
+cursor or `since` is more than 29 days old (the gap line, a day's margin inside the window) answers
+`gap: { reason: "window-truncated", since }`, where `since` is the cursor's position or the `since` given: meetings
+from then to the page's first event may be lost. It lists from the gap line, and its cursor carries that line until the
+read is a day past it: a later page of the read, however much later, answers a new gap only when its cursor has fallen
+out of Granola's whole 30 days, so it neither repeats the gap nor skips a meeting Granola still shows. A paid plan
+(`plus`, `business` or `enterprise`) has no window and no gap.
+
+`probe`'s record of the plan holds for a day. A listing cannot ask Granola again (reading `get_account_info` from a
+listing would need `permission.readsIdentity`, which a consumer on source-contract v0.1.x refuses), so after a day a
+paid record counts as none, and an account that moved to the free plan answers the gap. Call `probe` before a read
+that may be more than 29 days behind, so a paid account is not answered a gap it does not need; a needless gap only
+makes a consumer resync. A move to the free plan within a day of `probe`, with a cursor more than 29 days behind, is
+the one case still listed without a gap.
 
 The default rules allow `granola_events_list` and `granola_probe`. Their reads, `granola_search_meetings` and
 `granola_get_meetings` for `events_list`, and `granola_get_account_info` for `probe`, must be allowed too for the agent

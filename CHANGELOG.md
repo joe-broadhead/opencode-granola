@@ -35,12 +35,17 @@ All notable changes to this project are documented here. The format follows [Kee
 - On Granola's free (Basic) plan, which shows only the last 30 days, a listing whose cursor or `since` was older than
   that lost the meetings in between with no sign: it walked through the hidden weeks, listed only what the plan still
   showed, and moved the cursor past the rest. Released v0.0.3 and v0.0.4 have this bug. `probe` now records, in memory
-  for the signed-in account, the plan `get_account_info` names (`mcp_plan`); on the free plan, or for an account with no
-  plan recorded or a plan the plugin does not know, a listing that starts more than 29 days back (a day's margin inside
-  the window) answers `gap: { reason: "window-truncated", since }` once, on that page, with `since` the cursor's
-  position or the `since` given, and lists from the window's start; the cursor it answers is inside the window, so the
-  read's next page carries no gap. A paid plan (`plus`, `business`, `enterprise`) has no window and no gap. Call `probe`
-  before listing: a paid account with no plan recorded gets a needless gap, which only makes a consumer resync.
+  for the signed-in account and for a day, the plan `get_account_info` names (`mcp_plan`); on the free plan, or for an
+  account with no plan recorded in the last day or a plan the plugin does not know, a listing that starts more than 29
+  days back (the gap line, a day's margin inside the window) answers `gap: { reason: "window-truncated", since }` once,
+  on that page, with `since` the cursor's position or the `since` given, and lists from the gap line. Its cursor carries
+  the gap line until the read is a day past it, and a later page of that read answers a new gap only when its cursor
+  has fallen out of Granola's whole 30 days: as the clock moves, it neither repeats the gap nor skips a meeting Granola
+  still shows. A paid plan (`plus`, `business`, `enterprise`) has no window and no gap. The record holds a day because
+  a listing cannot ask Granola again: after that, a paid record counts as none, so an account moved to the free plan
+  answers the gap; a move within a day of `probe`, with a cursor 29 days behind, is the one case still without a gap
+  (README, Known limits). Call `probe` before a read that may be that far behind: a paid account with no plan recorded
+  gets a needless gap, which only makes a consumer resync.
   `events_list` still never reads `get_account_info` (that would need `permission.readsIdentity`, which a consumer on
   source-contract v0.1.x refuses), and the probe answer does not carry the plan. `gap` is a v0.1.0 key.
 

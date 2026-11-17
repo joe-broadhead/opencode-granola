@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Source contract `@we-the-rebel-alliance/source-contract` v0.2.0 (was v0.1.0), a devDependency bundled into `dist/`
+  (no runtime dependency). The declaration, the pages and the probe answer are unchanged: the plugin sends none of
+  v0.2.0's new keys (`removals[]`, `owner.verified`, `permission.identityRules`, `accounts.server`,
+  `permission.readsIdentity`, a price's `conditions` or `min`, an empty `permission.identity`), which a consumer still
+  on v0.1.x refuses.
+- The conformance report is complete and ok. The kit's `gap-and-cursor-expired` check is now not applicable, with its
+  reason in the report (`noExpiry`): a cursor holds its whole position, a meeting's start time and ID, and no state on
+  Granola's side, so it never expires and the source never answers `CURSOR_EXPIRED`; Granola's free plan showing only
+  the last 30 days limits what a listing finds, not the cursor (README, Known limits). `failed-holds-cursor` stays not
+  applicable for the reason it already gave (`atomicPages`): a failed read fails the whole listing, so no meeting fails
+  on its own. Every other check that applies runs, including v0.2.0's `gap-once-per-read` and `removals-are-final`,
+  which do not apply because the source answers no gap and removes nothing.
+- `npm run conformance` (`vitest run test/conformance.test.ts`) runs the kit alone and writes
+  `reports/conformance-report.json`, which a release attaches.
+- The release kit is revision 4.1 (`1f452e5`), the family's: a plugin that declares sources releases with its
+  conformance report, run again on the parent in the release's own `conformance` job, and the Release carries it as
+  `conformance-report.json`; the staged tarball is checked against the one the pack job kept; `docs/jelly.md` carries
+  jelly's shared rules for every plugin, word for word; the declaration kit (`test/support/jelly-kit.ts`) knows jelly's
+  `cost` and `admin` lines.
+- CI can be run by hand on any branch (`workflow_dispatch`), with the full matrix, macOS included; the event is part of
+  the concurrency group, so a run by hand on `master` never cancels the push run a release stands on.
+
 ## [0.0.4] - 2026-11-15
 
 ### Changed

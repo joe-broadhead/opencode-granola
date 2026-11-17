@@ -44,6 +44,15 @@ const ATOMIC =
   "Granola's search_meetings and get_meetings answer for the whole page: a meeting get_meetings leaves out of a batch is read again alone, " +
   "then listed from search_meetings' own facts, and a failed read fails the whole call, so no single meeting fails on its own"
 
+/**
+ * Why no cursor can expire, for the kit's `gap-and-cursor-expired` check: the cursor holds its whole position, and
+ * nothing on Granola's side backs it. What the plan lets Granola's MCP see is a different limit, which the README states.
+ */
+const NO_EXPIRY =
+  "A cursor holds its whole position, a meeting's start time and ID, bound to the plugin, source and account, and no state on Granola's side, " +
+  "so it never expires and the source never answers CURSOR_EXPIRED; Granola's free plan shows only the last 30 days of meetings, " +
+  "which limits what a listing finds, not the cursor, and the plugin cannot tell when it hides one, so it reports no gap (README, Known limits)"
+
 /** OpenCode's executors for Granola's reads, answering from the synthetic account; each asserts `granola_<tool>` first, as the host does. */
 function context(permission: SessionContext["permission"]): EventsContext {
   const granola = syntheticGranola({ meetings: MEETINGS_WITH_SECRET })
@@ -86,6 +95,14 @@ async function cases(): Promise<PageCase[]> {
   ]
 }
 
+/**
+ * The kit's checks that do not apply to this source, and why: a free source bills nothing (`billed-cost`), it declares
+ * no `details`, no `scope.suggest` and no snapshot output (`details`, `suggest`, `output-schema`), it answers no gap and
+ * removes nothing (`gap-once-per-read`, `removals-are-final`), and it states why no meeting fails on its own and no
+ * cursor expires (`failed-holds-cursor`, `gap-and-cursor-expired`, with ATOMIC and NO_EXPIRY). Every other check runs.
+ */
+const NOT_APPLICABLE = ["billed-cost", "details", "failed-holds-cursor", "gap-and-cursor-expired", "gap-once-per-read", "output-schema", "removals-are-final", "suggest"]
+
 const reports: ConformanceReport[] = []
 
 describe("the source contract's conformance kit", () => {
@@ -124,20 +141,24 @@ describe("the source contract's conformance kit", () => {
       sources,
       describe: { id: TOOLS_RPC_ID },
       atomicPages: { reason: ATOMIC },
+      noExpiry: { reason: NO_EXPIRY },
     })
     reports.push(report)
     expect(report.problems).toEqual([])
-    // A cursor is a meeting's start and id, which never expire, and the plugin cannot tell when Granola's plan hides
-    // older meetings (a free plan sees the last 30 days): it never answers CURSOR_EXPIRED, so the kit's gap check
-    // cannot run and the report stays incomplete on that one check.
-    expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual(["gap-and-cursor-expired"])
+    // Every check that applies runs: the report is complete, and ok.
+    expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
+    // Exactly these do not apply (NOT_APPLICABLE); the two this source states carry their reasons into the report.
+    expect(report.checks.filter((check) => check.notApplicable).map((check) => check.name).sort()).toEqual(NOT_APPLICABLE)
+    const reasons = Object.fromEntries(report.checks.filter((check) => check.reason !== undefined).map((check) => [check.name, check.reason]))
+    expect(reasons).toMatchObject({ "failed-holds-cursor": ATOMIC, "gap-and-cursor-expired": NO_EXPIRY })
+    expect(report.ok).toBe(true)
   })
 
   it("writes the report a release attaches", () => {
     expect(reports.map((report) => report.source)).toEqual([SOURCE_ID])
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
-      contract: "@we-the-rebel-alliance/source-contract@0.1.0",
+      contract: "@we-the-rebel-alliance/source-contract@0.2.0",
       plugin: pkg.name,
       version: pkg.version,
       descriptorHash: installed.ok ? installed.value.hash : null,

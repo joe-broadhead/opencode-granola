@@ -2,6 +2,55 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2026-11-17
+
+### Changed
+
+- Source contract `@we-the-rebel-alliance/source-contract` v0.2.0 (was v0.1.0), a devDependency bundled into `dist/`
+  (no runtime dependency). The declaration and the probe answer are unchanged: the plugin sends none of
+  v0.2.0's new keys (`removals[]`, `owner.verified`, `permission.identityRules`, `accounts.server`,
+  `permission.readsIdentity`, a price's `conditions` or `min`, an empty `permission.identity`), which a consumer still
+  on v0.1.x refuses.
+- The conformance report is complete and ok. The synthetic account is now on Granola's free plan and the first
+  listing starts before its 30 days, so the kit's `gap-once-per-read` runs on the `window-truncated` gap (below). The
+  kit's `gap-and-cursor-expired` check is not applicable, with its reason in the report (`noExpiry`): it takes only
+  `CURSOR_EXPIRED` or an `expired` gap, and the source answers neither on any plan, since a cursor holds its whole
+  position (a meeting's start time and ID) with no state on Granola's side; a paid plan hides no history, and the free
+  plan's lost history is the window gap. `failed-holds-cursor` stays not applicable (`atomicPages`), its reason now
+  naming every path: a meeting `get_meetings` leaves out is listed from `search_meetings`' facts for good, and a failed
+  read, a rate limit or an incomplete listing fails the whole call. `removals-are-final` does not apply: the source
+  removes nothing.
+- `npm run conformance` (`vitest run test/conformance.test.ts`) runs the kit alone and writes
+  `reports/conformance-report.json`, which a release attaches.
+- The release kit is revision 4.1 (`1f452e5`), the family's: a plugin that declares sources releases with its
+  conformance report, run again on the parent in the release's own `conformance` job, and the Release carries it as
+  `conformance-report.json`; the staged tarball is checked against the one the pack job kept; `docs/jelly.md` carries
+  jelly's shared rules for every plugin, word for word; the declaration kit (`test/support/jelly-kit.ts`) knows jelly's
+  `cost` and `admin` lines.
+- CI can be run by hand on any branch (`workflow_dispatch`), with the full matrix, macOS included; the event is part of
+  the concurrency group, so a run by hand on `master` never cancels the push run a release stands on.
+- Tested hosts unchanged: OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 (`TESTED_HOSTS` in `src/hosts.ts`), in the
+  supported range `>=2.2.3 <2.4.0`.
+
+### Fixed
+
+- On Granola's free (Basic) plan, which shows only the last 30 days, a listing whose cursor or `since` was older than
+  that lost the meetings in between with no sign: it walked through the hidden weeks, listed only what the plan still
+  showed, and moved the cursor past the rest. Released v0.0.3 and v0.0.4 have this bug. `probe` now records, in memory
+  for the signed-in account and for a day, the plan `get_account_info` names (`mcp_plan`); on the free plan, or for an
+  account with no plan recorded in the last day or a plan the plugin does not know, a listing that starts more than 29
+  days back (the gap line, a day's margin inside the window) answers `gap: { reason: "window-truncated", since }` once,
+  on that page, with `since` the cursor's position or the `since` given, and lists from the gap line. Its cursor carries
+  the gap line until the read is a day past it, and a later page of that read answers a new gap only when its cursor
+  has fallen out of Granola's whole 30 days: as the clock moves, it neither repeats the gap nor skips a meeting Granola
+  still shows. A paid plan (`plus`, `business`, `enterprise`) has no window and no gap. The record holds a day because
+  a listing cannot ask Granola again: after that, a paid record counts as none, so an account moved to the free plan
+  answers the gap; a move within a day of `probe`, with a cursor 29 days behind, is the one case still without a gap
+  (README, Known limits). Call `probe` before a read that may be that far behind: a paid account with no plan recorded
+  gets a needless gap, which only makes a consumer resync.
+  `events_list` still never reads `get_account_info` (that would need `permission.readsIdentity`, which a consumer on
+  source-contract v0.1.x refuses), and the probe answer does not carry the plan. `gap` is a v0.1.0 key.
+
 ## [0.0.4] - 2026-11-15
 
 ### Changed

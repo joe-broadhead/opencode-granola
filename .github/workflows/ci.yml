@@ -5,12 +5,15 @@ on:
   push:
     branches: [master]
   pull_request:
+  # A run by hand on any branch: the full matrix, macOS included.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # The event is part of the group, so a run by hand on master never cancels the push run a release stands on.
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -40,10 +43,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Public GitHub-hosted runners: Linux x64, Linux arm64, macOS arm64, macOS x64.
-        # A pull request runs the two Linux runners; a push to master, or a run by hand, runs all four, macOS too. macOS
+        # Public GitHub-hosted runners: Linux x64, Linux arm64, macOS arm64.
+        # A pull request runs the two Linux runners; a push to master, or a run by hand, runs three: macOS arm64 too. macOS
         # runs on master and for releases only, and the release planner requires that push run with every runner.
-        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-24.04","ubuntu-24.04-arm"]' || '["ubuntu-24.04","ubuntu-24.04-arm","macos-26","macos-26-intel"]') }}
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-24.04","ubuntu-24.04-arm"]' || '["ubuntu-24.04","ubuntu-24.04-arm","macos-26"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:

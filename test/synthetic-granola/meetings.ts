@@ -2,7 +2,8 @@
 // (5 November 2026). search_meetings filters by from_date and to_date and attended_only, lists newest first, and pages
 // with a <pagination next_cursor> element; get_meetings opens with a <connected_user_email> preamble and leaves out a
 // meeting when a batch is too large for it; get_account_info is a JSON object, its note-access scopes as its own
-// description gives them (mcp_note_access.scopes). Every name and address is made up.
+// description gives them (mcp_note_access.scopes), and its plan (mcp_plan); on the free plan the account answers only the
+// last 30 days of meetings. Every name and address is made up.
 
 export const EMAIL = "ada@example.test"
 
@@ -52,16 +53,30 @@ export interface Call {
   readonly args: Record<string, unknown>
 }
 
-/** The text a tool answers with, as OpenCode's executor returns it, for the synthetic account. */
-export function syntheticGranola(options: { readonly email?: string; readonly pageSize?: number; readonly meetings?: readonly SyntheticMeeting[] } = {}) {
+/** The plans the synthetic account can be on: a paid one, as a Business account names it, or Granola's free one. */
+export const PAID_PLAN = "business"
+export const FREE_PLAN = "basic"
+/** What Granola's free (Basic) plan lets MCP see: the last 30 days. */
+const FREE_DAYS = 30
+
+/**
+ * The text a tool answers with, as OpenCode's executor returns it, for the synthetic account. `plan` is the plan
+ * get_account_info names (`mcp_plan`, paid by default); on the free plan, search_meetings and get_meetings answer only
+ * meetings from the 30 days before `now` (NOW by default), as Granola's free plan does.
+ */
+export function syntheticGranola(
+  options: { readonly email?: string; readonly pageSize?: number; readonly meetings?: readonly SyntheticMeeting[]; readonly plan?: string; readonly now?: number } = {},
+) {
   const calls: Call[] = []
   const pageSize = options.pageSize ?? 2
-  const meetings = options.meetings ?? MEETINGS
+  const plan = options.plan ?? PAID_PLAN
+  const visibleFrom = (options.now ?? NOW) - FREE_DAYS * 86_400_000
+  const meetings = (options.meetings ?? MEETINGS).filter((meeting) => plan !== FREE_PLAN || Date.parse(meeting.at) >= visibleFrom)
   const answer = (tool: string, args: Record<string, unknown>): string => {
     calls.push({ tool, args })
     switch (tool) {
       case "get_account_info":
-        return JSON.stringify({ email: options.email ?? EMAIL, active_workspace: { id: "w-1", display_name: "Synthetic" }, mcp_note_access: { scopes: ["personal", "public"] } })
+        return JSON.stringify({ email: options.email ?? EMAIL, active_workspace: { id: "w-1", display_name: "Synthetic" }, mcp_note_access: { scopes: ["personal", "public"] }, mcp_plan: plan })
       case "search_meetings": {
         const offset = typeof args.cursor === "string" ? Number(args.cursor.replace(/^c-/, "")) : 0
         const from = Date.parse(String(args.from_date))
@@ -107,6 +122,8 @@ export function syntheticGranola(options: { readonly email?: string; readonly pa
   }
   return {
     calls,
+    /** The plan get_account_info names. */
+    plan,
     /** events_list's Read: the executor's result for one of Granola's tools. */
     read: async (tool: string, args: Record<string, unknown>) => ({ content: [{ type: "text" as const, text: answer(tool, args) }] }) as never,
     answer,

@@ -8,11 +8,13 @@ import { EVENTS_INPUT, MAX_BYTES, SETTLE_MS, SOURCE, granolaProbe, listEvents } 
 import { TOOLS_RPC_ID } from "../src/tools-rpc.js"
 import { setup } from "../src/setup.js"
 import { agent, fakeHost } from "./fakes.js"
-import { EMAIL, EXPECTED, MEETINGS, NOW, SINCE, syntheticGranola, type SyntheticMeeting } from "./synthetic-granola/meetings.js"
+import { EMAIL, EXPECTED, FREE_PLAN, MEETINGS, NOW, PAID_PLAN, SINCE, syntheticGranola, type SyntheticMeeting } from "./synthetic-granola/meetings.js"
 
 const OWNER = { id: `mailto:${EMAIL}`, label: EMAIL }
 const BINDING = { plugin: "granola", source: SOURCE, account: EMAIL }
-const list = (granola = syntheticGranola(), now = NOW) => (input: unknown) => listEvents(granola.read, input, now)
+/** events_list as on the synthetic account's plan, paid unless a test says otherwise. */
+const list = (granola = syntheticGranola(), now = NOW) => (input: unknown) => listEvents(granola.read, input, now, () => granola.plan)
+const paid = () => PAID_PLAN
 const probe = (granola = syntheticGranola()) => (input: unknown) => granolaProbe(granola.read, input)
 const code = async (promise: Promise<unknown>) => {
   try {
@@ -238,27 +240,27 @@ describe("events_list", () => {
 
   it("reads the account from get_meetings' meetings_data attribute too, and refuses another one there", async () => {
     const attribute = (email: string) => (text: string) => text.replace(preamble(email), "").replace("<meetings_data ", `<meetings_data connected_user_email="${email}" `)
-    const mine = (await listEvents(rewritten(EMAIL, attribute(EMAIL)), { account: EMAIL, since: SINCE, limit: 2 }, NOW)) as EventsListResult
+    const mine = (await listEvents(rewritten(EMAIL, attribute(EMAIL)), { account: EMAIL, since: SINCE, limit: 2 }, NOW, paid)) as EventsListResult
     expect(mine.events.map((event) => event.external_id)).toEqual(EXPECTED.slice(0, 2))
     const other = "someone@example.test"
-    expect(await code(listEvents(rewritten(other, attribute(other)), { account: EMAIL, since: SINCE }, NOW))).toBe("ACCOUNT_MISMATCH")
+    expect(await code(listEvents(rewritten(other, attribute(other)), { account: EMAIL, since: SINCE }, NOW, paid))).toBe("ACCOUNT_MISMATCH")
   })
 
   it("never lists meetings get_meetings gives without naming the account: UNAVAILABLE", async () => {
     const unnamed = rewritten(EMAIL, (text) => text.replace(preamble(EMAIL), ""))
-    expect(await code(listEvents(unnamed, { account: EMAIL, since: SINCE }, NOW))).toBe("UNAVAILABLE")
+    expect(await code(listEvents(unnamed, { account: EMAIL, since: SINCE }, NOW, paid))).toBe("UNAVAILABLE")
   })
 
   it("lists nothing when no get_meetings answer named the account, even one that gave no meeting", async () => {
     const empty = rewritten(EMAIL, () => "<not_found_hint>No meeting matches the requested IDs.</not_found_hint>")
-    expect(await code(listEvents(empty, { account: EMAIL, since: SINCE }, NOW))).toBe("UNAVAILABLE")
+    expect(await code(listEvents(empty, { account: EMAIL, since: SINCE }, NOW, paid))).toBe("UNAVAILABLE")
   })
 
   it("stops with UNAVAILABLE when Granola cannot list a whole week", async () => {
     const granola = syntheticGranola()
     const incomplete = async (tool: string, args: Record<string, unknown>) =>
       tool === "search_meetings" ? ({ content: [{ type: "text", text: '<meetings_data count="0"><pagination completion_status="incomplete" /></meetings_data>' }] } as never) : granola.read(tool, args)
-    expect(await code(listEvents(incomplete, { account: EMAIL, since: SINCE }, NOW))).toBe("UNAVAILABLE")
+    expect(await code(listEvents(incomplete, { account: EMAIL, since: SINCE }, NOW, paid))).toBe("UNAVAILABLE")
   })
 })
 

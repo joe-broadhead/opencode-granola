@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-granola",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "description": "Unofficial OpenCode plugin for Granola meeting notes, through Granola's official MCP server",
   "keywords": [
@@ -109,6 +109,7 @@
     "build": "node scripts/build.mjs",
     "lint": "node scripts/check-forbidden.mjs && node scripts/check-copies.mjs",
     "test": "vitest run",
+    "conformance": "vitest run test/conformance.test.ts",
     "test:kit": "node --test scripts/release-kit.test.mjs",
     "test:host": "bun test --timeout 120000 ./test/integration",
     "test:pack": "node test/pack-smoke.mjs",
@@ -127,7 +128,7 @@
     "@opentui/core": "0.8.0",
     "@opentui/solid": "0.8.0",
     "@types/node": "22.20.5",
-    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.1.0",
+    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.2.0",
     "babel-preset-solid": "1.9.16",
     "esbuild": "0.28.2",
     "solid-js": "1.9.16",

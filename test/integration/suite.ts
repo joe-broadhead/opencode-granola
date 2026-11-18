@@ -14,7 +14,7 @@ import { defaultRules, type Rule } from "../../src/permissions.js"
 import { Granola, type Status } from "../../src/rpc/contract.js"
 import { AGENT_FIX, CONFLICT_NEXT, formatStatus, shadowedFix } from "../../src/status.js"
 import { EMAIL, FAILING, MEETING, MEETING_AT, PLAN_LIMITED, TITLE, TOOLS, UPSTREAM_FAILURE, WORKSPACE, type SyntheticGranola } from "../synthetic-granola/server.js"
-import { ADOPTED_SERVER, globalPaths, OFFICIAL_URL, OTHER_SERVER, repositoryChanges, REPO, SHADOWING_SKILL, type Host, type Project } from "./harness.js"
+import { ADOPTED_SERVER, globalPaths, OFFICIAL_URL, OTHER_SERVER, repositoryChanges, REPO, SHADOWING_SKILL, unattended, type Host, type Project } from "./harness.js"
 import type { CallInput, CallResult, Outcome, ProbeState } from "./probe/index.js"
 
 const VERSION = (JSON.parse(readFileSync(join(REPO, "package.json"), "utf8")) as { version: string }).version
@@ -78,20 +78,14 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
     }
 
     /**
-     * Runs `code` as Code Mode does, through a schedule's check program: OpenCode checks each tool's input and output
-     * and evaluates permissions with nobody present to answer. The program reports by throwing "SEEN <json>", so no
-     * schedule is ever created.
+     * Runs `code` as Code Mode does, with nobody present to answer a prompt (`unattended`): OpenCode checks each tool's
+     * input and output and evaluates permissions as the session's agent, under its rules. The program reports by
+     * throwing "SEEN <json>", and no model is involved.
      */
     async function codeMode(project: Project, code: string): Promise<{ seen: unknown } | { refused: string }> {
       const session = await host.client.session.create({ title: "Granola Code Mode check", agent: "build", ...at(project) })
-      let message: string
-      try {
-        const schedule = await host.client.experimental.schedule.create({ sessionID: session.id, name: "granola-host-test", when: { in: "6 hours" }, prompt: "noop", if: { code } })
-        await host.client.experimental.schedule.delete({ scheduleID: schedule.id })
-        throw new Error("the check program finished without reporting")
-      } catch (error) {
-        message = error instanceof Error ? error.message : String(error)
-      }
+      const outcome = await unattended(host, session.id, code)
+      const message = outcome.ok ? "the check program finished without reporting" : outcome.error
       const seen = /SEEN (.*)$/s.exec(message)
       return seen ? { seen: JSON.parse(seen[1]!) } : { refused: message }
     }

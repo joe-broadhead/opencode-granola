@@ -80,8 +80,11 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
   address. Never commit, tag or publish with a work or personal address, or with a local hostname.
 - **Tests** use narrow fakes typed against `SetupContext` with `satisfies`. Host tests run isolated hosts with
   Granola's URL routed to `test/synthetic-granola/`, each in a git repository under the system's `/tmp` (never under
-  `TMPDIR` or `HOME`) and each stock host on its own port. Never call Granola, never point a CLI at your own OpenCode
-  service, and never type a prompt into a real TUI or `opencode run`.
+  `TMPDIR` or `HOME`) and each stock host on its own port. Code Mode with nobody present runs as a schedule's check
+  program up to 2.3.0 and as an automation's code action from 2.3.1 (`unattended` in `test/integration/harness.ts`),
+  which a stock `opencode serve` runs itself; the flag is `experimental.schedules`, and `experimental.automations` from
+  2.3.1. Never call Granola, never point a CLI at your own OpenCode service, and never type a prompt into a real TUI or
+  `opencode run`.
 - `npm run check` passes before every commit.
 
 ## Forbidden

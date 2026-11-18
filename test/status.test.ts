@@ -166,7 +166,7 @@ describe("status model", () => {
   it("gives a host outside the range, running because of allowUntestedHost, its own next step when nothing else is needed", () => {
     const host = { version: "2.4.0", range: RANGE, tested: false, warning: "outside the supported range >=2.2.3 <2.4.0; it runs because allowUntestedHost is true" }
     expect(buildStatus(inputs({ host })).nextStep).toBe(UNTESTED_HOST_NEXT)
-    expect(UNTESTED_HOST_NEXT).toBe("If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0.")
+    expect(UNTESTED_HOST_NEXT).toBe("If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2.")
     // Anything else to do comes first.
     expect(buildStatus(inputs({ host, agents: [agent("reviewer")] })).nextStep).toBe(AGENT_FIX)
   })

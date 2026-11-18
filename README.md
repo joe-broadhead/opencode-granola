@@ -9,7 +9,7 @@ Granola is a trademark of Granola, Inc.; this unofficial plugin is not endorsed 
 
 ## Requirements
 
-- OpenCode `>=2.2.3 <2.4.0`, tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0. Another release inside that range runs, and status
+- OpenCode `>=2.2.3 <2.4.0`, tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2. Another release inside that range runs, and status
   calls it untested. Outside the range the plugin does not start, unless you set `allowUntestedHost`; see
   [Troubleshooting](#troubleshooting).
 - macOS or Linux.
@@ -257,7 +257,7 @@ transcripts or folders.
 **`HOST_UNTESTED`.** The plugin does not start on an OpenCode version outside `>=2.2.3 <2.4.0`, including
 development builds. Use OpenCode `>=2.2.3 <2.4.0`, or set the plugin option `allowUntestedHost: true` to run anyway;
 the `OpenCode` row then says `host untested`, and when nothing else is needed the next step says to use a tested
-release if Granola misbehaves. A release inside the range other than 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 runs normally: only the
+release if Granola misbehaves. A release inside the range other than 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2 runs normally: only the
 `OpenCode` row calls it untested.
 
 **`OPTIONS_INVALID`.** A plugin option has an unknown name or a wrong type. The message names the option.
@@ -299,7 +299,7 @@ Files you exported stay in your export folder.
 - **No retries.** The plugin does not retry a failed call. The error names the next step.
 - **The meetings source sees what Granola's MCP sees.** Granola's MCP reads only the active workspace, and on the free (Basic) plan only notes from the last 30 days; its rate limits vary by plan and tool and average about 100 requests per minute across all tools ([Granola MCP](https://docs.granola.ai/help-center/sharing/integrations/mcp)). A listing reads `search_meetings` once per page of each week, and `get_meetings` once per 10 meetings. A cursor never expires, but the free plan's history does: `probe` records the plan `get_account_info` names, for a day, and on the free plan, or with no plan recorded in the last day, a listing whose cursor or `since` is more than 29 days old answers a `window-truncated` gap once and lists from there, so a consumer knows to resync; later pages of that read neither repeat the gap nor skip a meeting the plan still shows. A paid plan has no window and no gap. A move to the free plan within a day of `probe`, with a cursor more than 29 days behind, is still listed without a gap: re-probe after a plan change. The v0.0.3 and v0.0.4 sources listed only what the plan still showed, with no gap. Switching the active workspace changes what a listing reads under the same account.
 - **The meetings source's test data is invented.** The conformance kit runs on a synthetic Granola whose answers follow the shapes Granola's live tools returned when last checked, and the note-access scopes as `get_account_info`'s own description gives them; their content is made up, modelled on the provider's docs, not live-verified. The synthetic account is on the free plan and the first listing starts before its 30 days, so the kit checks the `window-truncated` gap is answered once per read. Its report is complete and ok: two checks do not apply, each with its reason in the report, because no meeting fails on its own (a failed read fails the whole listing) and no cursor is ever refused as expired (the source never answers `CURSOR_EXPIRED`; the free plan's lost history is the window gap).
-- **Hosts and platforms.** The plugin is tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0, and runs on macOS or Linux. A later 2.2 or 2.3 release starts and is reported as untested.
+- **Hosts and platforms.** The plugin is tested on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2, and runs on macOS or Linux. A later 2.2 or 2.3 release starts and is reported as untested.
 - In Jelly, the `access` setting is drawn as a choice of three, which needs a Jelly that reads declared choices: an
   older Jelly refuses the plugin's whole declaration.
 - Updates are not automatic for a Git install, and `opencode plugin update` and `opencode plugin check` do not work on one: to move to a newer release, remove the old entry and add the new tag.

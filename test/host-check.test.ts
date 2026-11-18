@@ -26,12 +26,12 @@ describe("supported OpenCode range", () => {
 })
 
 describe("checkHost", () => {
-  it("names 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0 as the tested releases, all inside the range", () => {
-    expect(TESTED_HOSTS).toEqual(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0"])
+  it("names 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2 as the tested releases, all inside the range", () => {
+    expect(TESTED_HOSTS).toEqual(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0", "2.3.1", "2.3.2"])
     for (const version of TESTED_HOSTS) expect(satisfies(version, tested), version).toBe(true)
   })
 
-  it.each(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0"])("passes the tested release %s with no warning", (version) => {
+  it.each(["2.2.3", "2.2.4", "2.2.5", "2.2.6", "2.2.7", "2.3.0", "2.3.1", "2.3.2"])("passes the tested release %s with no warning", (version) => {
     expect(checkHost(version, tested, false)).toEqual({ version, range: tested, tested: true })
   })
 

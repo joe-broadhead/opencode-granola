@@ -74,7 +74,7 @@ describe("plugin definition", () => {
     expect(result.host).toEqual({ version: "2.4.0", range: ">=2.2.3 <2.4.0", tested: false })
     host.listed.servers = [{ name: "granola", status: { status: "connected" } }]
     const connected = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
-    expect(connected).toMatchObject({ state: "connected", nextStep: "If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0." })
+    expect(connected).toMatchObject({ state: "connected", nextStep: "If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2." })
   })
 
   it("fails setup with one error that names a bad option", async () => {

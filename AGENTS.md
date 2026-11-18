@@ -9,7 +9,7 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
 
 - **Public APIs only:** `@opencode/plugin` 2.2.3 in `src`, plus `@opencode/sdk` and `@opencode/client` in tests. The
   supported range is `opencode.host` in `package.json`, exactly `>=2.2.3 <2.4.0`; the host check reads it from there.
-  `TESTED_HOSTS` in `src/hosts.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0); status calls only those
+  `TESTED_HOSTS` in `src/hosts.ts` is the one list of tested releases (2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2); status calls only those
   tested, and the host and pack tests run on each.
 - **Greenfield.** No migration code, compatibility paths or dead code, exports, dependencies, docs or tests. Delete
   rather than deprecate.
@@ -80,8 +80,11 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
   address. Never commit, tag or publish with a work or personal address, or with a local hostname.
 - **Tests** use narrow fakes typed against `SetupContext` with `satisfies`. Host tests run isolated hosts with
   Granola's URL routed to `test/synthetic-granola/`, each in a git repository under the system's `/tmp` (never under
-  `TMPDIR` or `HOME`) and each stock host on its own port. Never call Granola, never point a CLI at your own OpenCode
-  service, and never type a prompt into a real TUI or `opencode run`.
+  `TMPDIR` or `HOME`) and each stock host on its own port. Code Mode with nobody present runs as a schedule's check
+  program up to 2.3.0 and as an automation's code action from 2.3.1 (`unattended` in `test/integration/harness.ts`),
+  which a stock `opencode serve` runs itself; the flag is `experimental.schedules`, and `experimental.automations` from
+  2.3.1. Never call Granola, never point a CLI at your own OpenCode service, and never type a prompt into a real TUI or
+  `opencode run`.
 - `npm run check` passes before every commit.
 
 ## Forbidden

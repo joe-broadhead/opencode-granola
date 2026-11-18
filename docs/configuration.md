@@ -11,7 +11,7 @@ Options go in the plugin's entry in `plugins`. Both are optional.
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-granola#v0.0.5",
+      "package": "github:joe-broadhead/opencode-granola#v0.0.6",
       "options": {
         "exportDirectory": "<an absolute path>/Granola",
         "allowUntestedHost": false
@@ -456,7 +456,7 @@ of the session that runs them. A consumer's grant names exactly those operations
 ## Host check
 
 When it loads, the plugin compares the OpenCode version with its supported range, `>=2.2.3 <2.4.0`, which
-`package.json` declares as `opencode.host`. Every check runs on OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0, the tested releases.
+`package.json` declares as `opencode.host`. Every check runs on OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2, the tested releases.
 
 - **A tested release:** the plugin sets everything up. The `OpenCode` row reads, for example,
   `2.2.5 (tested; supported range >=2.2.3 <2.4.0), plugin <version>`.
@@ -467,7 +467,7 @@ When it loads, the plugin compares the OpenCode version with its supported range
   `HOST_UNTESTED`.
 - **Outside the range with `"allowUntestedHost": true`:** the plugin sets everything up, and the `OpenCode` row says
   `host untested`. When nothing else is needed, the next step reads
-  `If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 or 2.3.0.`
+  `If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2.`
 
 The plugin has no status-only mode: outside the range it does not start at all, so its status never has the state
 `host_untested`.
@@ -481,7 +481,7 @@ model. It reads only OpenCode's local state and holds no token and no sign-in li
 | Field | Content |
 | --- | --- |
 | `version` | The plugin's version |
-| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7 and 2.3.0) |
+| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2) |
 | `state` | `connected`, `sign_in_required`, `connecting`, `disabled`, `failed`, `not_configured` or `conflict`. The text surfaces show the same states as `connected`, `sign-in required`, `connecting`, `disabled`, `failed`, `not configured` and `conflict`. |
 | `title` | Granola's display title, when connected |
 | `problem` | `code` and `message`, whenever Granola is not connected and there is no conflict |

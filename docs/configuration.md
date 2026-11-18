@@ -378,7 +378,7 @@ recipe above.
 
 ## Events list
 
-`package.json`'s `sources` declares one source under source-contract version 1, `granola.meetings`
+`package.json`'s `sources` declares `granola.meetings` and the list snapshot `granola.meetings.list` under source-contract version 1. `granola.meetings`
 (`@we-the-rebel-alliance/source-contract`): `granola_events_list` (`tools.granola.events_list` in Code Mode, and the
 tools RPC method `events_list`) lists the meetings you took part in since a cursor, as normalised events, oldest first,
 and the tools RPC method `probe` names who is signed in. Both only read, never ask and call no model, so a consumer
@@ -390,7 +390,12 @@ probe({ source?, account? })
 
 events_list({ account, since?, cursor?, limit?, source? })
   → { source: "granola", account: "<email>", owner: { id, label }, events, cursor, more, refused?, gap?, plugin, asOf, trust: "untrusted" }
+
+events_list({ account, source: "granola", list: "meetings" })
+  → { source: "granola", account: "<email>", data: { items, editable: false }, asOf, trust: "untrusted" }
 ```
+
+`granola.meetings.list` is a snapshot. Its `tool` is `events_list`, its `output` is `list`, and its `input` is `{ "source": "granola", "list": "meetings" }`. It calls `search_meetings` for the last 29 days, the window a free plan still shows, and returns at most 50 titles. It does not call `get_meetings` or `get_account_info`. `permission.tool` is `granola_events_list`. `permission.operations` are `get_account_info` (identity, which only `probe` reads) and `search_meetings`. `private` is true. `cost` is free. `maxAgeSec` is 900. `maxBytes` is 65,536. A title that holds a secret is left out. `granola.meetings` is not renamed.
 
 The descriptor declares `accounts.named: true`: every read names its account, the signed-in Granola email. A consumer
 learns it from `probe`, which needs no account, and passes it to every `events_list` call; `default`, the account an
@@ -408,7 +413,7 @@ the answer does not carry it.
 | `since` | Where to start without a cursor: an ISO date (a UTC day) or date-time with `Z` or an offset. Default: 24 hours ago. |
 | `cursor` | The previous result's cursor, for the same account. It wins over `since`. |
 | `limit` | Most events, 1 to 500; 100 by default. A result also stops before 64 KiB of JSON. |
-| `source` | `granola`, the one source. |
+| `source` | `granola`. |
 
 How it reads, through OpenCode's own Granola tools, each with its own permission:
 

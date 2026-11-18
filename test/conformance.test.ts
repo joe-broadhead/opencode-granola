@@ -117,7 +117,11 @@ describe("the source contract's conformance kit", () => {
     expect(declarationProblems(pkg.sources, { tools })).toEqual([])
     expect(sources.rpc).toBe(TOOLS_RPC_ID)
     expect(pkg.name).toBe(PACKAGE)
-    expect(sources.items.map((item) => [item.id, item.kind])).toEqual([[SOURCE_ID, "events"]])
+    expect(sources.items.map((item) => [item.id, item.kind])).toEqual([
+      [SOURCE_ID, "events"],
+      ["granola.meetings.list", "snapshot"],
+    ])
+    expect(sources.items.find((item) => item.id === "granola.meetings.list")).toMatchObject({ output: "list", tool: "events_list" })
   })
 
   it("the descriptor and the read agree: the account is named, it is the email probe answers, and no read takes another", async () => {
@@ -160,8 +164,31 @@ describe("the source contract's conformance kit", () => {
     expect(report.ok).toBe(true)
   })
 
+  it("granola.meetings.list keeps the contract", async () => {
+    const listed = sources.items.find((item) => item.id === "granola.meetings.list")!
+    const report = await sourceConformance({
+      plugin: pkg.name,
+      source: listed,
+      tools,
+      calls: {
+        snapshot: (input, session) => eventsMethod(context(session.permission), () => NOW).run(input, call()) as Promise<Record<string, unknown>>,
+        probe: (input, session) => probeMethod(context(session.permission)).run(input, call()),
+      },
+      snapshotCases: [{ ...(listed.input ?? {}), account: EMAIL }],
+      cases: [],
+      account: EMAIL,
+      sources,
+      describe: { id: TOOLS_RPC_ID },
+    })
+    reports.push(report)
+    expect(report.problems).toEqual([])
+    expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
+    expect(report.ok).toBe(true)
+    expect(report.incomplete).toBe(false)
+  })
+
   it("writes the report a release attaches", () => {
-    expect(reports.map((report) => report.source)).toEqual([SOURCE_ID])
+    expect(reports.map((report) => report.source).sort()).toEqual([SOURCE_ID, "granola.meetings.list"].sort())
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
       contract: "@we-the-rebel-alliance/source-contract@0.2.0",

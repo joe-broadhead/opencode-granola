@@ -104,9 +104,34 @@ async function cases(): Promise<PageCase[]> {
  * The kit's checks that do not apply to this source, and why: a free source bills nothing (`billed-cost`), it declares
  * no `details`, no `scope.suggest` and no snapshot output (`details`, `suggest`, `output-schema`), it removes nothing
  * (`removals-are-final`), and it states why no meeting fails on its own and no cursor expires (`failed-holds-cursor`,
- * `gap-and-cursor-expired`, with ATOMIC and NO_EXPIRY). Every other check runs, `gap-once-per-read` on the free plan's gap.
+ * `gap-and-cursor-expired`, with ATOMIC and NO_EXPIRY). The v0.3 checks in ABSENT do not apply either; each reason is
+ * non-empty, which is what the kit accepts for a stated skip. Every other check runs, `gap-once-per-read` on the free plan's gap.
  */
-const NOT_APPLICABLE = ["billed-cost", "details", "failed-holds-cursor", "gap-and-cursor-expired", "output-schema", "removals-are-final", "suggest"]
+const NOT_APPLICABLE = [
+  "actor-kind",
+  "billed-cost",
+  "commitment-key",
+  "details",
+  "facts",
+  "failed-holds-cursor",
+  "gap-and-cursor-expired",
+  "hints",
+  "one-author",
+  "output-schema",
+  "parts-stable",
+  "removals-are-final",
+  "routines",
+  "suggest",
+]
+const ABSENT = {
+  "actor-kind": "the fixture names no machine actor, so actor-kind does not apply",
+  "commitment-key": "no page carries a commitment, so commitment-key does not apply",
+  facts: "no page carries a fact, so facts does not apply",
+  hints: "the source declares no hint file, so hints does not apply",
+  "one-author": "no page lists a from or author actor, so one-author does not apply",
+  "parts-stable": "no page carries a part, so parts-stable does not apply",
+  routines: "the source declares no routine file, so routines does not apply",
+}
 
 const reports: ConformanceReport[] = []
 
@@ -157,6 +182,10 @@ describe("the source contract's conformance kit", () => {
     expect(report.checks.filter((check) => check.notApplicable).map((check) => check.name).sort()).toEqual(NOT_APPLICABLE)
     const reasons = Object.fromEntries(report.checks.filter((check) => check.reason !== undefined).map((check) => [check.name, check.reason]))
     expect(reasons).toMatchObject({ "failed-holds-cursor": ATOMIC, "gap-and-cursor-expired": NO_EXPIRY })
+    for (const [name, reason] of Object.entries(ABSENT)) {
+      expect(reason.trim()).not.toBe("")
+      expect(report.checks.find((check) => check.name === name)).toMatchObject({ ran: false, notApplicable: true, problems: [] })
+    }
     expect(report.ok).toBe(true)
   })
 
@@ -164,7 +193,7 @@ describe("the source contract's conformance kit", () => {
     expect(reports.map((report) => report.source)).toEqual([SOURCE_ID])
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
-      contract: "@we-the-rebel-alliance/source-contract@0.2.0",
+      contract: "@we-the-rebel-alliance/source-contract@0.3.0",
       plugin: pkg.name,
       version: pkg.version,
       descriptorHash: installed.ok ? installed.value.hash : null,

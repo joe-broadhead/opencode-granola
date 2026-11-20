@@ -118,7 +118,8 @@
           "tool": "granola_events_list",
           "operations": [
             "get_account_info",
-            "search_meetings"
+            "search_meetings",
+            "get_meetings"
           ],
           "identity": [
             "get_account_info"

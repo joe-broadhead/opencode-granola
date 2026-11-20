@@ -6,7 +6,22 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- **List snapshot** `granola.meetings.list` (`output: "list"`). An app can bind it and render meetings without knowing Granola. It calls the existing `events_list` read (`search_meetings`), not a second client. `granola.meetings` stays the events source and is not renamed. No write is declared. The source-contract pin stays v0.2.0: `list` is already in that pin, and this change sends none of v0.3.0's new fields.
+- **List snapshot** `granola.meetings.list` (`output: "list"`). An app can bind it and render meetings without knowing
+  Granola. It is the tools RPC method `events_list` with `{ "source": "granola", "list": "meetings" }`: the model tool's
+  schema and description have no `list`, so an agent sees no list. It reads `search_meetings` over the 29 days a free
+  plan still shows, then verifies the account through `get_meetings` once for the first batch, as the events source
+  does: another account is `ACCOUNT_MISMATCH`, an answer that holds meetings and names none is `UNAVAILABLE`, and
+  `get_account_info` is never read. It returns at most 50 meetings, newest first, each an id and a title; a title is
+  screened whole and then cut to 200 characters, control characters are stripped, an id appears once, and the answer
+  stops short of 64 KiB. `granola.meetings` stays the events source and is not renamed, and no write is declared. Like
+  it, the snapshot is a `named` source: the call names the account, the signed-in email `probe` answers.
+
+### Changed
+
+- Source contract `@we-the-rebel-alliance/source-contract` v0.3.0 (was v0.2.0), a devDependency bundled into `dist/`
+  (no runtime dependency). The declaration and the probe answer are unchanged: the plugin sends none of v0.3.0's new
+  keys (`facts`, `hints`, `routines`, an actor's `kind`, `sections` or `parts`), which a consumer still on v0.2.0
+  refuses. The conformance test names the seven v0.3 checks the source carries nothing for, each with its reason.
 
 ## [0.0.6] - 2026-11-18
 

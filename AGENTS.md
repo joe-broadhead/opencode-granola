@@ -55,7 +55,9 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
   implements both with the package's `events` and `cursor` modules. `probe` alone reads `get_account_info`, the
   source's identity operation; a listing never does: it names its account, the signed-in email `probe` answers, and
   get_meetings' `<connected_user_email>` (element or attribute) must be that account, and an answer that holds
-  meetings and names none is `UNAVAILABLE`. `probe` records the account's plan (`mcp_plan`) in memory for a day
+  meetings and names none is `UNAVAILABLE`; the list snapshot reads `search_meetings` over the last 29 days and verifies
+  its account through `get_meetings` the same way. Its `list` input is on the tools RPC method only: the model tool
+  lists events, never a list. `probe` records the account's plan (`mcp_plan`) in memory for a day
   (`PLAN_TTL_MS`); a listing on the free plan, or with none recorded, that starts more than 29 days back answers a
   `window-truncated` gap once and restarts at that gap line, which its cursor carries (`w`) so a later page of the read
   is held to the whole 30 days (never read `get_account_info` from a listing: that needs `readsIdentity`, a key v0.1.x

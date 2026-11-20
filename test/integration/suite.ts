@@ -589,6 +589,22 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
         expect(await call("build", "events_list", { since: "2026-10-01" })).toMatchObject({ type: "failed", code: "INPUT_INVALID" })
       })
 
+      test("events_list with list answers the list snapshot through the tools RPC, and verifies the account", async () => {
+        const calls = received()
+        const result = await call("build", "events_list", { account: EMAIL, list: "meetings" })
+        expect(result.value).toMatchObject({
+          source: "granola",
+          account: EMAIL,
+          data: { editable: false, items: [{ id: MEETING, text: "Weekly sync" }] },
+          trust: "untrusted",
+          asOf: expect.any(String),
+        })
+        expect(new Set(calls())).toEqual(new Set(["search_meetings", "get_meetings"]))
+        expect(await call("build", "events_list", { account: "other@example.test", list: "meetings" })).toMatchObject({ type: "failed", code: "ACCOUNT_MISMATCH" })
+        // The same method still answers the events page, which the host validates against the union.
+        expect((await call("build", "events_list", { account: EMAIL, since: "2026-10-01" })).value.events).toHaveLength(1)
+      })
+
       test("an account read records the workspace that status shows, as the model path does", async () => {
         // Nothing has read the account in the adopted project yet; the script's session belongs to main.
         expect(Object.hasOwn(await statusWhen("adopted", connected), "workspace")).toBe(false)

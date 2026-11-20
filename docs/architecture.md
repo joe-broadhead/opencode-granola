@@ -98,7 +98,7 @@ OpenCode's tool hooks, so the export maps connection failures to the plugin's er
 
 ## Events list
 
-`package.json`'s `sources` declares `granola.meetings` under source-contract version 1, which the plugin implements
+`package.json`'s `sources` declares `granola.meetings` and the list snapshot `granola.meetings.list` under source-contract version 1. `granola.meetings` is what the plugin implements
 with the package's `events` and `cursor` modules, bundled into `dist/index.js`.
 
 `probe` asserts `granola_probe`, then reads `granola_get_account_info`, the source's one identity operation: the

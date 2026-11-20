@@ -4,7 +4,7 @@ import { encodeBoundCursor, encodeCursor } from "@we-the-rebel-alliance/source-c
 import { EVENT_LIMITS, PAGE, assertEventsListConformance, probeResultProblems, resultProblems, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
 import { EventsFailure } from "../src/events/errors.js"
 import { accountEmail, accountScopes, connectedEmails, readMeetings, readMeetingsPage } from "../src/events/granola.js"
-import { EVENTS_INPUT, MAX_BYTES, SETTLE_MS, SOURCE, granolaProbe, listEvents } from "../src/events/index.js"
+import { EVENTS_INPUT, MAX_BYTES, SETTLE_MS, SOURCE, granolaProbe, listEvents, meetingsList } from "../src/events/index.js"
 import { TOOLS_RPC_ID } from "../src/tools-rpc.js"
 import { setup } from "../src/setup.js"
 import { agent, fakeHost } from "./fakes.js"
@@ -77,6 +77,18 @@ describe("Granola's text", () => {
     expect(accountEmail({ content: JSON.stringify({ active_workspace: { display_name: "Synthetic" } }) })).toBeUndefined()
     expect(accountScopes({ content: JSON.stringify({ mcp_note_access: { scopes: ["personal", "public", "personal", 3] } }) })).toEqual(["personal", "public"])
     expect(accountScopes({ content: JSON.stringify({ email: EMAIL }) })).toBeUndefined()
+  })
+})
+
+describe("granola.meetings.list", () => {
+  it("reads meetings through search_meetings and returns the list shape", async () => {
+    const granola = syntheticGranola({ meetings: WITH_SECRET, plan: FREE_PLAN, now: NOW })
+    const snapshot = await meetingsList(granola.read, { source: SOURCE, list: "meetings", account: EMAIL }, NOW)
+    expect(granola.calls.map((call) => call.tool)).toContain("search_meetings")
+    expect(granola.calls.some((call) => call.tool === "get_account_info" || call.tool === "get_meetings")).toBe(false)
+    expect(snapshot).toMatchObject({ account: EMAIL, trust: "untrusted", data: { editable: false } })
+    expect(snapshot.data.items.map((item) => item.id)).toEqual(expect.arrayContaining(["m-05c", "m-07"]))
+    expect(snapshot.data.items.every((item) => item.text.length > 0 && item.text.length <= 200)).toBe(true)
   })
 })
 

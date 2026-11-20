@@ -49,7 +49,7 @@ change code, and [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and releases.
   the source contract's `tools-rpc` module (`@we-the-rebel-alliance/source-contract`, a devDependency pinned to a tag
   and bundled into `dist/index.js`); `src/tools-rpc.ts` is Granola's part of it, one `ToolsRpcPlugin` value and the
   method table. The executor it calls skips tool hooks, so `shapeResult` applies the hook's work itself.
-- **Sources.** `package.json`'s `sources` declares one source under source-contract version 1, `granola.meetings`:
+- **Sources.** `package.json`'s `sources` declares `granola.meetings` and the list snapshot `granola.meetings.list` under source-contract version 1. `granola.meetings`:
   `events_list` (`granola_events_list`, a tool and a tools RPC method) lists the meetings the user took part in, and
   `probe` (`granola_probe`, a tools RPC method only) names who is signed in. `src/events/` reads Granola's text and
   implements both with the package's `events` and `cursor` modules. `probe` alone reads `get_account_info`, the

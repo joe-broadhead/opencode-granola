@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- **Two Granola tools the plugin did not know.** `update_meeting_title` renames a meeting note and `update_summary`
+  edits its AI summary. Both are classified as writes, so at `ask-changes` they ask and at `read-only` they are denied;
+  status no longer lists them as unknown, and the README, the configuration and scripting guides, the skill and Jelly's
+  declaration name them. Both change notes other people in the workspace may see.
 - **List snapshot** `granola.meetings.list` (`output: "list"`). An app can bind it and render meetings without knowing
   Granola. It is the tools RPC method `events_list` with `{ "source": "granola", "list": "meetings" }`: the model tool's
   schema and description have no `list`, so an agent sees no list. It reads `search_meetings` over the 29 days a free

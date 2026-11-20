@@ -22,9 +22,11 @@ export const READ_TOOLS = [
 export const WRITE_TOOLS = [
   "create_folder",
   "update_folder",
+  "update_meeting_title",
   "add_note_to_folder",
   "remove_note_from_folder",
   "update_private_notes",
+  "update_summary",
   "generate_summary",
   "give_feedback",
   "create_meeting_note_from_transcript",

@@ -250,6 +250,12 @@
         "readOnly": false
       },
       {
+        "name": "granola.update_meeting_title",
+        "permission": "granola_update_meeting_title",
+        "effect": "allow",
+        "readOnly": false
+      },
+      {
         "name": "granola.add_note_to_folder",
         "permission": "granola_add_note_to_folder",
         "effect": "allow",
@@ -264,6 +270,12 @@
       {
         "name": "granola.update_private_notes",
         "permission": "granola_update_private_notes",
+        "effect": "allow",
+        "readOnly": false
+      },
+      {
+        "name": "granola.update_summary",
+        "permission": "granola_update_summary",
         "effect": "allow",
         "readOnly": false
       },

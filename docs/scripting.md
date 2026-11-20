@@ -7,7 +7,7 @@ client.
 | Method | The tool | Class |
 | --- | --- | --- |
 | `get_account_info`, `list_meeting_folders`, `search_meetings`, `get_meetings`, `get_meeting_transcript`, `query_granola_meetings`, `get_meeting_attachment`, `list_templates`, `search_transcripts`, `get_agent_brief` | the ten reads | read |
-| `create_folder`, `update_folder`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary`, `create_meeting_note_from_transcript` | Granola's writes | write |
+| `create_folder`, `update_folder`, `update_meeting_title`, `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `update_summary`, `generate_summary`, `create_meeting_note_from_transcript` | Granola's writes | write |
 | `give_feedback` | sends to Granola's team | send |
 | `export_markdown` | the plugin's export: writes a Markdown file under the export folder | export |
 | `events_list`, `probe` | the plugin's own reads, the `granola.meetings` source: the meetings you took part in as events, and who is signed in ([Events list](configuration.md#events-list)) | read |

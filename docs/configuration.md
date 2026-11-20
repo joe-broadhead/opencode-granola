@@ -70,9 +70,11 @@ that has the base "allow everything" rule, directly after that rule:
   { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_update_meeting_title", "resource": "*", "effect": "allow" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },
+  { "action": "granola_update_summary", "resource": "*", "effect": "allow" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },
   { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "allow" },
@@ -99,9 +101,11 @@ or, at `access: "ask-changes"`, this one:
   { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_update_folder", "resource": "*", "effect": "ask" },
+  { "action": "granola_update_meeting_title", "resource": "*", "effect": "ask" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_update_private_notes", "resource": "*", "effect": "ask" },
+  { "action": "granola_update_summary", "resource": "*", "effect": "ask" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "ask" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "ask" },
   { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "ask" },
@@ -128,9 +132,11 @@ or, at `access: "read-only"`:
   { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_update_folder", "resource": "*", "effect": "deny" },
+  { "action": "granola_update_meeting_title", "resource": "*", "effect": "deny" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_update_private_notes", "resource": "*", "effect": "deny" },
+  { "action": "granola_update_summary", "resource": "*", "effect": "deny" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "deny" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "deny" },
   { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "deny" },
@@ -142,8 +148,8 @@ The block is generated from `defaultRules(access)` in `src/permissions.ts`, so i
 So:
 
 - Granola's known reads run without a prompt at every `access` value.
-- At the default `"all"`, every other tool runs too: Granola's writes (`create_folder`, `update_folder`,
-  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and
+- At the default `"all"`, every other tool runs too: Granola's writes (`create_folder`, `update_folder`, `update_meeting_title`,
+  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `update_summary`, `generate_summary` and
   `create_meeting_note_from_transcript`), `give_feedback`
   (which sends a report to Granola's team, and which Granola's own instructions tell the model to send unasked), the
   plugin's `export_markdown`, and any Granola tool this plugin version does not know yet.
@@ -197,9 +203,11 @@ For example, for an agent `reviewer`, when your top-level `permissions` allow `g
         { "action": "granola_probe", "resource": "*", "effect": "allow" },
         { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
+        { "action": "granola_update_meeting_title", "resource": "*", "effect": "allow" },
         { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },
+        { "action": "granola_update_summary", "resource": "*", "effect": "allow" },
         { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },
         { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },
         { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "allow" },
@@ -241,9 +249,11 @@ Tools the plugin does not know yet, and exports, still ask.
   "permissions": [
     { "action": "granola_create_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_update_folder", "resource": "*", "effect": "deny" },
+    { "action": "granola_update_meeting_title", "resource": "*", "effect": "deny" },
     { "action": "granola_add_note_to_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_update_private_notes", "resource": "*", "effect": "deny" },
+    { "action": "granola_update_summary", "resource": "*", "effect": "deny" },
     { "action": "granola_generate_summary", "resource": "*", "effect": "deny" }
   ]
 }

@@ -104,9 +104,34 @@ async function cases(): Promise<PageCase[]> {
  * The kit's checks that do not apply to this source, and why: a free source bills nothing (`billed-cost`), it declares
  * no `details`, no `scope.suggest` and no snapshot output (`details`, `suggest`, `output-schema`), it removes nothing
  * (`removals-are-final`), and it states why no meeting fails on its own and no cursor expires (`failed-holds-cursor`,
- * `gap-and-cursor-expired`, with ATOMIC and NO_EXPIRY). Every other check runs, `gap-once-per-read` on the free plan's gap.
+ * `gap-and-cursor-expired`, with ATOMIC and NO_EXPIRY). The v0.3 checks in ABSENT do not apply either; each reason is
+ * non-empty, which is what the kit accepts for a stated skip. Every other check runs, `gap-once-per-read` on the free plan's gap.
  */
-const NOT_APPLICABLE = ["billed-cost", "details", "failed-holds-cursor", "gap-and-cursor-expired", "output-schema", "removals-are-final", "suggest"]
+const NOT_APPLICABLE = [
+  "actor-kind",
+  "billed-cost",
+  "commitment-key",
+  "details",
+  "facts",
+  "failed-holds-cursor",
+  "gap-and-cursor-expired",
+  "hints",
+  "one-author",
+  "output-schema",
+  "parts-stable",
+  "removals-are-final",
+  "routines",
+  "suggest",
+]
+const ABSENT = {
+  "actor-kind": "the fixture names no machine actor, so actor-kind does not apply",
+  "commitment-key": "no page carries a commitment, so commitment-key does not apply",
+  facts: "no page carries a fact, so facts does not apply",
+  hints: "the source declares no hint file, so hints does not apply",
+  "one-author": "no page lists a from or author actor, so one-author does not apply",
+  "parts-stable": "no page carries a part, so parts-stable does not apply",
+  routines: "the source declares no routine file, so routines does not apply",
+}
 
 const reports: ConformanceReport[] = []
 
@@ -117,7 +142,11 @@ describe("the source contract's conformance kit", () => {
     expect(declarationProblems(pkg.sources, { tools })).toEqual([])
     expect(sources.rpc).toBe(TOOLS_RPC_ID)
     expect(pkg.name).toBe(PACKAGE)
-    expect(sources.items.map((item) => [item.id, item.kind])).toEqual([[SOURCE_ID, "events"]])
+    expect(sources.items.map((item) => [item.id, item.kind])).toEqual([
+      [SOURCE_ID, "events"],
+      ["granola.meetings.list", "snapshot"],
+    ])
+    expect(sources.items.find((item) => item.id === "granola.meetings.list")).toMatchObject({ output: "list", tool: "events_list" })
   })
 
   it("the descriptor and the read agree: the account is named, it is the email probe answers, and no read takes another", async () => {
@@ -157,14 +186,41 @@ describe("the source contract's conformance kit", () => {
     expect(report.checks.filter((check) => check.notApplicable).map((check) => check.name).sort()).toEqual(NOT_APPLICABLE)
     const reasons = Object.fromEntries(report.checks.filter((check) => check.reason !== undefined).map((check) => [check.name, check.reason]))
     expect(reasons).toMatchObject({ "failed-holds-cursor": ATOMIC, "gap-and-cursor-expired": NO_EXPIRY })
+    for (const [name, reason] of Object.entries(ABSENT)) {
+      expect(reason.trim()).not.toBe("")
+      expect(report.checks.find((check) => check.name === name)).toMatchObject({ ran: false, notApplicable: true, problems: [] })
+    }
     expect(report.ok).toBe(true)
   })
 
+  it("granola.meetings.list keeps the contract", async () => {
+    const listed = sources.items.find((item) => item.id === "granola.meetings.list")!
+    const report = await sourceConformance({
+      plugin: pkg.name,
+      source: listed,
+      tools,
+      calls: {
+        snapshot: (input, session) => eventsMethod(context(session.permission), () => NOW).run(input, call()) as Promise<Record<string, unknown>>,
+        probe: (input, session) => probeMethod(context(session.permission)).run(input, call()),
+      },
+      snapshotCases: [{ ...(listed.input ?? {}), account: EMAIL }],
+      cases: [],
+      account: EMAIL,
+      sources,
+      describe: { id: TOOLS_RPC_ID },
+    })
+    reports.push(report)
+    expect(report.problems).toEqual([])
+    expect(report.checks.filter((check) => !check.ran && !check.notApplicable).map((check) => check.name)).toEqual([])
+    expect(report.ok).toBe(true)
+    expect(report.incomplete).toBe(false)
+  })
+
   it("writes the report a release attaches", () => {
-    expect(reports.map((report) => report.source)).toEqual([SOURCE_ID])
+    expect(reports.map((report) => report.source).sort()).toEqual([SOURCE_ID, "granola.meetings.list"].sort())
     const installed = readInstalledDescriptor(root, { version: pkg.version })
     const report = {
-      contract: "@we-the-rebel-alliance/source-contract@0.2.0",
+      contract: "@we-the-rebel-alliance/source-contract@0.3.0",
       plugin: pkg.name,
       version: pkg.version,
       descriptorHash: installed.ok ? installed.value.hash : null,

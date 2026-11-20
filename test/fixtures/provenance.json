@@ -3,25 +3,26 @@
     {
       "fixture": "live-tools.json",
       "evidence": "live-observed",
-      "listedAt": "2026-11-14",
+      "listedAt": "2026-11-20",
       "server": "granola",
       "endpoint": "https://mcp.granola.ai/mcp",
       "source": "scripts/capture-tools.mjs, signed in",
-      "host": "2.2.6",
+      "host": "2.3.2",
       "protocol": "2025-06-18",
-      "count": 19,
+      "count": 21,
+      "redactions": 0,
       "annotations": "every tool",
       "schemas": "recorded",
       "digest": {
         "algorithm": "sha256",
         "of": "canonical JSON of the recorded tools, sorted by name",
-        "value": "d735fcc606e69f91d89478517101413b35fa5f5c5e9e596ba8cb39501e60c680"
+        "value": "4ce88b9af919cd92599bfbfe432ca58e7bac9f4d67365a0d5f155d04eca273d4"
       }
     }
   ],
   "live": {
     "fixture": "live-tools.json",
-    "listedAt": "2026-11-14"
+    "listedAt": "2026-11-20"
   },
-  "note": "Digests are for drift detection, not a security signature. live names the newest live-observed capture, which the release gate requires to be at most 14 days old."
+  "note": "Digests are for drift detection, not a security signature. live names the newest live-observed capture, which the release gate requires to be at most 14 days old unless a waiver names it."
 }

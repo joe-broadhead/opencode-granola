@@ -11,7 +11,7 @@ Options go in the plugin's entry in `plugins`. Both are optional.
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-granola#v0.0.6",
+      "package": "github:joe-broadhead/opencode-granola#v0.0.7",
       "options": {
         "exportDirectory": "<an absolute path>/Granola",
         "allowUntestedHost": false
@@ -70,9 +70,11 @@ that has the base "allow everything" rule, directly after that rule:
   { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
+  { "action": "granola_update_meeting_title", "resource": "*", "effect": "allow" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "allow" },
   { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },
+  { "action": "granola_update_summary", "resource": "*", "effect": "allow" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },
   { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "allow" },
@@ -99,9 +101,11 @@ or, at `access: "ask-changes"`, this one:
   { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_update_folder", "resource": "*", "effect": "ask" },
+  { "action": "granola_update_meeting_title", "resource": "*", "effect": "ask" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "ask" },
   { "action": "granola_update_private_notes", "resource": "*", "effect": "ask" },
+  { "action": "granola_update_summary", "resource": "*", "effect": "ask" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "ask" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "ask" },
   { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "ask" },
@@ -128,9 +132,11 @@ or, at `access: "read-only"`:
   { "action": "granola_probe", "resource": "*", "effect": "allow" },
   { "action": "granola_create_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_update_folder", "resource": "*", "effect": "deny" },
+  { "action": "granola_update_meeting_title", "resource": "*", "effect": "deny" },
   { "action": "granola_add_note_to_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "deny" },
   { "action": "granola_update_private_notes", "resource": "*", "effect": "deny" },
+  { "action": "granola_update_summary", "resource": "*", "effect": "deny" },
   { "action": "granola_generate_summary", "resource": "*", "effect": "deny" },
   { "action": "granola_give_feedback", "resource": "*", "effect": "deny" },
   { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "deny" },
@@ -142,8 +148,8 @@ The block is generated from `defaultRules(access)` in `src/permissions.ts`, so i
 So:
 
 - Granola's known reads run without a prompt at every `access` value.
-- At the default `"all"`, every other tool runs too: Granola's writes (`create_folder`, `update_folder`,
-  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `generate_summary` and
+- At the default `"all"`, every other tool runs too: Granola's writes (`create_folder`, `update_folder`, `update_meeting_title`,
+  `add_note_to_folder`, `remove_note_from_folder`, `update_private_notes`, `update_summary`, `generate_summary` and
   `create_meeting_note_from_transcript`), `give_feedback`
   (which sends a report to Granola's team, and which Granola's own instructions tell the model to send unasked), the
   plugin's `export_markdown`, and any Granola tool this plugin version does not know yet.
@@ -197,9 +203,11 @@ For example, for an agent `reviewer`, when your top-level `permissions` allow `g
         { "action": "granola_probe", "resource": "*", "effect": "allow" },
         { "action": "granola_create_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_update_folder", "resource": "*", "effect": "allow" },
+        { "action": "granola_update_meeting_title", "resource": "*", "effect": "allow" },
         { "action": "granola_add_note_to_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "allow" },
         { "action": "granola_update_private_notes", "resource": "*", "effect": "allow" },
+        { "action": "granola_update_summary", "resource": "*", "effect": "allow" },
         { "action": "granola_generate_summary", "resource": "*", "effect": "allow" },
         { "action": "granola_give_feedback", "resource": "*", "effect": "allow" },
         { "action": "granola_create_meeting_note_from_transcript", "resource": "*", "effect": "allow" },
@@ -241,9 +249,11 @@ Tools the plugin does not know yet, and exports, still ask.
   "permissions": [
     { "action": "granola_create_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_update_folder", "resource": "*", "effect": "deny" },
+    { "action": "granola_update_meeting_title", "resource": "*", "effect": "deny" },
     { "action": "granola_add_note_to_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_remove_note_from_folder", "resource": "*", "effect": "deny" },
     { "action": "granola_update_private_notes", "resource": "*", "effect": "deny" },
+    { "action": "granola_update_summary", "resource": "*", "effect": "deny" },
     { "action": "granola_generate_summary", "resource": "*", "effect": "deny" }
   ]
 }
@@ -378,7 +388,7 @@ recipe above.
 
 ## Events list
 
-`package.json`'s `sources` declares one source under source-contract version 1, `granola.meetings`
+`package.json`'s `sources` declares `granola.meetings` and the list snapshot `granola.meetings.list` under source-contract version 1. `granola.meetings`
 (`@we-the-rebel-alliance/source-contract`): `granola_events_list` (`tools.granola.events_list` in Code Mode, and the
 tools RPC method `events_list`) lists the meetings you took part in since a cursor, as normalised events, oldest first,
 and the tools RPC method `probe` names who is signed in. Both only read, never ask and call no model, so a consumer
@@ -390,7 +400,12 @@ probe({ source?, account? })
 
 events_list({ account, since?, cursor?, limit?, source? })
   → { source: "granola", account: "<email>", owner: { id, label }, events, cursor, more, refused?, gap?, plugin, asOf, trust: "untrusted" }
+
+events_list({ account, source: "granola", list: "meetings" })
+  → { source: "granola", account: "<email>", data: { items, editable: false }, asOf, trust: "untrusted" }
 ```
+
+`granola.meetings.list` is a snapshot. Its `tool` is `events_list`, its `output` is `list`, and its `input` is `{ "source": "granola", "list": "meetings" }` on the tools RPC method only; the model tool has no `list`. It calls `search_meetings` for the last 29 days, the window a free plan still shows, and returns at most 50 titles. When the search found a meeting it calls `get_meetings` once for the first batch, as the events source does, so the answer names the signed-in account: another account is `ACCOUNT_MISMATCH` and an answer that holds meetings and names none is `UNAVAILABLE`. It never calls `get_account_info`. `permission.tool` is `granola_events_list`. `permission.operations` are `get_account_info` (identity, which only `probe` reads), `search_meetings` and `get_meetings`. `private` is true. `cost` is free. `maxAgeSec` is 900. `maxBytes` is 65,536. A title is screened whole and then cut to 200 characters, control characters are stripped, an id appears once, and the answer holds at most 50 items and stops earlier if it would exceed 64 KiB. `granola.meetings` is not renamed.
 
 The descriptor declares `accounts.named: true`: every read names its account, the signed-in Granola email. A consumer
 learns it from `probe`, which needs no account, and passes it to every `events_list` call; `default`, the account an
@@ -408,7 +423,7 @@ the answer does not carry it.
 | `since` | Where to start without a cursor: an ISO date (a UTC day) or date-time with `Z` or an offset. Default: 24 hours ago. |
 | `cursor` | The previous result's cursor, for the same account. It wins over `since`. |
 | `limit` | Most events, 1 to 500; 100 by default. A result also stops before 64 KiB of JSON. |
-| `source` | `granola`, the one source. |
+| `source` | `granola`. |
 
 How it reads, through OpenCode's own Granola tools, each with its own permission:
 

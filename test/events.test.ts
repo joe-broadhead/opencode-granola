@@ -4,7 +4,7 @@ import { encodeBoundCursor, encodeCursor } from "@we-the-rebel-alliance/source-c
 import { EVENT_LIMITS, PAGE, assertEventsListConformance, probeResultProblems, resultProblems, type EventsListResult } from "@we-the-rebel-alliance/source-contract/events"
 import { EventsFailure } from "../src/events/errors.js"
 import { accountEmail, accountScopes, connectedEmails, readMeetings, readMeetingsPage } from "../src/events/granola.js"
-import { EVENTS_INPUT, MAX_BYTES, SETTLE_MS, SOURCE, granolaProbe, listEvents } from "../src/events/index.js"
+import { EVENTS_INPUT, EVENTS_RPC_INPUT, MAX_BYTES, SETTLE_MS, SOURCE, granolaProbe, listEvents, meetingsList } from "../src/events/index.js"
 import { TOOLS_RPC_ID } from "../src/tools-rpc.js"
 import { setup } from "../src/setup.js"
 import { agent, fakeHost } from "./fakes.js"
@@ -77,6 +77,76 @@ describe("Granola's text", () => {
     expect(accountEmail({ content: JSON.stringify({ active_workspace: { display_name: "Synthetic" } }) })).toBeUndefined()
     expect(accountScopes({ content: JSON.stringify({ mcp_note_access: { scopes: ["personal", "public", "personal", 3] } }) })).toEqual(["personal", "public"])
     expect(accountScopes({ content: JSON.stringify({ email: EMAIL }) })).toBeUndefined()
+  })
+})
+
+describe("granola.meetings.list", () => {
+  it("keeps list off the model tool, and on the tools RPC method", () => {
+    expect(Object.keys(EVENTS_INPUT.properties)).not.toContain("list")
+    expect(Object.keys(EVENTS_RPC_INPUT.properties)).toContain("list")
+  })
+
+  it("reads meetings through search_meetings, verifies the account through get_meetings, and returns the list shape", async () => {
+    const granola = syntheticGranola({ meetings: WITH_SECRET, plan: FREE_PLAN, now: NOW })
+    const snapshot = await meetingsList(granola.read, { source: SOURCE, list: "meetings", account: EMAIL }, NOW)
+    expect(granola.calls.map((call) => call.tool)).toContain("search_meetings")
+    expect(granola.calls.map((call) => call.tool)).toContain("get_meetings")
+    expect(granola.calls.some((call) => call.tool === "get_account_info")).toBe(false)
+    expect(snapshot).toMatchObject({ account: EMAIL, trust: "untrusted", data: { editable: false } })
+    expect(snapshot.data.items.map((item) => item.id)).toEqual(expect.arrayContaining(["m-05c", "m-07"]))
+    expect(snapshot.data.items.every((item) => item.text.length > 0 && item.text.length <= 200)).toBe(true)
+  })
+
+  it("sorts newest first before the cap, independent of the search order", async () => {
+    const rows = [
+      { id: "m-old", title: "Old", at: "2026-10-01T09:00:00Z" },
+      { id: "m-new", title: "New", at: "2026-11-01T09:00:00Z" },
+      { id: "m-mid", title: "Mid", at: "2026-10-15T09:00:00Z" },
+    ]
+    const page = rows.map((row) => `<meeting id="${row.id}" title="${row.title}" meeting_at="${row.at}" />`).join("")
+    const read = async (tool: string) =>
+      ({
+        content: [
+          {
+            type: "text",
+            text:
+              tool === "search_meetings"
+                ? `<meetings_data count="${rows.length}">${page}<pagination has_more="false" completion_status="complete" /></meetings_data>`
+                : `<connected_user_email>${EMAIL}</connected_user_email><meetings_data count="0"></meetings_data>`,
+          },
+        ],
+      }) as never
+    const snapshot = await meetingsList(read, { source: SOURCE, list: "meetings", account: EMAIL }, NOW)
+    expect(snapshot.data.items.map((item) => item.id)).toEqual(["m-new", "m-mid", "m-old"])
+  })
+
+  it("refuses another account, as the events source does", async () => {
+    const granola = syntheticGranola({ meetings: WITH_SECRET, now: NOW })
+    expect(await code(meetingsList(granola.read, { source: SOURCE, list: "meetings", account: "other@example.test" }, NOW))).toBe("ACCOUNT_MISMATCH")
+  })
+
+  it("screens the whole title before the 200-character cut", async () => {
+    // The secret starts past 200 characters, so a cut first would keep only a harmless prefix.
+    const straddling: SyntheticMeeting = { id: "m-cut", title: `${"x".repeat(199)} ghp_A1b2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8`, at: "2026-11-01T09:00:00Z", attended: true, participants: [], summary: "" }
+    const granola = syntheticGranola({ meetings: [...MEETINGS, straddling], pageSize: 100, now: NOW })
+    const snapshot = await meetingsList(granola.read, { source: SOURCE, list: "meetings", account: EMAIL }, NOW)
+    expect(snapshot.data.items.map((item) => item.id)).not.toContain("m-cut")
+  })
+
+  it("keeps 50 maximal titles inside maxBytes, and strips control characters", async () => {
+    const many = Array.from({ length: 50 }, (_, index): SyntheticMeeting => ({
+      id: `m-many-${index}`,
+      title: `${"\u0001".repeat(20)}${"t".repeat(180)}`,
+      at: new Date(NOW - (index + 1) * 3_600_000).toISOString(),
+      attended: true,
+      participants: [],
+      summary: "",
+    }))
+    const granola = syntheticGranola({ meetings: many, pageSize: 100, now: NOW })
+    const snapshot = await meetingsList(granola.read, { source: SOURCE, list: "meetings", account: EMAIL }, NOW)
+    expect(snapshot.data.items).toHaveLength(50)
+    expect(snapshot.data.items.every((item) => item.text.length === 180 && !item.text.includes("\u0001"))).toBe(true)
+    expect(new TextEncoder().encode(JSON.stringify(snapshot)).length).toBeLessThanOrEqual(MAX_BYTES)
   })
 })
 

@@ -39,14 +39,14 @@ describe("default Granola rules", () => {
     expect(effect(rules, toolID("give_feedback"))).toBe("deny")
   })
 
-  it("match the tools Granola's server lists: ten reads, eight writes and the plugin's export", () => {
+  it("match the tools Granola's server lists: ten reads, ten writes and the plugin's export", () => {
     expect([...READ_TOOLS].sort()).toEqual([
       "get_account_info", "get_agent_brief", "get_meeting_attachment", "get_meeting_transcript", "get_meetings",
       "list_meeting_folders", "list_templates", "query_granola_meetings", "search_meetings", "search_transcripts",
     ])
     expect([...WRITE_TOOLS].sort()).toEqual([
       "add_note_to_folder", "create_folder", "create_meeting_note_from_transcript", "generate_summary", "give_feedback",
-      "remove_note_from_folder", "update_folder", "update_private_notes",
+      "remove_note_from_folder", "update_folder", "update_meeting_title", "update_private_notes", "update_summary",
     ])
     expect([...PLUGIN_TOOLS]).toEqual(["export_markdown"])
   })

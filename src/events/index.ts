@@ -18,6 +18,7 @@ import {
   parseProbeInput,
   probeResult,
   screenEvents,
+  secretKinds,
   startTime,
 } from "@we-the-rebel-alliance/source-contract/events"
 import type { JsonSchema, OwnedMethod, ToolCall } from "@we-the-rebel-alliance/source-contract/tools-rpc"
@@ -174,6 +175,22 @@ export const EVENTS_INPUT = {
   },
 } as const satisfies JsonSchema
 
+/**
+ * The tools RPC method's input: the model tool's, plus the list snapshot. A list is for an app's view, not an agent,
+ * so it stays off the model's schema.
+ */
+export const EVENTS_RPC_INPUT = {
+  ...EVENTS_INPUT,
+  properties: {
+    ...EVENTS_INPUT.properties,
+    list: {
+      type: "string",
+      enum: ["meetings"],
+      description: "A list snapshot for an app, instead of events: up to 50 meeting titles from the last 29 days, as data.items. Pass account, and source granola.",
+    },
+  },
+} as const satisfies JsonSchema
+
 const ACTOR = {
   type: "object",
   additionalProperties: false,
@@ -237,6 +254,40 @@ export const EVENTS_OUTPUT = {
     },
   },
 } as const satisfies JsonSchema
+
+/** A list snapshot's answer, as the tools RPC method declares it: the registry's `output: "list"` envelope. */
+const LIST_ANSWER = {
+  type: "object",
+  additionalProperties: false,
+  required: ["source", "account", "data", "asOf", "trust"],
+  properties: {
+    source: { type: "string", const: SOURCE },
+    account: { type: "string", description: "The signed-in Granola email." },
+    data: {
+      type: "object",
+      additionalProperties: false,
+      required: ["items", "editable"],
+      properties: {
+        items: {
+          type: "array",
+          maxItems: 50,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "text"],
+            properties: { id: { type: "string", minLength: 1, maxLength: 128 }, text: { type: "string", maxLength: 200 } },
+          },
+        },
+        editable: { type: "boolean", const: false },
+      },
+    },
+    asOf: { type: "string", description: "When the list was read, UTC ISO." },
+    trust: { type: "string", const: "untrusted" },
+  },
+} as const satisfies JsonSchema
+
+/** The tools RPC method answers the events page or, with `list`, the list snapshot. */
+const EVENTS_METHOD_OUTPUT = { anyOf: [EVENTS_OUTPUT, LIST_ANSWER] } as const satisfies JsonSchema
 
 const PROBE_INPUT = {
   type: "object",
@@ -576,14 +627,89 @@ const assertAction = (ctx: EventsContext, action: string, context: ToolContext) 
     metadata: {},
   })
 
+/** The list registry holds 50 items. A list read asks Granola for the recent window and returns no more. */
+const LIST_CAP = 50
+/** C0 and C1 control characters: JSON escapes each to six bytes, so a title holding many would blow `maxBytes`. */
+const CONTROL = /[\u0000-\u001F\u007F-\u009F]/g
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value)
+
+/** Meetings as the contract's `list` output: id and title. Not editable. A title that holds a secret is left out. */
+export interface MeetingsList {
+  readonly source: string
+  readonly account: string
+  readonly data: { readonly items: readonly { readonly id: string; readonly text: string }[]; readonly editable: false }
+  readonly asOf: string
+  readonly trust: "untrusted"
+}
+
 /**
- * The tool's and the method's one run: asserts granola_events_list for the caller, then lists. The assert passes the
+ * The meetings list snapshot. It reads through the same `search_meetings` executor as `events_list`, not a second
+ * client, over the window a free plan still shows, and returns titles only. When the search found a meeting it reads
+ * `get_meetings` once for the first batch, as the events source does, so the answer names the signed-in account: another
+ * account is ACCOUNT_MISMATCH, and an answer that holds meetings and names none is UNAVAILABLE. It never reads
+ * `get_account_info`.
+ */
+export async function meetingsList(read: Read, input: unknown, now: number): Promise<MeetingsList> {
+  const data = isRecord(input) ? input : {}
+  const asked = typeof data["account"] === "string" ? accountOf(data["account"]) : undefined
+  if (asked === undefined) throw new EventsFailure(accountRequired())
+  const filters = { from_date: isoFloor(now - VISIBLE_MS), to_date: isoCeil(now), attended_only: true, limit: SEARCH_LIMIT, max_participants: MAX_PARTICIPANTS }
+  const found: MeetingFacts[] = []
+  let cursor: string | undefined
+  for (let page = 0; page < SEARCH_PAGES && found.length < LIST_CAP; page++) {
+    const result = readMeetingsPage(resultText(await read("search_meetings", { ...filters, ...(cursor === undefined ? {} : { cursor }) })))
+    if (result.incomplete) throw new EventsFailure(readFailed("search_meetings", "Granola could not list every meeting of the window", EVENTS_TOOL))
+    found.push(...result.meetings)
+    if (result.next === undefined || result.next === cursor) break
+    cursor = result.next
+  }
+  if (found.length > 0) {
+    const listing: Listing = { read, account: asked, details: new Map(), tried: new Set(), verified: false }
+    await getMeetings(listing, [...new Set(found.map((meeting) => meeting.id))].slice(0, DETAIL_BATCH))
+    if (!listing.verified) throw new EventsFailure(accountUnnamed())
+  }
+  // Newest first, independent of the order search_meetings answers in. A meeting whose search page gives no start keeps
+  // its relative place, as the sort is stable.
+  const ordered = [...found].sort((a, b) => (b.time ?? 0) - (a.time ?? 0))
+  const items: { id: string; text: string }[] = []
+  const seen = new Set<string>()
+  for (const meeting of ordered) {
+    if (items.length >= LIST_CAP) break
+    const id = meeting.id.slice(0, 128)
+    // The whole title is screened before the cut, so a secret that straddles 200 characters is still refused.
+    const whole = (meeting.title ?? "").replace(/\s+/g, " ").replace(CONTROL, "").trim()
+    if (id === "" || whole === "" || seen.has(id) || secretKinds(whole).length > 0) continue
+    seen.add(id)
+    items.push({ id, text: whole.slice(0, 200) })
+  }
+  const answer: MeetingsList = {
+    source: typeof data["source"] === "string" ? data["source"] : SOURCE,
+    account: asked,
+    data: { items, editable: false },
+    asOf: new Date(now).toISOString(),
+    trust: "untrusted",
+  }
+  // `maxBytes` holds with 50 maximal items: drop items from the end, the oldest, until the answer fits. The registry
+  // holds at most 50, so a shortened list is still a list.
+  while (items.length > 0 && new TextEncoder().encode(JSON.stringify(answer)).length > MAX_BYTES) items.pop()
+  return answer
+}
+
+/**
+ * The tool's one run: asserts granola_events_list for the caller, then lists the events page. The assert passes the
  * call's own source, so the tools RPC can tell this call's ask apart.
  */
 export async function runEvents(dependencies: EventsDependencies, input: unknown, context: ToolContext): Promise<EventsListResult> {
   const { ctx } = dependencies
   await assertAction(ctx, EVENTS_ACTION, context)
   return listEvents(granolaReader(ctx, context), input, (dependencies.now ?? Date.now)())
+}
+
+/** The tools RPC method's list run: the same assert, then the list snapshot. */
+async function runMeetingsList(dependencies: EventsDependencies, input: unknown, context: ToolContext): Promise<MeetingsList> {
+  const { ctx } = dependencies
+  await assertAction(ctx, EVENTS_ACTION, context)
+  return meetingsList(granolaReader(ctx, context), input, (dependencies.now ?? Date.now)())
 }
 
 /** probe's one run: asserts granola_probe for the caller, then reads who is signed in. */
@@ -627,7 +753,10 @@ export async function registerEvents(ctx: EventsContext & { readonly tool: Pick<
   })
 }
 
-/** The tools RPC's events_list method: the tool's own run, as the envelope's session; EventsFailure becomes the script's code. */
+/**
+ * The tools RPC's events_list method: the tool's own run, as the envelope's session; EventsFailure becomes the script's
+ * code. Its input, and only its input, carries `list`: a list snapshot is for an app's view, not an agent.
+ */
 export function eventsMethod(ctx: EventsContext, now?: () => number): OwnedMethod {
   const dependencies: EventsDependencies = { ctx, ...(now ? { now } : {}) }
   return {
@@ -636,9 +765,12 @@ export function eventsMethod(ctx: EventsContext, now?: () => number): OwnedMetho
     name: EVENTS_TOOL,
     action: EVENTS_ACTION,
     description: EVENTS_DESCRIPTION,
-    input: EVENTS_INPUT,
-    output: EVENTS_OUTPUT,
-    run: (input: unknown, call: ToolCall) => runEvents(dependencies, input, call as unknown as ToolContext),
+    input: EVENTS_RPC_INPUT,
+    output: EVENTS_METHOD_OUTPUT,
+    run: (input: unknown, call: ToolCall) =>
+      isRecord(input) && input["list"] === "meetings"
+        ? runMeetingsList(dependencies, input, call as unknown as ToolContext)
+        : runEvents(dependencies, input, call as unknown as ToolContext),
   }
 }
 

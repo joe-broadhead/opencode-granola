@@ -1,6 +1,6 @@
 {
   "name": "@joe-broadhead/opencode-granola",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": true,
   "description": "Unofficial OpenCode plugin for Granola meeting notes, through Granola's official MCP server",
   "keywords": [
@@ -101,6 +101,36 @@
           "class": "free"
         },
         "maxBytes": 65536
+      },
+      {
+        "id": "granola.meetings.list",
+        "kind": "snapshot",
+        "tool": "events_list",
+        "input": {
+          "source": "granola",
+          "list": "meetings"
+        },
+        "output": "list",
+        "accounts": {
+          "named": true
+        },
+        "permission": {
+          "tool": "granola_events_list",
+          "operations": [
+            "get_account_info",
+            "search_meetings",
+            "get_meetings"
+          ],
+          "identity": [
+            "get_account_info"
+          ]
+        },
+        "private": true,
+        "cost": {
+          "class": "free"
+        },
+        "maxAgeSec": 900,
+        "maxBytes": 65536
       }
     ]
   },
@@ -128,7 +158,7 @@
     "@opentui/core": "0.8.0",
     "@opentui/solid": "0.8.0",
     "@types/node": "22.20.5",
-    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.2.0",
+    "@we-the-rebel-alliance/source-contract": "github:we-the-rebel-alliance/source-contract#v0.3.0",
     "babel-preset-solid": "1.9.16",
     "esbuild": "0.28.2",
     "solid-js": "1.9.16",
@@ -220,6 +250,12 @@
         "readOnly": false
       },
       {
+        "name": "granola.update_meeting_title",
+        "permission": "granola_update_meeting_title",
+        "effect": "allow",
+        "readOnly": false
+      },
+      {
         "name": "granola.add_note_to_folder",
         "permission": "granola_add_note_to_folder",
         "effect": "allow",
@@ -234,6 +270,12 @@
       {
         "name": "granola.update_private_notes",
         "permission": "granola_update_private_notes",
+        "effect": "allow",
+        "readOnly": false
+      },
+      {
+        "name": "granola.update_summary",
+        "permission": "granola_update_summary",
         "effect": "allow",
         "readOnly": false
       },

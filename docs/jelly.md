@@ -13,7 +13,7 @@ declaration, because that schema accepts no unknown keys.
 
 ## Tools and permissions
 
-21 tools are declared (11 read-only). Jelly's agents have no base "allow everything"
+23 tools are declared (11 read-only). Jelly's agents have no base "allow everything"
 rule, so this plugin's own default rules, which it puts after that rule, never reach them. Jelly
 writes each declared `ask` or `deny` as that tool's default instead (the person's own choice
 replaces it), and denies a read-only helper every tool not marked `readOnly`. A declared `allow`
@@ -29,7 +29,7 @@ changes nothing in Jelly.
 `granola_sign_out` is declared, not read-only, with a note: Granola serves it as a destructive change (it revokes the
 sign-in for every connection that shares it), so a read-only helper is never given it. The plugin removes it from the
 agents' tools in OpenCode and in Jelly alike; sign out from the card, or with `opencode mcp logout granola`.
-`granola_create_meeting_note_from_transcript` is one of Granola's writes: it creates a private note.
+`granola_create_meeting_note_from_transcript` is one of Granola's writes: it creates a private note. `granola_update_meeting_title` and `granola_update_summary` are writes too: they change a meeting note other people in the workspace may see.
 
 A tool the upstream server adds later is not declared, so in Jelly it is not asked about by
 default. Keep `jelly.tools` in step with the known-tool list; `test/jelly.test.ts` checks
@@ -85,4 +85,4 @@ not know declared choices yet refuses the whole declaration, so this needs a Jel
 Jelly's curated catalogue pins an exact version. Each release is published under a new version, so a review in
 Jelly can tell the two apart.
 
-The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit equal to the copy every plugin carries. The tools RPC and the source contract come from the pinned `@we-the-rebel-alliance/source-contract` package, bundled into `dist/index.js`; `package.json`'s `sources` declares `granola.meetings`, which Jelly reads from the installed package.
+The declaration test runs the shared kit, `test/support/jelly-kit.ts`, which checks the declaration and this page against Jelly's plugin authors' standard. `scripts/check-copies.mjs` holds the kit equal to the copy every plugin carries. The tools RPC and the source contract come from the pinned `@we-the-rebel-alliance/source-contract` package, bundled into `dist/index.js`; `package.json`'s `sources` declares `granola.meetings` and `granola.meetings.list`, which Jelly reads from the installed package.

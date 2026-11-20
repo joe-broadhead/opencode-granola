@@ -97,6 +97,29 @@ describe("granola.meetings.list", () => {
     expect(snapshot.data.items.every((item) => item.text.length > 0 && item.text.length <= 200)).toBe(true)
   })
 
+  it("sorts newest first before the cap, independent of the search order", async () => {
+    const rows = [
+      { id: "m-old", title: "Old", at: "2026-10-01T09:00:00Z" },
+      { id: "m-new", title: "New", at: "2026-11-01T09:00:00Z" },
+      { id: "m-mid", title: "Mid", at: "2026-10-15T09:00:00Z" },
+    ]
+    const page = rows.map((row) => `<meeting id="${row.id}" title="${row.title}" meeting_at="${row.at}" />`).join("")
+    const read = async (tool: string) =>
+      ({
+        content: [
+          {
+            type: "text",
+            text:
+              tool === "search_meetings"
+                ? `<meetings_data count="${rows.length}">${page}<pagination has_more="false" completion_status="complete" /></meetings_data>`
+                : `<connected_user_email>${EMAIL}</connected_user_email><meetings_data count="0"></meetings_data>`,
+          },
+        ],
+      }) as never
+    const snapshot = await meetingsList(read, { source: SOURCE, list: "meetings", account: EMAIL }, NOW)
+    expect(snapshot.data.items.map((item) => item.id)).toEqual(["m-new", "m-mid", "m-old"])
+  })
+
   it("refuses another account, as the events source does", async () => {
     const granola = syntheticGranola({ meetings: WITH_SECRET, now: NOW })
     expect(await code(meetingsList(granola.read, { source: SOURCE, list: "meetings", account: "other@example.test" }, NOW))).toBe("ACCOUNT_MISMATCH")

@@ -668,9 +668,12 @@ export async function meetingsList(read: Read, input: unknown, now: number): Pro
     await getMeetings(listing, [...new Set(found.map((meeting) => meeting.id))].slice(0, DETAIL_BATCH))
     if (!listing.verified) throw new EventsFailure(accountUnnamed())
   }
+  // Newest first, independent of the order search_meetings answers in. A meeting whose search page gives no start keeps
+  // its relative place, as the sort is stable.
+  const ordered = [...found].sort((a, b) => (b.time ?? 0) - (a.time ?? 0))
   const items: { id: string; text: string }[] = []
   const seen = new Set<string>()
-  for (const meeting of found) {
+  for (const meeting of ordered) {
     if (items.length >= LIST_CAP) break
     const id = meeting.id.slice(0, 128)
     // The whole title is screened before the cut, so a secret that straddles 200 characters is still refused.

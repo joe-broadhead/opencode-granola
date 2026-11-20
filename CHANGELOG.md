@@ -6,8 +6,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- **Two Granola tools the plugin did not know.** `update_meeting_title` renames a meeting note and `update_summary`
-  edits its AI summary. Both are classified as writes, so at `ask-changes` they ask and at `read-only` they are denied;
+- **Two Granola tools the plugin did not know.** `update_meeting_title` renames a meeting note (given an upcoming
+  calendar event's `evt_` id, it creates the note first) and `update_summary` edits its AI summary. Both are classified as writes, so at `ask-changes` they ask and at `read-only` they are denied;
   status no longer lists them as unknown, and the README, the configuration and scripting guides, the skill and Jelly's
   declaration name them. Both change notes other people in the workspace may see.
 - **List snapshot** `granola.meetings.list` (`output: "list"`). An app can bind it and render meetings without knowing
@@ -26,6 +26,8 @@ All notable changes to this project are documented here. The format follows [Kee
   (no runtime dependency). The declaration and the probe answer are unchanged: the plugin sends none of v0.3.0's new
   keys (`facts`, `hints`, `routines`, an actor's `kind`, `sections` or `parts`), which a consumer still on v0.2.0
   refuses. The conformance test names the seven v0.3 checks the source carries nothing for, each with its reason.
+- Jelly re-asks consent: `package.json`'s `jelly.tools` gains `granola.update_meeting_title` and
+  `granola.update_summary` (each not read-only), and its `sources` gains `granola.meetings.list`.
 
 ## [0.0.6] - 2026-11-18
 

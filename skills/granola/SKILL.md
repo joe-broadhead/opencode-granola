@@ -71,4 +71,4 @@ Ask before `overwrite: true`. Report the path, size and checksum it returns, and
 
 ## Scripts
 
-For a job that runs with no model, such as a cron job, the RPC `granola.meetings.tools` runs the ten reads as a session's agent. Its `describe` method lists them with their schemas; the guide is https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md.
+For a job that runs with no model, such as a cron job, the RPC `granola.meetings.tools` runs every tool this plugin knows, as a session's agent: the ten reads, the ten writes (`give_feedback` is a send), `export_markdown`, and the plugin's own source reads. Only a resolved `allow` runs: at the default `access: "all"` a script can read, write, send and export; at `"ask-changes"` an ask is refused because no one can answer it; at `"read-only"` only the reads run. Its `describe` method lists every method with its class, schema and permission; the guide is https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md.

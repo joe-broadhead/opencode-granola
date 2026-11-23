@@ -14,7 +14,7 @@ import {
   type ToolsRpcOptions,
 } from "@we-the-rebel-alliance/source-contract/tools-rpc"
 import { PLUGIN_ID } from "../src/meta.js"
-import { NEXT_STEPS, PLUGIN, pluginError, shapeInput, shapeResult, TOOLS_RPC_ID } from "../src/tools-rpc.js"
+import { NEXT_STEPS, PLUGIN, pluginError, shapeResult, TOOLS_RPC_ID } from "../src/tools-rpc.js"
 
 type Effect = "allow" | "deny" | "ask"
 type Rule = { action: string; resource: string; effect: Effect }

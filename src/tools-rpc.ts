@@ -28,7 +28,7 @@ export const TOOLS_RPC_ID = toolsRpcId(PLUGIN_ID)
 
 /**
  * Every known tool, by its upstream name, with its class. The table is `src/known-tools.ts`, the one list the default
- * rules, this module and the skills read: the ten reads of today's server, its eight writes, and the plugin's own
+ * rules, this module and the skills read: the ten reads of today's server, its ten writes, and the plugin's own
  * export. `give_feedback` sends to Granola's team, so it is a send; like every other tool it is allowed at the default
  * `access`. `sign_out` is not a tool this plugin offers (it removes it from the registry), so it is not here. A tool
  * the server adds later is not a method; `describe` lists it as unclassified.

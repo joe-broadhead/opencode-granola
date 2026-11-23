@@ -241,8 +241,12 @@ Run one write without asking:
 }
 ```
 
-Refuse every known Granola write. A tool whose last matching rule is a `deny` on `*` is also hidden from the model.
-Tools the plugin does not know yet, and exports, still ask.
+Refuse these known Granola writes. A tool whose last matching rule is a `deny` on `*` is also hidden from the model.
+This recipe lists only the writes below. The send `give_feedback`, the write `create_meeting_note_from_transcript`, the
+export and a tool the plugin does not know yet all follow `access` — allowed at `"all"`, ask at `"ask-changes"` and
+denied at `"read-only"` — so add a rule for them if the recipe should cover them too. An export whose destination is
+outside the project may also prompt for the separate `external_directory` permission for that folder; that path check is
+not the export tool's action and does not apply to a destination inside the project.
 
 ```json
 {

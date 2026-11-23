@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.10] - 2026-11-23
+
+### Changed
+
+- The README, the configuration guide and the `granola` skill now state the tools RPC's access rules precisely: a script
+  call runs only when its resolved rule is `allow`; `access: "all"` needs no extra tool-action rule; `"ask-changes"`
+  refuses an export, write or send that resolves to `ask` unless the rule is an explicit `allow`, and `"read-only"`
+  denies it. The export tool's `external_directory` permission is described as a separate path check for a destination
+  outside the project, not as an extra export-tool allow. The known-limits section now states the conformance report's
+  actual not-applicable counts (14 checks for `granola.meetings`, 18 for `granola.meetings.list`). Documentation only;
+  no runtime, descriptor or permission behaviour changes.
+
 ## [0.0.7] - 2026-11-20
 
 ### Added

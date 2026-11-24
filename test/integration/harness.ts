@@ -12,7 +12,7 @@ import { createServer } from "node:net"
 import { arch, platform } from "node:os"
 import { join, sep } from "node:path"
 import { setTimeout as sleep } from "node:timers/promises"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { OpenCode as Remote, type OpenCodeClient } from "@opencode/client"
 import { TESTED_HOSTS } from "../../src/hosts.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
@@ -55,21 +55,12 @@ export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" |
 const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "ask-changes", "read-only", "unload", "sign-in"] as const
 export type Project = (typeof PROJECTS)[number]
 
-/** A raw JSON request to a stock server, for routes the 2.2.3 client does not have. */
+/** A raw JSON request to a stock server, for a route its client does not expose. */
 export type Http = (
   method: string,
   path: string,
   body?: unknown,
 ) => Promise<{ data?: { id: string; lastOutcome?: string; lastOutput?: string }; message?: string } | undefined>
-
-/**
- * From OpenCode 2.3.1, `experimental.automation` replaces `experimental.schedule`, and a code action no longer runs when
- * it is created: it runs when the scheduler finds it due.
- */
-export const atLeast231 = (version: string): boolean => {
-  const [major, minor, patch] = version.split(".").map(Number) as [number, number, number]
-  return major > 2 || (major === 2 && (minor > 3 || (minor === 3 && patch >= 1)))
-}
 
 export interface Host {
   readonly version: string
@@ -85,7 +76,7 @@ export interface Host {
   exports(project: Project): string
   /** Replaces a project's config with one that no longer loads the Granola plugin. */
   removePlugin(project: Project): void
-  /** A raw JSON request to a stock server, for the routes the 2.2.3 client does not have. Embedded hosts have none. */
+  /** A raw JSON request to a stock server, for a route its client does not expose. Embedded hosts have none. */
   readonly http?: Http
   close(): Promise<void>
 }
@@ -114,10 +105,7 @@ export const OTHER_SERVER = { type: "remote", url: "https://mcp.example.invalid/
 const configOnly = (description: string, permissions?: readonly Rule[]) => ({ description, mode: "primary", ...(permissions ? { permissions } : {}) })
 
 /** Each project's opencode.jsonc. The probe comes after granola.meetings, because transforms run in config order. */
-function projectConfig(project: Project, plugin: string, fake: SyntheticGranola, exports: string, automations: boolean): object {
-  // A schedule's check program up to 2.3.0, an automation's code action from 2.3.1: how the suite runs Code Mode with
-  // nobody present to answer a prompt.
-  const experimental = automations ? { automations: true } : { schedules: true }
+function projectConfig(project: Project, plugin: string, fake: SyntheticGranola, exports: string): object {
   const granola = (options: object = { exportDirectory: exports }) => ({ package: plugin, options })
   const probe = (route: Parameters<SyntheticGranola["url"]>[0] = "connected") => ({ package: PROBE, options: { route: fake.url(route) } })
   switch (project) {
@@ -134,7 +122,6 @@ function projectConfig(project: Project, plugin: string, fake: SyntheticGranola,
           locked: configOnly("Denies Granola", [...defaultRules(), ...USER_RULES, deny("granola_*")]),
           careful: configOnly("Asks before get_meetings", [...defaultRules(), ...USER_RULES, ask("granola_get_meetings")]),
         },
-        experimental,
       }
     case "needs-auth":
       return { plugins: [granola(), probe("needs-auth")] }
@@ -149,14 +136,14 @@ function projectConfig(project: Project, plugin: string, fake: SyntheticGranola,
     case "untested":
       return { plugins: [granola({ exportDirectory: exports, allowUntestedHost: true }), probe()] }
     case "automation":
-      // A schedule's check program is authorized per tool for every resource, so a narrower export rule does not cover it.
-      return { plugins: [granola(), probe()], permissions: [allow("granola_export_markdown")], experimental }
+      // An automation's code action is authorized per tool for every resource, so a narrower export rule does not cover it.
+      return { plugins: [granola(), probe()], permissions: [allow("granola_export_markdown")] }
     case "ask-changes":
-      return { plugins: [granola({ exportDirectory: exports, access: "ask-changes" }), probe()], experimental }
+      return { plugins: [granola({ exportDirectory: exports, access: "ask-changes" }), probe()] }
     case "read-only":
-      return { plugins: [granola({ exportDirectory: exports, access: "read-only" }), probe()], experimental }
+      return { plugins: [granola({ exportDirectory: exports, access: "read-only" }), probe()] }
     case "unload":
-      return { plugins: [granola(), probe()], experimental }
+      return { plugins: [granola(), probe()] }
     case "sign-in":
       return { plugins: [granola(), probe("sign-in")] }
   }
@@ -171,7 +158,7 @@ interface Root {
   remove(): void
 }
 
-function makeRoot(label: string, plugin: string, fake: SyntheticGranola, automations = false): Root {
+function makeRoot(label: string, plugin: string, fake: SyntheticGranola): Root {
   const path = tempDirectory(`granola-host-${label}-`, true)
   const home = join(path, "home")
   const env = {
@@ -190,12 +177,12 @@ function makeRoot(label: string, plugin: string, fake: SyntheticGranola, automat
   const write = (project: Project, config: object) => writeFileSync(join(directory(project), "opencode.jsonc"), JSON.stringify(config, null, 2))
   for (const project of PROJECTS) {
     mkdirSync(directory(project), { recursive: true })
-    write(project, projectConfig(project, plugin, fake, exports(project), automations))
+    write(project, projectConfig(project, plugin, fake, exports(project)))
   }
   mkdirSync(join(directory("adopted"), SHADOWING_SKILL, ".."), { recursive: true })
   writeFileSync(join(directory("adopted"), SHADOWING_SKILL), "---\nname: granola\ndescription: The user's own Granola notes skill, for the host test.\n---\n\nUse the user's own steps.\n")
   const removePlugin = (project: Project) => {
-    const config = projectConfig(project, plugin, fake, exports(project), automations) as { plugins: { package: string }[] }
+    const config = projectConfig(project, plugin, fake, exports(project)) as { plugins: { package: string }[] }
     write(project, { ...config, plugins: config.plugins.filter((entry) => entry.package !== plugin) })
   }
   return { path, env, directory, exports, removePlugin, remove: () => rmSync(path, { recursive: true, force: true }) }
@@ -230,8 +217,8 @@ export async function globalPaths(client: Pick<Client, "agent" | "server">, loca
 /** Fails before any case runs if OpenCode resolved its home or tmp folder outside the temp root. */
 async function isolated(client: Pick<Client, "agent" | "server">, root: Root): Promise<void> {
   let paths: Awaited<ReturnType<typeof globalPaths>>
-  // The first request for a location waits for its plugins, which can time out while the machine is busy. From 2.2.7 it
-  // can also answer with no agents yet, so no plan rule and no home: ask again until the plan agent is listed.
+  // The first request for a location waits for its plugins, which can time out while the machine is busy. It can also
+  // answer with no agents yet, so no plan rule and no home: ask again until the plan agent is listed.
   for (const deadline = Date.now() + 120_000; ;) {
     try {
       paths = await globalPaths(client, { directory: root.directory("main") })
@@ -246,8 +233,8 @@ async function isolated(client: Pick<Client, "agent" | "server">, root: Root): P
 }
 
 /**
- * Waits until granola.meetings has finished activating, or failed to, in every project. From 2.2.7 a location answers
- * before its plugins have loaded, so a first status or RPC call there would find no granola.meetings yet.
+ * Waits until granola.meetings has finished activating, or failed to, in every project. A location answers before its
+ * plugins have loaded, so a first status or RPC call there would find no granola.meetings yet.
  */
 async function activatedEverywhere(client: Pick<Client, "plugin">, root: Root): Promise<void> {
   const deadline = Date.now() + 120_000
@@ -270,6 +257,35 @@ const hostFields = (root: Root) => ({
 
 /** The installed `@opencode/sdk` version, which the embedded host reports by default. */
 const SDK_VERSION = (JSON.parse(readFileSync(join(REPO, "node_modules", "@opencode", "sdk", "package.json"), "utf8")) as { version: string }).version
+
+/** The installed SDK and the modules beside it, which are the instances its own bundle imports. */
+const SDK_DIR = join(REPO, "node_modules", "@opencode", "sdk")
+const SDK_MODULES = join(REPO, "node_modules")
+
+/**
+ * The SDK's embedded host, with the automation scheduler that only a server process starts. `@opencode/server` is the
+ * only host that forks `Automation.run`; without it an automation's code action is never due, so the embedded host fits
+ * the scheduler in: the same Automation service, from the same @opencode/core module the SDK's bundle imports, wrapped
+ * in a layer that forks `run` in the host's scope. The modules are loaded by path, next to the SDK, so they are its
+ * instances and not a second copy.
+ */
+async function createSdk(options: Parameters<(typeof import("@opencode/sdk"))["OpenCode"]["create"]>[0]) {
+  const load = (...path: string[]) => import(pathToFileURL(join(...path)).href)
+  const { PromiseSdk } = await load(SDK_DIR, "dist", "promise.js")
+  const { Automation } = await load(SDK_MODULES, "@opencode", "core", "dist", "automation.js")
+  const { Effect, Layer } = await load(SDK_MODULES, "effect", "dist", "index.js")
+  const scheduling = Automation.node.mapLayer((layer: unknown) =>
+    Layer.effect(
+      Automation.Service,
+      Effect.gen(function* () {
+        const automations = yield* Automation.Service
+        yield* Effect.forkScoped(automations.run)
+        return automations
+      }),
+    ).pipe(Layer.provide(layer)),
+  )
+  return PromiseSdk.create(options, { overrides: [Automation.node.replace(scheduling)] }) as ReturnType<(typeof import("@opencode/sdk"))["OpenCode"]["create"]>
+}
 
 /**
  * The public `@opencode/sdk` host in this process, at the version installed as a devDependency. `version` is the
@@ -299,8 +315,7 @@ export async function startEmbedded(fake: SyntheticGranola, version: string = SD
     // The embedded SDK opens a location at the process working directory. Stay inside the temp root so that
     // location is not this repository.
     process.chdir(root.path)
-    const { OpenCode } = await import("@opencode/sdk")
-    const opencode = await OpenCode.create({
+    const opencode = await createSdk({
       // An embedded host reports "unknown" unless told, which the plugin's host check refuses.
       app: { version },
       config: { directory: join(root.path, "config"), project: true, claude: false },
@@ -311,6 +326,7 @@ export async function startEmbedded(fake: SyntheticGranola, version: string = SD
     })
     try {
       await isolated(opencode, root)
+      await activatedEverywhere(opencode, root)
     } catch (error) {
       await opencode.close()
       throw error
@@ -392,13 +408,13 @@ async function freePort(): Promise<number> {
  */
 export async function startBinary(version: string, fake: SyntheticGranola): Promise<Host> {
   const binary = stockBinary(version)
-  const root = makeRoot(`cli-${version}`, REPO, fake, atLeast231(version))
+  const root = makeRoot(`cli-${version}`, REPO, fake)
   const password = randomUUID()
   const port = await freePort()
   const env = { ...root.env, ...OFFLINE, ...QUIET, PATH: "/usr/bin:/bin", OPENCODE_PASSWORD: password }
   const stop = () => root.remove()
 
-  // Prints "opencode v2.2.3".
+  // Prints "opencode v2.4.1".
   const reported = spawnSync(binary, ["--version"], { cwd: root.path, env, encoding: "utf8" })
   if (reported.stdout.trim() !== `opencode v${version}`) {
     stop()
@@ -426,7 +442,7 @@ export async function startBinary(version: string, fake: SyntheticGranola): Prom
     stop()
   }
 
-  /** A raw request to this server, for routes the 2.2.3 client does not have. */
+  /** A raw request to this server, for a route its client does not expose. */
   const http: Http = async (method, path, body) => {
     const response = await fetch(`http://127.0.0.1:${port}${path}`, {
       method,
@@ -472,40 +488,45 @@ export function repositoryChanges(): string {
 /** How OpenCode answered a program run with nobody present: it ran and returned, or its message. */
 export type Unattended = { readonly ok: true } | { readonly ok: false; readonly error: string }
 
-/** A schedule check returned a boolean or `{ wake }`; an automation returns nothing, so the program is wrapped. */
-const asCheck = (code: string) =>
-  `const checked = await (async () => {\n${code}\n})()\nif (typeof checked !== "boolean" && !(typeof checked === "object" && checked !== null && typeof checked.wake === "boolean")) throw new Error("A code check must return a boolean or { wake, state?, message? }")`
+/** One automation's route answers: what its run settled as, if it has run. */
+interface AutomationRun {
+  readonly lastOutcome?: string
+  readonly lastOutput?: string
+}
 
 /**
  * Runs a Code Mode program once with nobody present to answer a prompt, as the session's agent and under its rules,
- * with no model, and answers as a schedule's `if: { code }` check did at creation up to 2.3.0: `ok` when the program
- * returned a boolean or `{ wake }`, else OpenCode's message (a refusal, or what the program threw). Up to 2.3.0, and on
- * the embedded host, it is that check, and the schedule is deleted at once. From 2.3.1 a stock server runs an
- * automation's code action, due at once, over raw HTTP: creation refuses what the rules do not allow, as the check did,
- * and the run's outcome is read back before the automation is deleted. A run that never comes throws, so it is never
- * read as a refusal.
+ * with no model. Creation refuses what the rules do not allow, and the run's outcome is read back before the
+ * automation is deleted. A run that never comes throws, so it is never read as a refusal. Both hosts now run the
+ * scheduler: `opencode serve` starts it, and the embedded host gets it from `createSdk`'s override. The stock host
+ * answers over raw HTTP (its client's cast path for the route) and the embedded host through the client's own
+ * `experimental.automation` methods.
  */
 export async function unattended(host: Host, sessionID: string, code: string): Promise<Unattended> {
   const name = "granola-host-test"
   const refused = (error: unknown): Unattended => ({ ok: false, error: error instanceof Error ? error.message : String(error) })
-  if (host.http === undefined || !atLeast231(host.version)) {
-    try {
-      const schedule = await host.client.experimental.schedule.create({ sessionID, name, when: { in: "6 hours" }, prompt: "noop", if: { code } })
-      await host.client.experimental.schedule.delete({ scheduleID: schedule.id })
-      return { ok: true }
-    } catch (error) {
-      return refused(error)
-    }
-  }
+  const http = host.http
+  const automation = host.client.experimental.automation
+  const routes = http === undefined
+    ? {
+        create: (body: object) => automation.create(body as never),
+        get: (id: string) => automation.get({ automationID: id }),
+        delete: (id: string) => automation.delete({ automationID: id }),
+      }
+    : {
+        create: async (body: object) => (await http("POST", "/api/experimental/automation", body))!.data!,
+        get: async (id: string) => (await http("GET", `/api/experimental/automation/${id}`))?.data,
+        delete: async (id: string) => void (await http("DELETE", `/api/experimental/automation/${id}`)),
+      }
   let automationID: string
   try {
-    automationID = (await host.http("POST", "/api/experimental/automation", { sessionID, name, trigger: { type: "at", at: "in 1 millis" }, action: { type: "code", code: asCheck(code) } }))!.data!.id
+    automationID = (await routes.create({ sessionID, name, trigger: { type: "at", at: "in 1 millis" }, action: { type: "code", code } })).id
   } catch (error) {
     return refused(error)
   }
   try {
     for (const deadline = Date.now() + 60_000; ; await sleep(100)) {
-      const info = (await host.http("GET", `/api/experimental/automation/${automationID}`))?.data
+      const info: AutomationRun | undefined = await routes.get(automationID)
       if (info?.lastOutcome !== undefined) {
         if (info.lastOutcome === "fired" || info.lastOutcome === "late") return { ok: true }
         // A program that cannot succeed on a retry (a bad return value, a scoped ask) pauses its automation.
@@ -515,6 +536,6 @@ export async function unattended(host: Host, sessionID: string, code: string): P
       if (Date.now() > deadline) throw new Error("timed out waiting until the automation's code action has run (is the server's scheduler running?)")
     }
   } finally {
-    await host.http("DELETE", `/api/experimental/automation/${automationID}`)
+    await routes.delete(automationID)
   }
 }

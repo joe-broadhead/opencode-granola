@@ -71,7 +71,7 @@ import { accountEmail, accountPlan, accountScopes, connectedEmails, readMeetings
  */
 
 /** The plugin's package name, which every page names. */
-export const PACKAGE = "@joe-broadhead/opencode-granola"
+export const PACKAGE = "@we-the-rebel-alliance/granola-plugin"
 /** The source every event names, and the `source` input the descriptor gives. */
 export const SOURCE = "granola"
 /** The descriptor's id for it. */
@@ -102,10 +102,10 @@ export const UNWINDOWED_PLANS: ReadonlySet<string> = new Set(["plus", "business"
 
 /**
  * How long a recorded plan holds. An account can move to the free plan after probe read a paid one, and events_list
- * cannot ask again: reading get_account_info from a listing needs `permission.readsIdentity`, which a consumer on
- * source-contract v0.1.x refuses. So a record older than this counts as none, and a listing more than 29 days behind
- * answers a gap unless probe has read a paid plan within the day. A needless gap only makes a consumer resync; a
- * downgrade inside the day, with a cursor that far behind, is the one case still answered without a gap.
+ * cannot ask again: get_account_info is the source's one identity operation, which only probe reads. So a record older
+ * than this counts as none, and a listing more than 29 days behind answers a gap unless probe has read a paid plan
+ * within the day. A needless gap only makes a consumer resync; a downgrade inside the day, with a cursor that far
+ * behind, is the one case still answered without a gap.
  */
 export const PLAN_TTL_MS = DAY_MS
 

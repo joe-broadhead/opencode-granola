@@ -59,6 +59,15 @@ describe("production architecture", () => {
     for (const file of files) expect(readFileSync(file, "utf8"), relative(root, file)).not.toMatch(forbidden)
   })
 
+  it("pins no tool and registers no per-request hook", () => {
+    // Code Mode pins are sent on every turn, and a per-request hook adds text every turn: neither has a place here.
+    for (const file of files) {
+      const text = readFileSync(file, "utf8")
+      expect(text, relative(root, file)).not.toMatch(/pinned:\s*true/)
+      expect(text, relative(root, file)).not.toMatch(/\.hook\(\s*["'`](?:context|prompt|compaction|chat|idle)["'`]/)
+    }
+  })
+
   it("hooks permission evaluation nowhere in src: the tools RPC's one hook is the source contract package's", () => {
     // It turns an ask on one of the RPC's own script calls in flight into a deny, because no one can answer it.
     const hooks = files.map((file) => [relative(root, file), readFileSync(file, "utf8").match(/hook\("evaluate"/g)?.length ?? 0] as const)

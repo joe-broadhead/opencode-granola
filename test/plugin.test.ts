@@ -31,7 +31,8 @@ describe("plugin definition", () => {
     expect(host.agents.get("build")!.permissions.slice(1, 1 + defaultRules().length)).toEqual(defaultRules())
     expect([...host.commands.keys()]).toEqual(["granola-status"])
     expect(host.skills.size).toBeGreaterThan(0)
-    expect(host.hooks.has("execute.after")).toBe(true)
+    expect([...host.hooks.keys()]).toEqual(["execute.after"])
+    expect([...host.tools.values()].filter((tool) => tool.options?.pinned === true)).toEqual([])
   })
 
   it("serves status with the package version, the host version and the export directory", async () => {
@@ -41,7 +42,7 @@ describe("plugin definition", () => {
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
     expect(result).toMatchObject({
       version: pkg.version,
-      host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
+      host: { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true },
       state: "connecting",
       exportDirectory: "/data/Granola",
       nextStep: "Retry in a few seconds.",
@@ -49,16 +50,16 @@ describe("plugin definition", () => {
   })
 
   it("sets everything up on a release inside the range that is not tested, and calls it untested", async () => {
-    const host = fakeHost({ version: "2.2.99" })
+    const host = fakeHost({ version: "2.4.99" })
     await setup(host.ctx, host.toolsRpc)
     expect(host.servers.size).toBe(1)
     host.listed.servers = [{ name: "granola", status: { status: "connected" } }]
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
-    expect(result).toMatchObject({ state: "connected", host: { version: "2.2.99", tested: false }, nextStep: "Nothing to do." })
+    expect(result).toMatchObject({ state: "connected", host: { version: "2.4.99", tested: false }, nextStep: "Nothing to do." })
     expect(result.hostWarning).toBeUndefined()
   })
 
-  it.each(["2.4.0", "2.2.2", "0.0.0-dev-202610301200"])("refuses OpenCode %s with HOST_UNTESTED before registering anything", async (version) => {
+  it.each(["2.5.0", "2.3.0", "0.0.0-dev-202610301200"])("refuses OpenCode %s with HOST_UNTESTED before registering anything", async (version) => {
     const host = fakeHost({ version })
     const error = await rejection(Promise.resolve(setup(host.ctx, host.toolsRpc)))
     expect(error.code).toBe("HOST_UNTESTED")
@@ -67,14 +68,14 @@ describe("plugin definition", () => {
   })
 
   it("loads on an untested host with allowUntestedHost and warns in status", async () => {
-    const host = fakeHost({ version: "2.4.0", options: { allowUntestedHost: true } })
+    const host = fakeHost({ version: "2.5.0", options: { allowUntestedHost: true } })
     await setup(host.ctx, host.toolsRpc)
     const result = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
-    expect(result.hostWarning).toContain("outside the supported range >=2.2.3 <2.4.0")
-    expect(result.host).toEqual({ version: "2.4.0", range: ">=2.2.3 <2.4.0", tested: false })
+    expect(result.hostWarning).toContain("outside the supported range >=2.4.1 <2.5.0")
+    expect(result.host).toEqual({ version: "2.5.0", range: ">=2.4.1 <2.5.0", tested: false })
     host.listed.servers = [{ name: "granola", status: { status: "connected" } }]
     const connected = await host.rpc.get("granola.meetings")!.status!({}, {}) as Status
-    expect(connected).toMatchObject({ state: "connected", nextStep: "If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2." })
+    expect(connected).toMatchObject({ state: "connected", nextStep: "If Granola misbehaves, use OpenCode 2.4.1." })
   })
 
   it("fails setup with one error that names a bad option", async () => {
@@ -88,7 +89,7 @@ describe("plugin definition", () => {
 describe("package metadata", () => {
   it("reads the version and the tested OpenCode line from package.json", () => {
     expect(readPackageInfo()).toEqual({ version: pkg.version, hostRange: pkg.opencode.host })
-    expect(pkg.opencode.host).toBe(">=2.2.3 <2.4.0")
+    expect(pkg.opencode.host).toBe(">=2.4.1 <2.5.0")
   })
 
   it("refuses a package.json without the tested line", () => {

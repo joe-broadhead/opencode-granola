@@ -160,7 +160,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
 
       test("allowUntestedHost changes nothing on a tested OpenCode version", async () => {
         const current = await statusWhen("untested", settled)
-        expect(current).toMatchObject({ state: "connected", host: { version: host.version, range: ">=2.2.3 <2.4.0", tested: true } })
+        expect(current).toMatchObject({ state: "connected", host: { version: host.version, range: ">=2.4.1 <2.5.0", tested: true } })
         expect(Object.hasOwn(current, "hostWarning")).toBe(false)
       })
 
@@ -305,7 +305,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
           tools: { visible: TOOLS.read.length + TOOLS.write.length + TOOLS.unknown.length, hidden: TOOLS.hidden.length, unknown: TOOLS.unknown.length, unknownNames: [...TOOLS.unknown] },
           exportDirectory: host.exports("main"),
           version: VERSION,
-          host: { version: host.version, range: ">=2.2.3 <2.4.0", tested: true },
+          host: { version: host.version, range: ">=2.4.1 <2.5.0", tested: true },
         })
         const current = await status("main")
         expect(["problem", "conflict", "hostWarning"].filter((key) => Object.hasOwn(current, key))).toEqual([])

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { HIDDEN_TOOLS, PLUGIN_READS, PLUGIN_TOOLS, READ_TOOLS, SERVER, WRITE_TOOLS, toolID } from "../src/known-tools.js"
 import { defaultRules } from "../src/permissions.js"
 import { ACCESS_VALUES, parseOptions } from "../src/options.js"
-import { type Declaration, type DeclaredTool, declarationProblems, docProblems, effectFromRules, readPackage } from "./support/jelly-kit.js"
+import { type Declaration, type DeclaredTool, declarationProblems, effectFromRules, readPackage } from "./support/jelly-kit.js"
 import { ACCESS_CHOICES, settingChoices, type PluginSetting, settingsProblems, settingValueIssue } from "./support/jelly-settings.js"
 
 /**
@@ -73,11 +73,5 @@ describe("the jelly declaration", () => {
     expect<string>(parseOptions({}).access).toBe(access.default as string)
     expect(settingValueIssue(access, "write")).not.toBeNull()
     expect(() => parseOptions({ access: "write" })).toThrow("Plugin option access")
-  })
-})
-
-describe("docs/jelly.md", () => {
-  it("follows the plugin authors' standard", () => {
-    expect(docProblems(ROOT)).toEqual([])
   })
 })

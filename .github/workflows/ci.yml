@@ -5,7 +5,7 @@ on:
   push:
     branches: [master]
   pull_request:
-  # A run by hand on any branch: the full matrix, macOS included.
+  # A run by hand on any branch.
   workflow_dispatch:
 
 permissions:
@@ -17,10 +17,10 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  workflows:
-    name: workflows
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
+  ci:
+    name: ci
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (vars.CI_RUNNER_PUBLIC || 'ubuntu-24.04') || 'ubuntu-24.04' }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,34 +37,19 @@ jobs:
           grep " actionlint_${version}_linux_amd64.tar.gz$" "actionlint_${version}_checksums.txt" | sha256sum -c -
           tar xzf "actionlint_${version}_linux_amd64.tar.gz" actionlint
           ./actionlint -color
-
-  check:
-    name: check (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        # Public GitHub-hosted runners: Linux x64, Linux arm64, macOS arm64.
-        # A pull request runs the two Linux runners; a push to master, or a run by hand, runs three: macOS arm64 too. macOS
-        # runs on master and for releases only, and the release planner requires that push run with every runner.
-        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-24.04","ubuntu-24.04-arm"]' || '["ubuntu-24.04","ubuntu-24.04-arm","macos-26"]') }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
+          echo "$PWD" >> "$GITHUB_PATH" # so `npm run check`'s actionlint stage finds it too
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          # Caches ~/.npm per OS and architecture. The host and pack tests install the stock @opencode/cli releases
-          # listed in src/hosts.ts (TESTED_HOSTS: 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2) through npm, so that file is part of the key.
+          # Caches ~/.npm. The host and pack tests install the stock @opencode/cli release named in src/hosts.ts
+          # (TESTED_HOSTS: 2.4.1) through npm, so that file is part of the key.
           cache: npm
           cache-dependency-path: |
             package-lock.json
             src/hosts.ts
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: 1.4.4 # the Bun inside stock OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2
+          bun-version: 1.4.4 # the Bun the host and pack stages run under
       # OpenCode installs plugins with scripts off, and no dev dependency needs its install script.
       - run: npm ci --ignore-scripts
       - run: npm run check

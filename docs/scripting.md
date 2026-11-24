@@ -1,6 +1,6 @@
 # Scripting
 
-A script can call every Granola tool this plugin knows with no model: a cron job, a shell script, or any program that
+A script can call every Granola tool this plugin knows with no model: an OpenCode automation, a shell script, or any program that
 can reach the OpenCode server. It uses the tools RPC, `granola.meetings.tools`, through `opencode api` or an OpenCode
 client.
 

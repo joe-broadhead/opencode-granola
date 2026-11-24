@@ -16,7 +16,7 @@ const status: Status = {
   exportDirectory: "/x",
   access: "all",
   version: VERSION,
-  host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
+  host: { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true },
   nextStep: "Run `/connect` and choose Granola.",
 }
 

@@ -37,7 +37,9 @@ const NOTHING_TO_DO = "Nothing to do."
  * The next step when nothing else is needed but OpenCode is outside the supported range and runs only because of
  * allowUntestedHost. An untested release inside the range leaves the next step unchanged.
  */
-export const UNTESTED_HOST_NEXT = `If Granola misbehaves, use OpenCode ${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}.`
+export const UNTESTED_HOST_NEXT = TESTED_HOSTS.length === 1
+  ? `If Granola misbehaves, use OpenCode ${TESTED_HOSTS[0]}.`
+  : `If Granola misbehaves, use OpenCode ${TESTED_HOSTS.slice(0, -1).join(", ")} or ${TESTED_HOSTS.at(-1)}.`
 
 /**
  * The fix for agents that missed the defaults, such as agents defined only in the user's config, worded the same in

@@ -5,8 +5,8 @@ Read [AGENTS.md](AGENTS.md) first: it lists the rules for this repository and th
 
 ## Set up
 
-You need Node.js 24 or later, npm, and [Bun](https://bun.sh). CI and releases use Node.js 24 and Bun 1.4.4, the Bun inside stock
-OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2.
+You need Node.js 24 or later, npm, and [Bun](https://bun.sh). CI and releases use Node.js 24 and Bun 1.4.4, the Bun
+inside stock OpenCode 2.4.1.
 
 ```sh
 npm ci --ignore-scripts
@@ -43,39 +43,35 @@ npm run check
 | build | `npm run build` | `scripts/build.mjs`: deletes `dist/`, then esbuild bundles the server into `dist/index.js` and the TUI, compiled with Solid's Babel transform, into `dist/tui.js`. Each file is self-contained. |
 | icons | `npm run icons` | `node scripts/check-icons.mjs`: the three icons, the manifest's declarations and the tarball's `files` against the family icon contract |
 | unit | `npm test` | Vitest: `test/*.test.ts` and `test/tui/*.test.ts`. The TUI render test runs the built `dist/tui.js` under Bun, so build first. It includes `test/conformance.test.ts`: the source contract's conformance kit over `package.json`'s `sources` on a synthetic Granola, which writes `reports/conformance-report.json` (the same bytes every run) for a release to attach. |
-| host | `npm run test:host` | `bun test ./test/integration`: the plugin from `dist/` in three OpenCode hosts, with Granola's URL routed to the loopback server in `test/synthetic-granola/` |
+| host | `npm run test:host` | `bun test ./test/integration`: the plugin from `dist/` in two OpenCode hosts, the embedded SDK and stock 2.4.1, with Granola's URL routed to the loopback server in `test/synthetic-granola/` |
 | pack | `npm run test:pack` | `node test/pack-smoke.mjs`: builds, packs and installs the package, then loads it in stock OpenCode |
 | actionlint | `npm run actionlint` | `node scripts/check-workflows.mjs`: `actionlint` parses the workflows as workflows when it is on `PATH`; otherwise it prints a notice, and CI's own `workflows` job runs it |
 
-The host stage runs the same cases in the public `@opencode/sdk` 2.2.3, embedded in the test process, and in stock
-`opencode serve` 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2 (`TESTED_HOSTS` in `src/hosts.ts`, the one list of tested releases) through
-`@opencode/client`. It needs Bun and a prior `npm run build`,
-because OpenCode loads the plugin from `dist/`. It covers registration, the default rules, prompts and saved
-approvals, the per-agent fix, status in each connection state, the export, runs where nobody is present and
-unloading.
+The host stage runs the same cases in the public `@opencode/sdk` 2.4.1, embedded in the test process, and in stock
+`opencode serve` 2.4.1 (`TESTED_HOSTS` in `src/hosts.ts`, the one list of tested releases) through `@opencode/client`.
+It needs Bun and a prior `npm run build`, because OpenCode loads the plugin from `dist/`. It covers registration, the
+default rules, prompts and saved approvals, the per-agent fix, status in each connection state, the export, runs where
+nobody is present and unloading, on both hosts. The embedded host gets the automation scheduler a server process would
+start, through an override that forks `Automation.run`.
 
 The pack stage builds explicitly, packs the package and installs the tarball alone into a temporary project with
 scripts off. It checks that the tarball holds exactly the `files` whitelist, with no source or JSX and under 1 MB, that
 it installs no dependencies, and that `dist/` holds only `index.js` and `tui.js`, with no relative, dynamic or
-`require()` import and nothing but modules OpenCode provides. It then loads the installed
-package in stock `opencode serve` 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2, and imports `.` and `./tui` under Bun next to the host
-packages, which it installs from the npm registry. It needs npm, Bun and network access to the npm registry.
+`require()` import and nothing but modules OpenCode provides. It then loads the installed package in stock
+`opencode serve` 2.4.1, and imports `.` and `./tui` under Bun next to the host packages, which it installs from the npm
+registry. It needs npm, Bun and network access to the npm registry.
 
 ### Environment variables
 
 | Variable | Effect |
 | --- | --- |
-| `OPENCODE_BIN_2_2_3`, `OPENCODE_BIN_2_2_4`, `OPENCODE_BIN_2_2_5`, `OPENCODE_BIN_2_2_6` | Paths to stock `opencode` binaries of those versions, used by the host and pack stages. Unset, each stage installs `@opencode/cli@<version>` from npm into a temporary folder, once per version and run. |
+| `OPENCODE_BIN_2_4_1` | Path to a stock `opencode` 2.4.1 binary, used by the host and pack stages. Unset, each stage installs `@opencode/cli@2.4.1` from npm into a temporary folder, once per run. |
 | `VITEST_MAX_WORKERS` | The number of Vitest workers for the unit stage. Use `2` on a busy machine. |
 
 For example:
 
 ```sh
-OPENCODE_BIN_2_2_3=/path/to/opencode-2.2.3 OPENCODE_BIN_2_2_4=/path/to/opencode-2.2.4 \
-  OPENCODE_BIN_2_2_5=/path/to/opencode-2.2.5 OPENCODE_BIN_2_2_6=/path/to/opencode-2.2.6 \
-  OPENCODE_BIN_2_2_7=/path/to/opencode-2.2.7 OPENCODE_BIN_2_3_0=/path/to/opencode-2.3.0 \
-  OPENCODE_BIN_2_3_1=/path/to/opencode-2.3.1 OPENCODE_BIN_2_3_2=/path/to/opencode-2.3.2 \
-  VITEST_MAX_WORKERS=2 npm run check
+OPENCODE_BIN_2_4_1=/path/to/opencode-2.4.1 VITEST_MAX_WORKERS=2 npm run check
 ```
 
 ### Isolation
@@ -95,8 +91,8 @@ When you try something by hand, do the same: set those variables to a temporary 
 `opencode` command. Without `--server`, commands such as `opencode mcp list` talk to your own OpenCode service. Do not
 type prompts into the TUI or `opencode run`: a fresh install answers with a hosted model.
 
-CI (`.github/workflows/ci.yml`) runs `npm ci --ignore-scripts` and `npm run check` on GitHub-hosted Linux x64,
-Linux arm64, macOS arm64 and macOS x64 runners.
+CI (`.github/workflows/ci.yml`) runs `npm ci --ignore-scripts` and `npm run check` on one GitHub-hosted Ubuntu 24.04
+runner.
 
 ## Granola's tools
 
@@ -206,7 +202,7 @@ Before the approval, the workflow:
 - **verifies** on a fresh runner: the commit's identity, one parent on `master`, `package.json` exactly the parent's
   without the lifecycle scripts, only regular files in the allowed paths, no `package.json` under `dist/`, and a second,
   independent build of the parent (its own job) equal to the committed `dist/` byte for byte;
-- **installs** the release commit with `plugin add` on each stock OpenCode host (2.2.3 to 2.3.2);
+- **installs** the release commit with `plugin add` on the tested stock OpenCode host (2.4.1);
 - **packs** the commit before installing anything, keeps that tarball and records its sha256, then runs the pack stage
   against a copy;
 - **runs the conformance kit** on the parent, for a plugin that declares sources (above), and uploads only its report;
@@ -236,7 +232,7 @@ exact `package.json`, the allowed paths and the byte-for-byte rebuild. Never rel
 **A rejected, expired or failed run** leaves nothing behind: the `cleanup` job deletes `release/v<version>` when it points
 at the parent or at that run's commit, and never touches another branch. No tag exists before the approval, so the
 version is not burned: fix `master` and start again. If `cleanup` itself failed, the next run refuses until the branch
-is deleted: `gh api -X DELETE repos/joe-broadhead/opencode-granola/git/refs/heads/release/v<version>`.
+is deleted: `gh api -X DELETE repos/we-the-rebel-alliance/granola-plugin/git/refs/heads/release/v<version>`.
 
 **Resume.** If the run fails after creating the tag and before the Release is complete, start it again with the same `sha`. The plan finds the kit's tag on a release commit on that sha with no published Release, and resumes:
 it makes no new commit, checks and installs the tagged commit, stages the files, and after a new approval reuses the tag
@@ -250,8 +246,8 @@ tag, and restores the ruleset exactly as it was.
 
 **Known limit: a `v*` tag pushed by hand.** No ruleset limits who creates a `v*` tag, so anyone with write access can
 push one by hand, pointing at any commit. Such a tag has no published Release, the forward-only check ignores it, and
-Jelly installs only a published Release whose `SHA256SUMS` it verifies. But a user who installs
-`github:joe-broadhead/opencode-granola#v<x>` directly gets whatever that tag points at. Only the release workflow makes
+A packaged app installs only a published Release whose `SHA256SUMS` it verifies. But a user who installs
+`github:we-the-rebel-alliance/granola-plugin#v<x>` directly gets whatever that tag points at. Only the release workflow makes
 release tags; never push one by hand.
 
 The release kit is these files, the same in every plugin: `scripts/release-rules.mjs`, `scripts/release-commit.mjs`,
@@ -263,10 +259,10 @@ pins each of the scripts whole by its sha256, so a plugin whose copy differs fro
 change the kit in every plugin at once, with the new hashes. Do not re-run the older `apply-release-kit.mjs`: it writes
 back the kit that could release only `v0.0.0`.
 
-Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:joe-broadhead/opencode-granola#v<old version>`, then add the new tag with `opencode plugin add github:joe-broadhead/opencode-granola#v<version>`.
+Each release has its own tag, and a Git install does not update by itself. To move to a newer release, remove the old entry with `opencode plugin remove github:we-the-rebel-alliance/granola-plugin#v<old version>`, then add the new tag with `opencode plugin add github:we-the-rebel-alliance/granola-plugin#v<version>`.
 
 Or add the plugin to `opencode.json` instead, with the same spec:
 
 ```json
-{ "plugins": [{ "package": "github:joe-broadhead/opencode-granola#v0.0.10" }] }
+{ "plugins": [{ "package": "github:we-the-rebel-alliance/granola-plugin#v0.0.0" }] }
 ```

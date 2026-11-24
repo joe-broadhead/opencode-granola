@@ -59,13 +59,13 @@ describe("the default rules block", () => {
 })
 
 describe("tested hosts", () => {
-  const UNRELEASED = /## \[Unreleased\]([\s\S]*?)(?=\n## |$)/.exec(raw("CHANGELOG.md"))?.[1] ?? ""
+  const UNRELEASED = /## 0\.0\.0 \(unreleased\)([\s\S]*?)(?=\n## |$)/.exec(raw("CHANGELOG.md"))?.[1] ?? ""
   const SOURCES: [string, string][] = [
     ["README.md", raw("README.md")],
     ["AGENTS.md", raw("AGENTS.md")],
     ["SECURITY.md", raw("SECURITY.md")],
     ["docs/configuration.md", raw("docs/configuration.md")],
-    ["CHANGELOG.md (Unreleased)", UNRELEASED],
+    ["CHANGELOG.md (unreleased)", UNRELEASED],
   ]
 
   it.each(SOURCES)("%s names exactly TESTED_HOSTS wherever it says what is tested", (file, body) => {
@@ -83,14 +83,14 @@ describe("tested hosts", () => {
 
   it("the README's Requirements line names every tested release", () => {
     const requirements = /## Requirements([\s\S]*?)## /i.exec(raw("README.md"))?.[1] ?? ""
-    const named = [...requirements.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((match) => match[0]).filter((version) => version !== "2.4.0")
+    const named = [...requirements.matchAll(/\b\d+\.\d+\.\d+\b/g)].map((match) => match[0]).filter((version) => version !== "2.5.0")
     expect([...new Set(named)].sort()).toEqual([...TESTED_HOSTS].sort())
   })
 
   // A release inside the range that ships later is the untested example, so it must be one that never ships.
-  it("the untested example is 2.2.99, and no doc names a future release as tested", () => {
+  it("the untested example is 2.4.99, and no doc names a future release as tested", () => {
     const all = SOURCES.map(([, body]) => body).join("\n")
-    expect(all).toContain("2.2.99")
-    expect(all).not.toMatch(/\b(?:2\.2\.(?:8|9[0-8])|2\.3\.(?:[3-9]|[1-9]\d+))\b(?!\d)/)
+    expect(all).toContain("2.4.99")
+    expect(all).not.toMatch(/\b2\.4\.(?:[2-9]|[1-8]\d)(?!\d)\b/)
   })
 })

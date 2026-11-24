@@ -55,21 +55,12 @@ export type Client = Pick<OpenCodeClient, "agent" | "command" | "experimental" |
 const PROJECTS = ["main", "needs-auth", "pending", "adopted", "conflict", "invalid", "untested", "automation", "ask-changes", "read-only", "unload", "sign-in"] as const
 export type Project = (typeof PROJECTS)[number]
 
-/** A raw JSON request to a stock server, for routes the 2.2.3 client does not have. */
+/** A raw JSON request to a stock server, for a route its client does not expose. */
 export type Http = (
   method: string,
   path: string,
   body?: unknown,
 ) => Promise<{ data?: { id: string; lastOutcome?: string; lastOutput?: string }; message?: string } | undefined>
-
-/**
- * From OpenCode 2.3.1, `experimental.automation` replaces `experimental.schedule`, and a code action no longer runs when
- * it is created: it runs when the scheduler finds it due.
- */
-export const atLeast231 = (version: string): boolean => {
-  const [major, minor, patch] = version.split(".").map(Number) as [number, number, number]
-  return major > 2 || (major === 2 && (minor > 3 || (minor === 3 && patch >= 1)))
-}
 
 export interface Host {
   readonly version: string
@@ -85,7 +76,7 @@ export interface Host {
   exports(project: Project): string
   /** Replaces a project's config with one that no longer loads the Granola plugin. */
   removePlugin(project: Project): void
-  /** A raw JSON request to a stock server, for the routes the 2.2.3 client does not have. Embedded hosts have none. */
+  /** A raw JSON request to a stock server, for a route its client does not expose. Embedded hosts have none. */
   readonly http?: Http
   close(): Promise<void>
 }
@@ -114,10 +105,7 @@ export const OTHER_SERVER = { type: "remote", url: "https://mcp.example.invalid/
 const configOnly = (description: string, permissions?: readonly Rule[]) => ({ description, mode: "primary", ...(permissions ? { permissions } : {}) })
 
 /** Each project's opencode.jsonc. The probe comes after granola.meetings, because transforms run in config order. */
-function projectConfig(project: Project, plugin: string, fake: SyntheticGranola, exports: string, automations: boolean): object {
-  // A schedule's check program up to 2.3.0, an automation's code action from 2.3.1: how the suite runs Code Mode with
-  // nobody present to answer a prompt.
-  const experimental = automations ? { automations: true } : { schedules: true }
+function projectConfig(project: Project, plugin: string, fake: SyntheticGranola, exports: string): object {
   const granola = (options: object = { exportDirectory: exports }) => ({ package: plugin, options })
   const probe = (route: Parameters<SyntheticGranola["url"]>[0] = "connected") => ({ package: PROBE, options: { route: fake.url(route) } })
   switch (project) {
@@ -134,7 +122,6 @@ function projectConfig(project: Project, plugin: string, fake: SyntheticGranola,
           locked: configOnly("Denies Granola", [...defaultRules(), ...USER_RULES, deny("granola_*")]),
           careful: configOnly("Asks before get_meetings", [...defaultRules(), ...USER_RULES, ask("granola_get_meetings")]),
         },
-        experimental,
       }
     case "needs-auth":
       return { plugins: [granola(), probe("needs-auth")] }
@@ -149,14 +136,14 @@ function projectConfig(project: Project, plugin: string, fake: SyntheticGranola,
     case "untested":
       return { plugins: [granola({ exportDirectory: exports, allowUntestedHost: true }), probe()] }
     case "automation":
-      // A schedule's check program is authorized per tool for every resource, so a narrower export rule does not cover it.
-      return { plugins: [granola(), probe()], permissions: [allow("granola_export_markdown")], experimental }
+      // An automation's code action is authorized per tool for every resource, so a narrower export rule does not cover it.
+      return { plugins: [granola(), probe()], permissions: [allow("granola_export_markdown")] }
     case "ask-changes":
-      return { plugins: [granola({ exportDirectory: exports, access: "ask-changes" }), probe()], experimental }
+      return { plugins: [granola({ exportDirectory: exports, access: "ask-changes" }), probe()] }
     case "read-only":
-      return { plugins: [granola({ exportDirectory: exports, access: "read-only" }), probe()], experimental }
+      return { plugins: [granola({ exportDirectory: exports, access: "read-only" }), probe()] }
     case "unload":
-      return { plugins: [granola(), probe()], experimental }
+      return { plugins: [granola(), probe()] }
     case "sign-in":
       return { plugins: [granola(), probe("sign-in")] }
   }
@@ -171,7 +158,7 @@ interface Root {
   remove(): void
 }
 
-function makeRoot(label: string, plugin: string, fake: SyntheticGranola, automations = false): Root {
+function makeRoot(label: string, plugin: string, fake: SyntheticGranola): Root {
   const path = tempDirectory(`granola-host-${label}-`, true)
   const home = join(path, "home")
   const env = {
@@ -190,12 +177,12 @@ function makeRoot(label: string, plugin: string, fake: SyntheticGranola, automat
   const write = (project: Project, config: object) => writeFileSync(join(directory(project), "opencode.jsonc"), JSON.stringify(config, null, 2))
   for (const project of PROJECTS) {
     mkdirSync(directory(project), { recursive: true })
-    write(project, projectConfig(project, plugin, fake, exports(project), automations))
+    write(project, projectConfig(project, plugin, fake, exports(project)))
   }
   mkdirSync(join(directory("adopted"), SHADOWING_SKILL, ".."), { recursive: true })
   writeFileSync(join(directory("adopted"), SHADOWING_SKILL), "---\nname: granola\ndescription: The user's own Granola notes skill, for the host test.\n---\n\nUse the user's own steps.\n")
   const removePlugin = (project: Project) => {
-    const config = projectConfig(project, plugin, fake, exports(project), automations) as { plugins: { package: string }[] }
+    const config = projectConfig(project, plugin, fake, exports(project)) as { plugins: { package: string }[] }
     write(project, { ...config, plugins: config.plugins.filter((entry) => entry.package !== plugin) })
   }
   return { path, env, directory, exports, removePlugin, remove: () => rmSync(path, { recursive: true, force: true }) }
@@ -230,8 +217,8 @@ export async function globalPaths(client: Pick<Client, "agent" | "server">, loca
 /** Fails before any case runs if OpenCode resolved its home or tmp folder outside the temp root. */
 async function isolated(client: Pick<Client, "agent" | "server">, root: Root): Promise<void> {
   let paths: Awaited<ReturnType<typeof globalPaths>>
-  // The first request for a location waits for its plugins, which can time out while the machine is busy. From 2.2.7 it
-  // can also answer with no agents yet, so no plan rule and no home: ask again until the plan agent is listed.
+  // The first request for a location waits for its plugins, which can time out while the machine is busy. It can also
+  // answer with no agents yet, so no plan rule and no home: ask again until the plan agent is listed.
   for (const deadline = Date.now() + 120_000; ;) {
     try {
       paths = await globalPaths(client, { directory: root.directory("main") })
@@ -246,8 +233,8 @@ async function isolated(client: Pick<Client, "agent" | "server">, root: Root): P
 }
 
 /**
- * Waits until granola.meetings has finished activating, or failed to, in every project. From 2.2.7 a location answers
- * before its plugins have loaded, so a first status or RPC call there would find no granola.meetings yet.
+ * Waits until granola.meetings has finished activating, or failed to, in every project. A location answers before its
+ * plugins have loaded, so a first status or RPC call there would find no granola.meetings yet.
  */
 async function activatedEverywhere(client: Pick<Client, "plugin">, root: Root): Promise<void> {
   const deadline = Date.now() + 120_000
@@ -311,6 +298,7 @@ export async function startEmbedded(fake: SyntheticGranola, version: string = SD
     })
     try {
       await isolated(opencode, root)
+      await activatedEverywhere(opencode, root)
     } catch (error) {
       await opencode.close()
       throw error
@@ -392,13 +380,13 @@ async function freePort(): Promise<number> {
  */
 export async function startBinary(version: string, fake: SyntheticGranola): Promise<Host> {
   const binary = stockBinary(version)
-  const root = makeRoot(`cli-${version}`, REPO, fake, atLeast231(version))
+  const root = makeRoot(`cli-${version}`, REPO, fake)
   const password = randomUUID()
   const port = await freePort()
   const env = { ...root.env, ...OFFLINE, ...QUIET, PATH: "/usr/bin:/bin", OPENCODE_PASSWORD: password }
   const stop = () => root.remove()
 
-  // Prints "opencode v2.2.3".
+  // Prints "opencode v2.4.1".
   const reported = spawnSync(binary, ["--version"], { cwd: root.path, env, encoding: "utf8" })
   if (reported.stdout.trim() !== `opencode v${version}`) {
     stop()
@@ -426,7 +414,7 @@ export async function startBinary(version: string, fake: SyntheticGranola): Prom
     stop()
   }
 
-  /** A raw request to this server, for routes the 2.2.3 client does not have. */
+  /** A raw request to this server, for a route its client does not expose. */
   const http: Http = async (method, path, body) => {
     const response = await fetch(`http://127.0.0.1:${port}${path}`, {
       method,
@@ -472,34 +460,19 @@ export function repositoryChanges(): string {
 /** How OpenCode answered a program run with nobody present: it ran and returned, or its message. */
 export type Unattended = { readonly ok: true } | { readonly ok: false; readonly error: string }
 
-/** A schedule check returned a boolean or `{ wake }`; an automation returns nothing, so the program is wrapped. */
-const asCheck = (code: string) =>
-  `const checked = await (async () => {\n${code}\n})()\nif (typeof checked !== "boolean" && !(typeof checked === "object" && checked !== null && typeof checked.wake === "boolean")) throw new Error("A code check must return a boolean or { wake, state?, message? }")`
-
 /**
  * Runs a Code Mode program once with nobody present to answer a prompt, as the session's agent and under its rules,
- * with no model, and answers as a schedule's `if: { code }` check did at creation up to 2.3.0: `ok` when the program
- * returned a boolean or `{ wake }`, else OpenCode's message (a refusal, or what the program threw). Up to 2.3.0, and on
- * the embedded host, it is that check, and the schedule is deleted at once. From 2.3.1 a stock server runs an
- * automation's code action, due at once, over raw HTTP: creation refuses what the rules do not allow, as the check did,
- * and the run's outcome is read back before the automation is deleted. A run that never comes throws, so it is never
- * read as a refusal.
+ * with no model: a stock 2.4.1 server runs an automation's code action over raw HTTP. Creation refuses what the rules
+ * do not allow, and the run's outcome is read back before the automation is deleted. A run that never comes throws, so
+ * it is never read as a refusal. The embedded `@opencode/sdk` host starts no scheduler, so it has none of this.
  */
 export async function unattended(host: Host, sessionID: string, code: string): Promise<Unattended> {
   const name = "granola-host-test"
   const refused = (error: unknown): Unattended => ({ ok: false, error: error instanceof Error ? error.message : String(error) })
-  if (host.http === undefined || !atLeast231(host.version)) {
-    try {
-      const schedule = await host.client.experimental.schedule.create({ sessionID, name, when: { in: "6 hours" }, prompt: "noop", if: { code } })
-      await host.client.experimental.schedule.delete({ scheduleID: schedule.id })
-      return { ok: true }
-    } catch (error) {
-      return refused(error)
-    }
-  }
+  if (host.http === undefined) throw new Error("this host runs no automations, so it has no unattended Code Mode")
   let automationID: string
   try {
-    automationID = (await host.http("POST", "/api/experimental/automation", { sessionID, name, trigger: { type: "at", at: "in 1 millis" }, action: { type: "code", code: asCheck(code) } }))!.data!.id
+    automationID = (await host.http("POST", "/api/experimental/automation", { sessionID, name, trigger: { type: "at", at: "in 1 millis" }, action: { type: "code", code } }))!.data!.id
   } catch (error) {
     return refused(error)
   }

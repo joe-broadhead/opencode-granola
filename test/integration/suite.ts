@@ -31,7 +31,13 @@ const settled = (current: Status) => current.state !== "connecting" && current.s
 /** Connected, with Granola's tools in the registry: OpenCode can report connected before it lists them. */
 const connected = (current: Status) => current.state === "connected" && current.tools.visible > 0
 
-export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promise<Host>, fake: () => SyntheticGranola, budget?: (host: Host) => Promise<void>): void {
+/** What a host can do beyond loading the plugin: the embedded SDK has no automation scheduler. */
+export interface HostOptions {
+  readonly unattended?: boolean
+}
+
+export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promise<Host>, fake: () => SyntheticGranola, budget?: (host: Host) => Promise<void>, options: HostOptions = {}): void {
+  const unattendedSupported = options.unattended ?? true
   describe(name, () => {
     let host: Host
     let changesBefore: string
@@ -160,7 +166,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
 
       test("allowUntestedHost changes nothing on a tested OpenCode version", async () => {
         const current = await statusWhen("untested", settled)
-        expect(current).toMatchObject({ state: "connected", host: { version: host.version, range: ">=2.2.3 <2.4.0", tested: true } })
+        expect(current).toMatchObject({ state: "connected", host: { version: host.version, range: ">=2.4.1 <2.5.0", tested: true } })
         expect(Object.hasOwn(current, "hostWarning")).toBe(false)
       })
 
@@ -305,7 +311,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
           tools: { visible: TOOLS.read.length + TOOLS.write.length + TOOLS.unknown.length, hidden: TOOLS.hidden.length, unknown: TOOLS.unknown.length, unknownNames: [...TOOLS.unknown] },
           exportDirectory: host.exports("main"),
           version: VERSION,
-          host: { version: host.version, range: ">=2.2.3 <2.4.0", tested: true },
+          host: { version: host.version, range: ">=2.4.1 <2.5.0", tested: true },
         })
         const current = await status("main")
         expect(["problem", "conflict", "hostWarning"].filter((key) => Object.hasOwn(current, key))).toEqual([])
@@ -331,7 +337,9 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
       })
     })
 
-    describe("Code Mode with nobody present", () => {
+    // The embedded @opencode/sdk host starts no scheduler (`@opencode/server` does: Automation.Service.run), so a code
+    // action never runs there. The stock 2.4.1 host runs the same cases.
+    ;(unattendedSupported ? describe : describe.skip)("Code Mode with nobody present", () => {
       test("an account read runs without asking, and status then shows the workspace", async () => {
         const result = await codeMode("main", `await tools.granola.get_account_info({}); throw new Error("SEEN " + JSON.stringify("read"))`)
         expect(result).toEqual({ seen: "read" })

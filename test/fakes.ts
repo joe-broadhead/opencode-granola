@@ -106,7 +106,7 @@ export function fakeHost(config: Options = {}): FakeHost {
   }
 
   const ctx = {
-    app: { version: config.version ?? "2.2.3" },
+    app: { version: config.version ?? "2.4.1" },
     options: config.options ?? {},
     agent: { transform: transform("agent"), list: async () => ({ location, data: host.listed.agents.map(agentInfo) }) },
     mcp: { transform: transform("mcp"), list: async () => ({ location, data: host.listed.servers }) },

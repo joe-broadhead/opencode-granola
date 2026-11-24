@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url"
 import ts from "typescript"
 
 const root = fileURLToPath(new URL("../", import.meta.url))
-const SUPPORTED_RANGE = ">=2.2.3 <2.4.0"
-const SDK_VERSION = "2.2.3"
+const SUPPORTED_RANGE = ">=2.4.1 <2.5.0"
+const SDK_VERSION = "2.4.1"
 
 /** The first matching rule names the problem. Only @opencode/plugin, sdk, client and theme are public. */
 const IMPORT_RULES = [

@@ -69,7 +69,7 @@ describe("error format", () => {
   it("gives every plugin error a unique code and exactly one next step, ending with a full stop", () => {
     const problems = [
       ...(["absent", "pending", "needs_auth", "failed", "disabled"] as const).map((state) => connectionProblem(state, "x")!),
-      toolUnavailable("x"), invalidOption("x", "is wrong"), hostUntested(">=2.2.3 <2.4.0", "2.4.0"), STATUS_UNAVAILABLE,
+      toolUnavailable("x"), invalidOption("x", "is wrong"), hostUntested(">=2.4.1 <2.5.0", "2.5.0"), STATUS_UNAVAILABLE,
       skillsInvalid("skills/x/SKILL.md"), packageInvalid("is broken"),
     ]
     expect(new Set(problems.map((problem) => problem.code)).size).toBe(problems.length)
@@ -100,8 +100,8 @@ describe("error format", () => {
   })
 
   it("states the tested line, the found version and the override", () => {
-    expect(describeProblem(hostUntested(">=2.2.3 <2.4.0", "2.4.0"))).toBe(
-      "HOST_UNTESTED: The Granola plugin supports OpenCode >=2.2.3 <2.4.0, found 2.4.0. Next step: Use OpenCode >=2.2.3 <2.4.0, or set the plugin option allowUntestedHost to true to run anyway.",
+    expect(describeProblem(hostUntested(">=2.4.1 <2.5.0", "2.5.0"))).toBe(
+      "HOST_UNTESTED: The Granola plugin supports OpenCode >=2.4.1 <2.5.0, found 2.5.0. Next step: Use OpenCode >=2.4.1 <2.5.0, or set the plugin option allowUntestedHost to true to run anyway.",
     )
   })
 })

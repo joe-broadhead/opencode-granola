@@ -3,10 +3,10 @@
 The plugin is a thin layer over OpenCode's own MCP support. OpenCode connects to Granola's official MCP server, runs
 the sign-in, stores the credentials, runs Granola's tools and asks for permission. The plugin registers the server,
 sets the default permission rules, and adds a status model, a Markdown export, a status command, two skills and a
-terminal UI dialog. It uses only the public `@opencode/plugin` API of OpenCode 2.2.3.
+terminal UI dialog. It uses only the public `@opencode/plugin` API of OpenCode 2.4.1.
 
 ```text
-OpenCode 2.2 or 2.3
+OpenCode 2.4
 ├─ MCP server "granola"   registered by the plugin; OpenCode owns transport, OAuth and credentials
 │    Granola's tools  →  granola_<tool>, tools.granola.<tool> in Code Mode
 ├─ plugin "granola.meetings"   (dist/index.js, one bundle)
@@ -32,7 +32,7 @@ OpenCode 2.2 or 2.3
 | `src/setup.ts` | Wires the parts below in order. Its `SetupContext` names exactly the parts of OpenCode's context that the plugin uses, apart from the tools RPC's. |
 | `src/meta.ts` | Reads the version and the supported OpenCode range (`opencode.host`) from `package.json`. |
 | `src/hosts.ts` | `TESTED_HOSTS`, the one list of tested OpenCode releases, which status and the host and pack tests read. |
-| `src/options.ts` | Strict option parsing: `exportDirectory` and `allowUntestedHost`. |
+| `src/options.ts` | Strict option parsing: `exportDirectory`, `allowUntestedHost` and `access`. |
 | `src/host-check.ts` | Compares `ctx.app.version` with the supported range; refuses with `HOST_UNTESTED` unless `allowUntestedHost` is set, and marks a release outside `TESTED_HOSTS` untested. |
 | `src/server.ts` | Registers the official server under `granola`, or records a conflict with the user's own entry. |
 | `src/known-tools.ts` | The known-tool table: reads, writes, the hidden `sign_out`, and the plugin's own tools. |
@@ -132,12 +132,12 @@ sign-in. A call to a server that is not connected gets the connection codes and 
 
 ## Platform facts
 
-These hold on OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2, the releases in `TESTED_HOSTS`.
+These hold on OpenCode 2.4.1, the release in `TESTED_HOSTS`.
 
 | Topic | Fact | Source |
 | --- | --- | --- |
-| Credential status | A status set with `integration.connection.status` is not on what `connection.active` returns; `integration.get` projects it as `connections[].status`, so the plugin reads its own mark back from there and clears only its own message. A 401 whose token refresh fails with no refresh token leaves the credential in place, so the `/connect` mark is only observable then. The host test signs in through the loopback callback and the token endpoint, then challenges, and asserts the mark is set and cleared. | The host test, on 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2 |
-| Unattended Code Mode | Up to 2.3.0 a schedule's `if: { code }` check runs once at creation, with asks settled unattended. From 2.3.1 `experimental.automation` replaces `experimental.schedule`: a code action's tools are authorized at creation the same way (an ask or a deny is refused), and the program runs, under an unattended grant for those tools, when the scheduler finds it due. A stock `opencode serve` starts the scheduler; the host test reaches it over raw HTTP. The flag is `experimental.automations`, also read as `experimental.schedules`. | [`automation/code.ts`](https://github.com/anomalyco/opencode/blob/v2.3.2/packages/core/src/automation/code.ts), [`server/process.ts`](https://github.com/anomalyco/opencode/blob/v2.3.2/packages/server/src/process.ts) |
+| Credential status | A status set with `integration.connection.status` is not on what `connection.active` returns; `integration.get` projects it as `connections[].status`, so the plugin reads its own mark back from there and clears only its own message. A 401 whose token refresh fails with no refresh token leaves the credential in place, so the `/connect` mark is only observable then. The host test signs in through the loopback callback and the token endpoint, then challenges, and asserts the mark is set and cleared. | The host test, on 2.4.1 |
+| Unattended Code Mode | An automation's code action has its tools authorized at creation (an ask or a deny is refused), and the program runs, under an unattended grant for those tools, when the scheduler finds it due. The routes are `/api/experimental/automation`; `experimental.schedule` no longer exists. A stock `opencode serve` starts the scheduler; the host test reaches it over raw HTTP. The embedded `@opencode/sdk` host starts no scheduler, so the host test runs unattended Code Mode on the stock host only. | [`automation/code.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/automation/code.ts), [`server/process.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/server/src/process.ts) |
 
 ## Build
 

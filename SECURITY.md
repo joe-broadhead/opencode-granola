@@ -58,7 +58,7 @@ What the model can do in Granola is limited by three layers, in this order:
 3. **Your OpenCode permissions.** Your `permissions` rules and saved "Always allow" answers override the defaults. A
    `deny` you configure always wins.
 
-The [configuration guide](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/configuration.md#permissions)
+The [configuration guide](https://github.com/we-the-rebel-alliance/granola-plugin/blob/master/docs/configuration.md#permissions)
 has the rules and how to change them. Things to know:
 
 - **The export folder is outside the project.** `export_markdown` writes under its export folder, which by default is
@@ -85,7 +85,7 @@ has the rules and how to change them. Things to know:
 ## Scripts
 
 The tools RPC (`granola.meetings.tools`, see
-[docs/scripting.md](https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md)) runs Granola's
+[docs/scripting.md](https://github.com/we-the-rebel-alliance/granola-plugin/blob/master/docs/scripting.md)) runs Granola's
 tools for a script, with no model. It adds no authority:
 
 - A script names a session that names an agent, and runs as them. A call resolves the tool's action against that

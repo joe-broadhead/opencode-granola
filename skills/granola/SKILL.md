@@ -3,7 +3,7 @@ name: granola
 description: Load before the first Granola tool call (granola_*, tools.granola.*). For questions about the user's Granola meetings: what was said, decided or assigned, notes, transcripts, follow-ups, questions across meetings, saving meetings as Markdown, or Granola sign-in and sign-out.
 ---
 
-If Granola's tools are absent, run `/connect` and choose Granola, or on Jelly call jelly_connection_request.
+If Granola's tools are absent, run `/connect` and choose Granola.
 
 # Granola meeting notes
 
@@ -71,4 +71,4 @@ Ask before `overwrite: true`. Report the path, size and checksum it returns, and
 
 ## Scripts
 
-For a job that runs with no model, such as a cron job, the RPC `granola.meetings.tools` runs every tool this plugin knows, as a session's agent: the ten reads, the ten writes (`give_feedback` is a send), `export_markdown`, and the plugin's own source reads. Only a resolved `allow` runs: at the default `access: "all"` a script can read, write, send and export; at `"ask-changes"` an ask is refused because no one can answer it; at `"read-only"` only the reads run. Its `describe` method lists every method with its class, schema and permission; the guide is https://github.com/joe-broadhead/opencode-granola/blob/HEAD/docs/scripting.md.
+For work that runs with no model, such as an automation, the RPC `granola.meetings.tools` runs every tool this plugin knows, as a session's agent: the ten reads, the ten writes (`give_feedback` is a send), `export_markdown`, and the plugin's own source reads. Only a resolved `allow` runs: at the default `access: "all"` a script can read, write, send and export; at `"ask-changes"` an ask is refused because no one can answer it; at `"read-only"` only the reads run. Its `describe` method lists every method with its class, schema and permission; the guide is https://github.com/we-the-rebel-alliance/granola-plugin/blob/master/docs/scripting.md.

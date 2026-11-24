@@ -5,13 +5,13 @@ is present, and every error code. The [README](../README.md) covers install, sig
 
 ## Plugin options
 
-Options go in the plugin's entry in `plugins`. Both are optional.
+Options go in the plugin's entry in `plugins`. All are optional.
 
 ```jsonc
 {
   "plugins": [
     {
-      "package": "github:joe-broadhead/opencode-granola#v0.0.10",
+      "package": "github:we-the-rebel-alliance/granola-plugin#v0.0.0",
       "options": {
         "exportDirectory": "<an absolute path>/Granola",
         "allowUntestedHost": false
@@ -24,7 +24,7 @@ Options go in the plugin's entry in `plugins`. Both are optional.
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `exportDirectory` | `Granola` in your home folder | Where `export_markdown` writes files. It must be an absolute path; write out your home folder instead of `~`. The folder is created on the first approved export. |
-| `allowUntestedHost` | `false` | `true` lets the plugin run on an OpenCode version outside the supported range (`>=2.2.3 <2.4.0`). Status then shows a warning. See [Host check](#host-check). |
+| `allowUntestedHost` | `false` | `true` lets the plugin run on an OpenCode version outside the supported range (`>=2.4.1 <2.5.0`). Status then shows a warning. See [Host check](#host-check). |
 | `access` | `"all"` | What the default permission rules allow: `"all"` (every tool), `"ask-changes"` (reads run, everything else asks) or `"read-only"` (reads run, everything else is denied). See [Permissions](#permissions). |
 
 The options are checked strictly when the plugin starts. An unknown key or a wrong type stops the plugin with one error
@@ -461,9 +461,9 @@ read is a day past it: a later page of the read, however much later, answers a n
 out of Granola's whole 30 days, so it neither repeats the gap nor skips a meeting Granola still shows. A paid plan
 (`plus`, `business` or `enterprise`) has no window and no gap.
 
-`probe`'s record of the plan holds for a day. A listing cannot ask Granola again (reading `get_account_info` from a
-listing would need `permission.readsIdentity`, which a consumer on source-contract v0.1.x refuses), so after a day a
-paid record counts as none, and an account that moved to the free plan answers the gap. Call `probe` before a read
+`probe`'s record of the plan holds for a day. A listing cannot ask Granola again (its `get_account_info` read is the
+source's identity operation, which only `probe` makes), so after a day a paid record counts as none, and an account
+that moved to the free plan answers the gap. Call `probe` before a read
 that may be more than 29 days behind, so a paid account is not answered a gap it does not need; a needless gap only
 makes a consumer resync. A move to the free plan within a day of `probe`, with a cursor more than 29 days behind, is
 the one case still listed without a gap.
@@ -474,19 +474,19 @@ of the session that runs them. A consumer's grant names exactly those operations
 
 ## Host check
 
-When it loads, the plugin compares the OpenCode version with its supported range, `>=2.2.3 <2.4.0`, which
-`package.json` declares as `opencode.host`. Every check runs on OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2, the tested releases.
+When it loads, the plugin compares the OpenCode version with its supported range, `>=2.4.1 <2.5.0`, which
+`package.json` declares as `opencode.host`. Every check runs on OpenCode 2.4.1, the tested release.
 
 - **A tested release:** the plugin sets everything up. The `OpenCode` row reads, for example,
-  `2.2.5 (tested; supported range >=2.2.3 <2.4.0), plugin <version>`.
-- **Another release inside the range, such as 2.2.99:** the plugin sets everything up too. The `OpenCode` row calls the
+  `2.4.1 (tested; supported range >=2.4.1 <2.5.0), plugin <version>`.
+- **Another release inside the range, such as 2.4.99:** the plugin sets everything up too. The `OpenCode` row calls the
   version `untested` (the RPC's `host.tested` is `false`); the state and the next step are the same as on a tested
   release.
 - **Outside the range, including prereleases and development builds:** the plugin does not start, with
   `HOST_UNTESTED`.
 - **Outside the range with `"allowUntestedHost": true`:** the plugin sets everything up, and the `OpenCode` row says
   `host untested`. When nothing else is needed, the next step reads
-  `If Granola misbehaves, use OpenCode 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 or 2.3.2.`
+  `If Granola misbehaves, use OpenCode 2.4.1.`
 
 The plugin has no status-only mode: outside the range it does not start at all, so its status never has the state
 `host_untested`.
@@ -500,7 +500,7 @@ model. It reads only OpenCode's local state and holds no token and no sign-in li
 | Field | Content |
 | --- | --- |
 | `version` | The plugin's version |
-| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.2.3, 2.2.4, 2.2.5, 2.2.6, 2.2.7, 2.3.0, 2.3.1 and 2.3.2) |
+| `host` | `version` (`null` if OpenCode reports none), `range` (the supported range) and `tested` (true only for 2.4.1) |
 | `state` | `connected`, `sign_in_required`, `connecting`, `disabled`, `failed`, `not_configured` or `conflict`. The text surfaces show the same states as `connected`, `sign-in required`, `connecting`, `disabled`, `failed`, `not configured` and `conflict`. |
 | `title` | Granola's display title, when connected |
 | `problem` | `code` and `message`, whenever Granola is not connected and there is no conflict |
@@ -538,7 +538,7 @@ Every error has a code, a message and a next step, in the form `CODE: message Ne
 | `CONNECTION_FAILED` | Granola connection failed: *reason*, ending with one full stop, question mark or exclamation mark. | Reconnect Granola from /mcps, and if it keeps failing, run /connect and choose Granola to sign in again. |
 | `DISABLED` | Granola is disabled in OpenCode. | Enable granola in /mcps, or remove "disabled": true from mcp.servers.granola in your OpenCode config. |
 | `TOOL_UNAVAILABLE` | Granola does not offer *tool* for this account. | Your Granola plan may not include it; run /granola-status to see the tools Granola offers you. |
-| `HOST_UNTESTED` | The Granola plugin supports OpenCode >=2.2.3 <2.4.0, found *version*. | Use OpenCode >=2.2.3 <2.4.0, or set the plugin option allowUntestedHost to true to run anyway. |
+| `HOST_UNTESTED` | The Granola plugin supports OpenCode >=2.4.1 <2.5.0, found *version*. | Use OpenCode >=2.4.1 <2.5.0, or set the plugin option allowUntestedHost to true to run anyway. |
 | `OPTIONS_INVALID` | Plugin option *key* *problem*. | Fix the Granola plugin options in your OpenCode config, then reload OpenCode. |
 | `STATUS_UNAVAILABLE` | Granola status could not be read. | Run /granola-status again in a few seconds. The status RPC answers with its error `unavailable`, and the `/granola` dialog says to press r in a few seconds. |
 | `SKILLS_INVALID` | The bundled skill *path* needs front matter with a name that matches its folder and a description. | Reinstall the plugin. |

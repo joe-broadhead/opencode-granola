@@ -33,7 +33,7 @@ function status(overrides: Partial<Status>): Status {
     exportDirectory: "/home/someone/Granola",
     access: "all",
     version: VERSION,
-    host: { version: "2.2.3", range: ">=2.2.3 <2.4.0", tested: true },
+    host: { version: "2.4.1", range: ">=2.4.1 <2.5.0", tested: true },
     nextStep: "Nothing to do.",
     ...overrides,
   }
@@ -87,7 +87,7 @@ async function run(scenario: Scenario) {
   const context = {
     options: {},
     location: { directory: "/project" },
-    app: { version: "2.2.3", channel: "latest" },
+    app: { version: "2.4.1", channel: "latest" },
     theme,
     client: {
       rpc: (definition: { id: string }) => ({

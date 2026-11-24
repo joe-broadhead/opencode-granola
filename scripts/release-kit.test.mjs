@@ -1974,11 +1974,22 @@ describe("CI: macOS on pushes to master and for releases, never on pull requests
     assert.deepEqual(ciJobsProblems(undefined, ["macos-26"]), ["no successful job on macos-26"])
   })
 
-  test("this repository's ci.yml: a pull request's matrix has no macOS entry, and a master push's does (npm run check)", () => {
-    const matrix = ciMatrix(readFileSync(join(SCRIPTS, "..", ".github", "workflows", "ci.yml"), "utf8"))
-    assert.deepEqual(matrix.problems, [])
-    assert.equal(matrix.pullRequest.some((runner) => /^macos-/.test(runner)), false)
-    assert.ok(matrix.push.includes("macos-26"), `a push to master runs ${matrix.push.join(", ")}`)
+})
+
+describe("this repository's CI", () => {
+  const text = readFileSync(join(SCRIPTS, "..", ".github", "workflows", "ci.yml"), "utf8")
+
+  test("has one job, id and name ci, on the family's runner rule (npm run check)", () => {
+    const jobs = text.slice(text.indexOf("\njobs:\n") + 7).split("\n")
+    const named = jobs.filter((line) => /^ {2}[\w-]+:$/.test(line)).map((line) => line.trim().slice(0, -1))
+    assert.deepEqual(named, ["ci"])
+    assert.match(text, /^ {2}ci:\n {4}name: ci$/m)
+    assert.ok(text.includes("    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (vars.CI_RUNNER_PUBLIC || 'ubuntu-24.04') || 'ubuntu-24.04' }}"))
+    assert.match(text, /^permissions:\n {2}contents: read$/m)
+    assert.match(text, /node-version: 24/)
+    assert.match(text, /uses: oven-sh\/setup-bun@[0-9a-f]{40} # v[\d.]+/)
+    assert.match(text, /run: npm ci --ignore-scripts/)
+    assert.match(text, /run: npm run check/)
   })
 })
 

@@ -23,7 +23,7 @@ function compare(left: Triple, right: Triple): number {
 }
 
 /**
- * True when a release version satisfies every comparator of the range, for example ">=2.2.3 <2.4.0".
+ * True when a release version satisfies every comparator of the range, for example ">=2.4.1 <2.5.0".
  * Prerelease and dev builds such as 0.0.0-dev-202610301200 are never inside it.
  */
 export function satisfies(version: string, range: string): boolean {

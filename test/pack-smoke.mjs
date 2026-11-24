@@ -5,9 +5,8 @@
 //
 // Usage: node test/pack-smoke.mjs [--tarball <path>]. It tests the tarball named by --tarball, else by PACK_TARBALL:
 // scripts/release-pack.mjs sets PACK_TARBALL to the tarball release.yml built, and the stage tests that exact file.
-// With neither, it builds and packs the repository. Needs npm and Bun. Set OPENCODE_BIN_2_2_3 to
-// OPENCODE_BIN_2_2_7 and OPENCODE_BIN_2_3_0 to stock opencode binaries you already have; otherwise each @opencode/cli
-// release is installed into a temp directory, once per run.
+// With neither, it builds and packs the repository. Needs npm and Bun. Set OPENCODE_BIN_2_4_1 to a stock opencode binary
+// you already have; otherwise the @opencode/cli release is installed into a temp directory, once per run.
 import assert from "node:assert/strict"
 import { spawn, spawnSync } from "node:child_process"
 import { randomUUID } from "node:crypto"
@@ -28,7 +27,7 @@ const pkg = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8"))
 
 /** The stock OpenCode releases the package is tested on: the one list in src/hosts.ts. */
 const HOST_VERSIONS = TESTED_HOSTS
-const SUPPORTED_RANGE = ">=2.2.3 <2.4.0"
+const SUPPORTED_RANGE = ">=2.4.1 <2.5.0"
 const MAX_BYTES = 1024 * 1024
 const OFFICIAL_URL = "https://mcp.granola.ai/mcp"
 const SKILLS = ["granola", "granola-meeting-brief"]
@@ -180,8 +179,8 @@ test("dist holds exactly two self-contained entries, which import only modules O
 const binaries = new Map()
 
 /**
- * The stock CLI for `version`: OPENCODE_BIN_2_2_3 (and so on) if set, otherwise the unmodified npm release,
- * installed into the temp directory with scripts off, once per version.
+ * The stock CLI for `version`: OPENCODE_BIN_2_4_1 if set, otherwise the unmodified npm release, installed into the temp
+ * directory with scripts off, once per version.
  */
 function stockBinary(version) {
   const given = process.env[`OPENCODE_BIN_${version.replaceAll(".", "_")}`]

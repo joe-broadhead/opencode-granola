@@ -12,7 +12,7 @@ import { createServer } from "node:net"
 import { arch, platform } from "node:os"
 import { join, sep } from "node:path"
 import { setTimeout as sleep } from "node:timers/promises"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { OpenCode as Remote, type OpenCodeClient } from "@opencode/client"
 import { TESTED_HOSTS } from "../../src/hosts.js"
 import { defaultRules, type Rule } from "../../src/permissions.js"
@@ -258,6 +258,35 @@ const hostFields = (root: Root) => ({
 /** The installed `@opencode/sdk` version, which the embedded host reports by default. */
 const SDK_VERSION = (JSON.parse(readFileSync(join(REPO, "node_modules", "@opencode", "sdk", "package.json"), "utf8")) as { version: string }).version
 
+/** The installed SDK and the modules beside it, which are the instances its own bundle imports. */
+const SDK_DIR = join(REPO, "node_modules", "@opencode", "sdk")
+const SDK_MODULES = join(REPO, "node_modules")
+
+/**
+ * The SDK's embedded host, with the automation scheduler that only a server process starts. `@opencode/server` is the
+ * only host that forks `Automation.run`; without it an automation's code action is never due, so the embedded host fits
+ * the scheduler in: the same Automation service, from the same @opencode/core module the SDK's bundle imports, wrapped
+ * in a layer that forks `run` in the host's scope. The modules are loaded by path, next to the SDK, so they are its
+ * instances and not a second copy.
+ */
+async function createSdk(options: Parameters<(typeof import("@opencode/sdk"))["OpenCode"]["create"]>[0]) {
+  const load = (...path: string[]) => import(pathToFileURL(join(...path)).href)
+  const { PromiseSdk } = await load(SDK_DIR, "dist", "promise.js")
+  const { Automation } = await load(SDK_MODULES, "@opencode", "core", "dist", "automation.js")
+  const { Effect, Layer } = await load(SDK_MODULES, "effect", "dist", "index.js")
+  const scheduling = Automation.node.mapLayer((layer: unknown) =>
+    Layer.effect(
+      Automation.Service,
+      Effect.gen(function* () {
+        const automations = yield* Automation.Service
+        yield* Effect.forkScoped(automations.run)
+        return automations
+      }),
+    ).pipe(Layer.provide(layer)),
+  )
+  return PromiseSdk.create(options, { overrides: [Automation.node.replace(scheduling)] }) as ReturnType<(typeof import("@opencode/sdk"))["OpenCode"]["create"]>
+}
+
 /**
  * The public `@opencode/sdk` host in this process, at the version installed as a devDependency. `version` is the
  * OpenCode version it reports to plugins.
@@ -286,8 +315,7 @@ export async function startEmbedded(fake: SyntheticGranola, version: string = SD
     // The embedded SDK opens a location at the process working directory. Stay inside the temp root so that
     // location is not this repository.
     process.chdir(root.path)
-    const { OpenCode } = await import("@opencode/sdk")
-    const opencode = await OpenCode.create({
+    const opencode = await createSdk({
       // An embedded host reports "unknown" unless told, which the plugin's host check refuses.
       app: { version },
       config: { directory: join(root.path, "config"), project: true, claude: false },
@@ -460,25 +488,45 @@ export function repositoryChanges(): string {
 /** How OpenCode answered a program run with nobody present: it ran and returned, or its message. */
 export type Unattended = { readonly ok: true } | { readonly ok: false; readonly error: string }
 
+/** One automation's route answers: what its run settled as, if it has run. */
+interface AutomationRun {
+  readonly lastOutcome?: string
+  readonly lastOutput?: string
+}
+
 /**
  * Runs a Code Mode program once with nobody present to answer a prompt, as the session's agent and under its rules,
- * with no model: a stock 2.4.1 server runs an automation's code action over raw HTTP. Creation refuses what the rules
- * do not allow, and the run's outcome is read back before the automation is deleted. A run that never comes throws, so
- * it is never read as a refusal. The embedded `@opencode/sdk` host starts no scheduler, so it has none of this.
+ * with no model. Creation refuses what the rules do not allow, and the run's outcome is read back before the
+ * automation is deleted. A run that never comes throws, so it is never read as a refusal. Both hosts now run the
+ * scheduler: `opencode serve` starts it, and the embedded host gets it from `createSdk`'s override. The stock host
+ * answers over raw HTTP (its client's cast path for the route) and the embedded host through the client's own
+ * `experimental.automation` methods.
  */
 export async function unattended(host: Host, sessionID: string, code: string): Promise<Unattended> {
   const name = "granola-host-test"
   const refused = (error: unknown): Unattended => ({ ok: false, error: error instanceof Error ? error.message : String(error) })
-  if (host.http === undefined) throw new Error("this host runs no automations, so it has no unattended Code Mode")
+  const http = host.http
+  const automation = host.client.experimental.automation
+  const routes = http === undefined
+    ? {
+        create: (body: object) => automation.create(body as never),
+        get: (id: string) => automation.get({ automationID: id }),
+        delete: (id: string) => automation.delete({ automationID: id }),
+      }
+    : {
+        create: async (body: object) => (await http("POST", "/api/experimental/automation", body))!.data!,
+        get: async (id: string) => (await http("GET", `/api/experimental/automation/${id}`))?.data,
+        delete: async (id: string) => void (await http("DELETE", `/api/experimental/automation/${id}`)),
+      }
   let automationID: string
   try {
-    automationID = (await host.http("POST", "/api/experimental/automation", { sessionID, name, trigger: { type: "at", at: "in 1 millis" }, action: { type: "code", code } }))!.data!.id
+    automationID = (await routes.create({ sessionID, name, trigger: { type: "at", at: "in 1 millis" }, action: { type: "code", code } })).id
   } catch (error) {
     return refused(error)
   }
   try {
     for (const deadline = Date.now() + 60_000; ; await sleep(100)) {
-      const info = (await host.http("GET", `/api/experimental/automation/${automationID}`))?.data
+      const info: AutomationRun | undefined = await routes.get(automationID)
       if (info?.lastOutcome !== undefined) {
         if (info.lastOutcome === "fired" || info.lastOutcome === "late") return { ok: true }
         // A program that cannot succeed on a retry (a bad return value, a scoped ask) pauses its automation.
@@ -488,6 +536,6 @@ export async function unattended(host: Host, sessionID: string, code: string): P
       if (Date.now() > deadline) throw new Error("timed out waiting until the automation's code action has run (is the server's scheduler running?)")
     }
   } finally {
-    await host.http("DELETE", `/api/experimental/automation/${automationID}`)
+    await routes.delete(automationID)
   }
 }

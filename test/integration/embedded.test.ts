@@ -55,4 +55,4 @@ hostSuite("embedded @opencode/sdk", (server) => startEmbedded(server, undefined,
     const section = [lines[start]!]
     for (let i = start + 1; i < lines.length && lines[i]!.startsWith("  "); i++) section.push(lines[i]!)
     expect(Math.round(section.join("\n").length / 4)).toBeLessThanOrEqual(1000)
-}, { unattended: false })
+})

@@ -31,13 +31,7 @@ const settled = (current: Status) => current.state !== "connecting" && current.s
 /** Connected, with Granola's tools in the registry: OpenCode can report connected before it lists them. */
 const connected = (current: Status) => current.state === "connected" && current.tools.visible > 0
 
-/** What a host can do beyond loading the plugin: the embedded SDK has no automation scheduler. */
-export interface HostOptions {
-  readonly unattended?: boolean
-}
-
-export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promise<Host>, fake: () => SyntheticGranola, budget?: (host: Host) => Promise<void>, options: HostOptions = {}): void {
-  const unattendedSupported = options.unattended ?? true
+export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promise<Host>, fake: () => SyntheticGranola, budget?: (host: Host) => Promise<void>): void {
   describe(name, () => {
     let host: Host
     let changesBefore: string
@@ -337,9 +331,7 @@ export function hostSuite(name: string, start: (fake: SyntheticGranola) => Promi
       })
     })
 
-    // The embedded @opencode/sdk host starts no scheduler (`@opencode/server` does: Automation.Service.run), so a code
-    // action never runs there. The stock 2.4.1 host runs the same cases.
-    ;(unattendedSupported ? describe : describe.skip)("Code Mode with nobody present", () => {
+    describe("Code Mode with nobody present", () => {
       test("an account read runs without asking, and status then shows the workspace", async () => {
         const result = await codeMode("main", `await tools.granola.get_account_info({}); throw new Error("SEEN " + JSON.stringify("read"))`)
         expect(result).toEqual({ seen: "read" })

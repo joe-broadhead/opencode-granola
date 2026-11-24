@@ -50,9 +50,9 @@ npm run check
 The host stage runs the same cases in the public `@opencode/sdk` 2.4.1, embedded in the test process, and in stock
 `opencode serve` 2.4.1 (`TESTED_HOSTS` in `src/hosts.ts`, the one list of tested releases) through `@opencode/client`.
 It needs Bun and a prior `npm run build`, because OpenCode loads the plugin from `dist/`. It covers registration, the
-default rules, prompts and saved approvals, the per-agent fix, status in each connection state, the export and
-unloading. The embedded SDK host starts no automation scheduler, so the cases that run Code Mode with nobody present
-run on the stock host only.
+default rules, prompts and saved approvals, the per-agent fix, status in each connection state, the export, runs where
+nobody is present and unloading, on both hosts. The embedded host gets the automation scheduler a server process would
+start, through an override that forks `Automation.run`.
 
 The pack stage builds explicitly, packs the package and installs the tarball alone into a temporary project with
 scripts off. It checks that the tarball holds exactly the `files` whitelist, with no source or JSX and under 1 MB, that

@@ -75,8 +75,8 @@ they are: the contract release replaces them.
 - **Text** in skills, errors and status is plain language with no process terms (`test/ux.test.ts`). Docs describe
   what the code does now. No tokens, sign-in links, meeting content or personal data anywhere; test data is invented.
 - **Hosts.** The plugin runs on OpenCode 2.4.1. The host suite runs the public `@opencode/sdk` in-process and a stock
-  `opencode serve` 2.4.1; the embedded SDK host starts no automation scheduler, so the unattended Code Mode cases run
-  on the stock host only (`test/integration/harness.ts`).
+  `opencode serve` 2.4.1, both with the same cases. The embedded host gets the automation scheduler a server process
+  would start, through an override that forks `Automation.run` (`test/integration/harness.ts`).
 - **Releases** come only from `.github/workflows/release.yml` ("Releasing" in [CONTRIBUTING.md](CONTRIBUTING.md)). A
   release-prep PR sets `version` in `package.json` and the install specs and runs `node scripts/changelog.mjs release`;
   once it is on `master` and CI passed, start the release with

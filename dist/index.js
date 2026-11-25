@@ -1,4 +1,4 @@
-// @we-the-rebel-alliance/granola-plugin 0.0.0. Built by scripts/build.mjs; do not edit.
+// @we-the-rebel-alliance/granola-plugin 0.0.11. Built by scripts/build.mjs; do not edit.
 
 // src/index.ts
 import { homedir } from "node:os";

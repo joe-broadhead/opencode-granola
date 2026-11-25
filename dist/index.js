@@ -2,7 +2,7 @@
 
 // src/index.ts
 import { homedir } from "node:os";
-import { isAbsolute, join, resolve } from "node:path";
+import { isAbsolute, join as join2, resolve } from "node:path";
 import { Plugin } from "@opencode/plugin";
 
 // node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-WLRWVIVP.js
@@ -13799,14 +13799,54 @@ var packageName = file2.name;
 var version2 = file2.version;
 var manifest = checked.value;
 
+// src/skills.ts
+import { existsSync, readFileSync as readFileSync2, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Skill } from "@opencode/plugin";
+var KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+var INVALID = (directory, problem) => new Error(
+  `OPTIONS_INVALID: The bundled skill skills/${directory}/SKILL.md ${problem}. Next step: give it a --- front matter with name: ${directory}, a one-line description, then a non-empty body.`
+);
+function readSkills(root = fileURLToPath(new URL("../skills/", import.meta.url))) {
+  return readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory() && existsSync(join(root, entry.name, "SKILL.md"))).map((entry) => entry.name).sort().map((directory) => {
+    const path3 = join(root, directory, "SKILL.md");
+    const text3 = readFileSync2(path3, "utf8");
+    const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(text3);
+    if (match === null) throw INVALID(directory, "has no --- front matter");
+    if (!KEBAB.test(directory)) throw INVALID(directory, "is not a kebab-case directory");
+    const field = (key) => match[1].split(/\r?\n/).find((line) => line.startsWith(`${key}:`))?.slice(key.length + 1).trim();
+    const name = field("name");
+    const description = field("description");
+    const content = match[2].trim();
+    if (name !== directory) throw INVALID(directory, `names ${name ?? "no skill"} instead of ${directory}`);
+    if (description === void 0 || description === "") throw INVALID(directory, "has no description");
+    if (content === "") throw INVALID(directory, "has an empty body");
+    return { name: directory, description, path: path3, content };
+  });
+}
+async function registerSkills(skill, skills) {
+  await skill.transform((editor) => {
+    for (const skill2 of skills) {
+      editor.add({
+        id: Skill.ID.make(skill2.name),
+        name: Skill.Name.make(skill2.name),
+        description: skill2.description,
+        path: Skill.Info.fields.path.make(skill2.path),
+        content: skill2.content
+      });
+    }
+  });
+}
+
 // src/index.ts
 function exportDirectoryOf(options) {
   const raw = options["exportDirectory"];
-  if (raw === void 0) return join(homedir(), "Granola");
+  if (raw === void 0) return join2(homedir(), "Granola");
   if (typeof raw !== "string" || raw.includes("\0")) {
     throw new Error("OPTIONS_INVALID: exportDirectory must be an absolute path or start with ~/. Next step: set an absolute folder, or ~/Granola.");
   }
-  const expanded = raw === "~" ? homedir() : raw.startsWith("~/") ? join(homedir(), raw.slice(2)) : raw;
+  const expanded = raw === "~" ? homedir() : raw.startsWith("~/") ? join2(homedir(), raw.slice(2)) : raw;
   if (!isAbsolute(expanded)) {
     throw new Error("OPTIONS_INVALID: exportDirectory must be an absolute path or start with ~/. Next step: set an absolute folder, or ~/Granola.");
   }
@@ -13822,6 +13862,7 @@ var src_default = Plugin.define({
       throw new Error(`OPTIONS_INVALID: ${plan.problems.join("; ")}. Next step: fix the plugin's accounts option.`);
     }
     const exportDirectory = exportDirectoryOf(options);
+    const skills = readSkills();
     const accountRegistration = await registerMcpAccounts(context, manifest, options);
     const provider = createProvider({ tool: context.tool, mcp: context.mcp }, manifest.plugin.name);
     const handlers = handlersFor({
@@ -13835,6 +13876,7 @@ var src_default = Plugin.define({
       provider,
       clock: Date.now
     });
+    await registerSkills(context.skill, skills);
     const registration = await register(context, manifest, handlers);
     return () => registration.dispose();
   }

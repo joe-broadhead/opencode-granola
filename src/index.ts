@@ -1,8 +1,10 @@
 /**
- * The plugin's one entry: `Plugin.define({ id, setup })`, the host gate, the accounts, and one `register` call.
+ * The plugin's one entry: `Plugin.define({ id, setup })`, the host gate, the accounts, the bundled skills, and one
+ * `register` call.
  *
  * `register` wires doors 1–3 from `handlers`, resolves accounts and generates the access rules. This file never calls
- * `ctx.tool`, `ctx.rpc` or `ctx.permission` itself.
+ * `ctx.tool`, `ctx.rpc` or `ctx.permission` itself. Skills are registered here because the contract's `register` does
+ * not register them.
  */
 import { homedir } from "node:os"
 import { isAbsolute, join, resolve } from "node:path"
@@ -13,6 +15,7 @@ import { registerMcpAccounts } from "./accounts.ts"
 import { handlersFor } from "./handlers/index.ts"
 import { manifest, packageName, version } from "./manifest.ts"
 import { createProvider } from "./provider/client.ts"
+import { readSkills, registerSkills } from "./skills.ts"
 
 /** The export folder: `exportDirectory` when given, else `~/Granola`. A leading `~` is the home folder. */
 export function exportDirectoryOf(options: Readonly<Record<string, unknown>>): string {
@@ -40,6 +43,8 @@ export default Plugin.define({
     }
 
     const exportDirectory = exportDirectoryOf(options)
+    // Read before the synchronous transform, and before any door is wired: a broken skill fails setup cleanly.
+    const skills = readSkills()
 
     // The vendor's MCP server holds the credentials: one server per alias, named <plugin> or <plugin>-<alias>.
     const accountRegistration = await registerMcpAccounts(context, manifest, options)
@@ -57,6 +62,7 @@ export default Plugin.define({
       clock: Date.now,
     })
 
+    await registerSkills(context.skill, skills)
     const registration = await register(context, manifest, handlers)
     return () => registration.dispose()
   },

@@ -73,7 +73,9 @@ test("two sources share one service and one read", () => {
   assert.equal(events?.maxBytes, 65536)
 })
 
-test("the plugin performs no write a nudge could honestly announce", () => {
+// Standard §4.7: a nudge announces a write the plugin makes. `export_markdown` is a local file, and the seven
+// pass-through writes are executed by Granola's MCP server, so the plugin has no write of its own to announce.
+test("the plugin makes no write of its own for standard §4.7 to announce", () => {
   assert.deepEqual(manifest.events, {})
   assert.deepEqual(manifest.actions, [])
 })

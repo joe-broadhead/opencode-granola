@@ -13805,9 +13805,52 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Skill } from "@opencode/plugin";
 var KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+var BLOCK_MARKER = /^[>|][+-]?\d*$/;
 var INVALID = (directory, problem) => new Error(
-  `OPTIONS_INVALID: The bundled skill skills/${directory}/SKILL.md ${problem}. Next step: give it a --- front matter with name: ${directory}, a one-line description, then a non-empty body.`
+  `OPTIONS_INVALID: The bundled skill skills/${directory}/SKILL.md ${problem}. Next step: give it a --- front matter with name: ${directory}, a description (one line, or a >/| block with text), then a non-empty body.`
 );
+var unquote = (value) => {
+  const trimmed = value.trim();
+  if (trimmed.length < 2) return trimmed;
+  const first = trimmed[0];
+  return (first === '"' || first === "'") && trimmed.endsWith(first) ? trimmed.slice(1, -1) : trimmed;
+};
+function fieldOf(frontmatter, key) {
+  const lines = frontmatter.replace(/\r\n/g, "\n").split("\n");
+  const at = lines.findIndex((line2) => line2.startsWith(`${key}:`));
+  const line = lines[at];
+  if (line === void 0) return void 0;
+  const first = line.slice(key.length + 1).trim();
+  if (!BLOCK_MARKER.test(first)) {
+    const parts = [unquote(first)];
+    for (const line2 of lines.slice(at + 1)) {
+      if (line2.trim() === "") continue;
+      if (!/^\s/.test(line2)) break;
+      parts.push(unquote(line2));
+    }
+    return parts.join(" ").trim();
+  }
+  const body = [];
+  for (const line2 of lines.slice(at + 1)) {
+    if (line2.trim() !== "" && !/^\s/.test(line2)) break;
+    body.push(line2);
+  }
+  const indents = body.filter((line2) => line2.trim() !== "").map((line2) => line2.length - line2.trimStart().length);
+  const indent = indents.length === 0 ? 0 : Math.min(...indents);
+  const dedented = body.map((line2) => line2.slice(Math.min(indent, line2.length)));
+  if (!first.startsWith(">")) return dedented.join("\n").trim();
+  let folded = "";
+  for (const line2 of dedented) {
+    if (line2.trim() === "") {
+      folded += "\n";
+    } else if (folded === "" || folded.endsWith("\n")) {
+      folded += line2;
+    } else {
+      folded += ` ${line2}`;
+    }
+  }
+  return folded.trim();
+}
 function readSkills(root = fileURLToPath(new URL("../skills/", import.meta.url))) {
   return readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory() && existsSync(join(root, entry.name, "SKILL.md"))).map((entry) => entry.name).sort().map((directory) => {
     const path3 = join(root, directory, "SKILL.md");
@@ -13815,12 +13858,13 @@ function readSkills(root = fileURLToPath(new URL("../skills/", import.meta.url))
     const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(text3);
     if (match === null) throw INVALID(directory, "has no --- front matter");
     if (!KEBAB.test(directory)) throw INVALID(directory, "is not a kebab-case directory");
-    const field = (key) => match[1].split(/\r?\n/).find((line) => line.startsWith(`${key}:`))?.slice(key.length + 1).trim();
-    const name = field("name");
-    const description = field("description");
-    const content = match[2].trim();
+    const frontmatter = match[1] ?? "";
+    const name = fieldOf(frontmatter, "name");
+    const description = fieldOf(frontmatter, "description");
+    const content = (match[2] ?? "").trim();
     if (name !== directory) throw INVALID(directory, `names ${name ?? "no skill"} instead of ${directory}`);
     if (description === void 0 || description === "") throw INVALID(directory, "has no description");
+    if (BLOCK_MARKER.test(description)) throw INVALID(directory, `has the block marker ${description} as its description`);
     if (content === "") throw INVALID(directory, "has an empty body");
     return { name: directory, description, path: path3, content };
   });

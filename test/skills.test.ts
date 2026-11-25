@@ -29,6 +29,22 @@ test("reads every skills/<name>/SKILL.md from the package root", () => {
   )
 })
 
+test("parses folded and literal block descriptions from the front matter", () => {
+  const skills = readSkills(
+    tree({
+      granola: "---\nname: granola\ndescription: >\n  Read meetings and notes.\n  Keep the account in mind.\n---\nbody",
+      "granola-meeting-brief": "---\nname: granola-meeting-brief\ndescription: |\n  First line.\n  Second line.\n---\nbody",
+    }),
+  )
+  assert.deepEqual(
+    skills.map((skill) => [skill.name, skill.description]),
+    [
+      ["granola", "Read meetings and notes. Keep the account in mind."],
+      ["granola-meeting-brief", "First line.\nSecond line."],
+    ],
+  )
+})
+
 test("registers each skill under its directory name, with the parsed front matter and body", async () => {
   const skills = readSkills()
   const added: { id: string; name: string; description?: string; path: string; content: string }[] = []
@@ -54,6 +70,8 @@ test("registers each skill under its directory name, with the parsed front matte
 for (const [label, files] of [
   ["a name that differs from the directory", { granola: "---\nname: other\ndescription: d\n---\nbody" }],
   ["no description", { granola: "---\nname: granola\n---\nbody" }],
+  ["a block marker with no text", { granola: "---\nname: granola\ndescription: >\n---\nbody" }],
+  ["a literal block marker as the description", { granola: "---\nname: granola\ndescription: '>'\n---\nbody" }],
   ["no front matter", { granola: "# Granola" }],
   ["a non-kebab-case directory", { Granola_Notes: "---\nname: Granola_Notes\ndescription: d\n---\nbody" }],
   ["an empty body", { granola: "---\nname: granola\ndescription: d\n---\n" }],

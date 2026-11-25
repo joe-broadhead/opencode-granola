@@ -10,6 +10,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { join, sep } from "node:path"
 import { test, after, before } from "node:test"
 import { fileURLToPath } from "node:url"
+import { parse } from "yaml"
 import { manifest } from "../../src/manifest.ts"
 import { REPO, startHost, type Host } from "../support/host.ts"
 
@@ -27,18 +28,12 @@ function expectedSkills(): { id: string; description: string }[] {
       const text = readFileSync(join(SKILLS, id, "SKILL.md"), "utf8")
       const front = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text)?.[1]
       assert.ok(front !== undefined, `skills/${id}/SKILL.md has front matter`)
-      const name = front
-        .split(/\r?\n/)
-        .find((line) => line.startsWith("name:"))
-        ?.slice("name:".length)
-        .trim()
-      const description = front
-        .split(/\r?\n/)
-        .find((line) => line.startsWith("description:"))
-        ?.slice("description:".length)
-        .trim()
-      assert.equal(name, id)
-      assert.ok(description !== undefined && description !== "")
+      const fields = parse(front) as { name?: unknown; description?: unknown }
+      assert.equal(fields.name, id)
+      assert.equal(typeof fields.description, "string", `skills/${id}/SKILL.md has a description`)
+      const description = (fields.description as string).trim()
+      assert.notEqual(description, "", `skills/${id}/SKILL.md has a non-empty description`)
+      assert.doesNotMatch(description, /^[>|][+-]?\d*$/, `skills/${id}/SKILL.md has a real description, not a block marker`)
       return { id, description }
     })
 }
@@ -82,6 +77,8 @@ test("every bundled skill is registered after the plugin loads in OpenCode 2.4.1
     assert.ok(found !== undefined, `${skill.id} is registered: ${listed.map((entry) => entry.id).join(", ")}`)
     assert.equal(found.name, skill.id)
     assert.equal(found.description, skill.description)
+    assert.notEqual(found.description.trim(), "", `${skill.id} has a non-empty description`)
+    assert.doesNotMatch(found.description, /^[>|][+-]?\d*$/, `${skill.id} has a real description, not a block marker`)
     assert.ok(found.path.endsWith(`skills/${skill.id}/SKILL.md`), found.path)
     assert.ok(found.content !== "")
   }

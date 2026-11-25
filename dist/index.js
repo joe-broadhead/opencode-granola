@@ -3,7 +3,7 @@
 // src/index.ts
 import { homedir } from "node:os";
 import { isAbsolute, join as join2, resolve } from "node:path";
-import { Plugin } from "@opencode/plugin";
+import { Plugin, Skill as Skill2 } from "@opencode/plugin";
 
 // node_modules/@we-the-rebel-alliance/plugin-contract/dist/chunks/chunk-WLRWVIVP.js
 var __defProp = Object.defineProperty;
@@ -13825,19 +13825,6 @@ function readSkills(root = fileURLToPath(new URL("../skills/", import.meta.url))
     return { name: directory, description, path: path3, content };
   });
 }
-async function registerSkills(skill, skills) {
-  await skill.transform((editor) => {
-    for (const skill2 of skills) {
-      editor.add({
-        id: Skill.ID.make(skill2.name),
-        name: Skill.Name.make(skill2.name),
-        description: skill2.description,
-        path: Skill.Info.fields.path.make(skill2.path),
-        content: skill2.content
-      });
-    }
-  });
-}
 
 // src/index.ts
 function exportDirectoryOf(options) {
@@ -13876,9 +13863,22 @@ var src_default = Plugin.define({
       provider,
       clock: Date.now
     });
-    await registerSkills(context.skill, skills);
+    const skillRegistration = await context.skill.transform((editor) => {
+      for (const skill of skills) {
+        editor.add({
+          id: Skill2.ID.make(skill.name),
+          name: Skill2.Name.make(skill.name),
+          description: skill.description,
+          path: Skill2.Info.fields.path.make(skill.path),
+          content: skill.content
+        });
+      }
+    });
     const registration = await register(context, manifest, handlers);
-    return () => registration.dispose();
+    return async () => {
+      await skillRegistration.dispose();
+      await registration.dispose();
+    };
   }
 });
 export {

@@ -104,13 +104,17 @@ test("every declared method still reaches every agent's rules", async () => {
   }
 })
 
-test("sign-in and status keep their pre-4b surfaces", async () => {
+test("registers one MCP server per account on the real host", async () => {
   assert.ok(host !== undefined)
   const servers = (await host.client.mcp.list({ location: host.location })).data.map((entry) => entry.name)
   assert.deepEqual(
-    servers.filter((name) => name.startsWith(manifest.plugin.name)).sort(),
+    servers.filter((name) => name === manifest.plugin.name || name.startsWith(`${manifest.plugin.name}-`)).sort(),
     [...SERVERS].sort(),
   )
+})
+
+test("sign-in and status keep their pre-4b surfaces", async () => {
+  assert.ok(host !== undefined)
   const session = await host.client.sessions.create({ location: host.location, agent: "build", permissions: [] })
   const status = (
     await host.client.rpc.call({ rpcID: manifest.plugin.name, method: "status", input: { sessionID: session.id, input: {} }, location: host.location })

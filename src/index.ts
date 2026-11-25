@@ -8,14 +8,14 @@
  */
 import { homedir } from "node:os"
 import { isAbsolute, join, resolve } from "node:path"
-import { Plugin, Skill } from "@opencode/plugin"
+import { Plugin } from "@opencode/plugin"
 import { accountsOf } from "@we-the-rebel-alliance/plugin-contract/accounts"
 import { assertHost, register } from "@we-the-rebel-alliance/plugin-contract/register"
 import { registerMcpAccounts } from "./accounts.ts"
 import { handlersFor } from "./handlers/index.ts"
 import { manifest, packageName, version } from "./manifest.ts"
 import { createProvider } from "./provider/client.ts"
-import { readSkills } from "./skills.ts"
+import { readSkills, registerSkills } from "./skills.ts"
 
 /** The export folder: `exportDirectory` when given, else `~/Granola`. A leading `~` is the home folder. */
 export function exportDirectoryOf(options: Readonly<Record<string, unknown>>): string {
@@ -62,20 +62,8 @@ export default Plugin.define({
       clock: Date.now,
     })
 
-    // Registered directly here: the release-bot bundle check looks for the `.skill.transform` chain in the built
-    // setup, so skills must not be hidden behind a helper call.
-    const skillRegistration = await context.skill.transform((editor) => {
-      for (const skill of skills) {
-        editor.add({
-          id: Skill.ID.make(skill.name),
-          name: Skill.Name.make(skill.name),
-          description: skill.description,
-          path: Skill.Info.fields.path.make(skill.path),
-          content: skill.content,
-        })
-      }
-    })
     const registration = await register(context, manifest, handlers)
+    const skillRegistration = await registerSkills(context, skills)
     return async () => {
       await skillRegistration.dispose()
       await registration.dispose()

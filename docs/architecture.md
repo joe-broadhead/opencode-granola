@@ -13,7 +13,7 @@
 | Export | `src/export/` | Markdown rendering, path and link checks, and the atomic local write |
 
 The entry is deliberately thin. `assertHost` refuses an untested OpenCode release. `readSkills` reads the package's
-`skills/*/SKILL.md` before any transform runs; the setup call registers them directly through `ctx.skill.transform`, because the
+`skills/*/SKILL.md` before any transform runs; `registerSkills` adds them through `ctx.skill.transform`, because the
 contract's `register` does not register skills. `register` from the contract wires doors 1–3: one agent tool per method
 in the `granola` namespace, the same tools in Code Mode, one RPC registration under `granola`, the permission
 assertions on `<alias>:<operation>`, and the access rules inserted into every agent. This repository never calls
@@ -25,7 +25,7 @@ assertions on `<alias>:<operation>`, and the access rules inserted into every ag
 2. `assertHost` refuses an OpenCode release outside `>=2.4.1 <2.5.0`, unless `allowUntestedHost` is set.
 3. `accountsOf` reads the aliases from the options; `registerAccounts` adds one remote MCP server per alias through
    `ctx.mcp.transform`, named `granola` or `granola-<alias>`. A server it could not add becomes a `status` problem.
-4. `readSkills` reads and validates every `skills/*/SKILL.md`; setup registers each one directly through
+4. `readSkills` reads and validates every `skills/*/SKILL.md`; `registerSkills` adds each one through
    `ctx.skill.transform`, so OpenCode lists the plugin's `granola` and `granola-meeting-brief` skills after load.
 5. `register` checks the handler table against `capabilities.methods`, generates the access rules into every agent,
    and registers the tools and the single RPC id.

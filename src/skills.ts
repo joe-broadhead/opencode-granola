@@ -1,111 +1,116 @@
 /**
- * The bundled skills: `skills/<name>/SKILL.md`, read from the package root and registered through `ctx.skill`.
+ * The plugin's skills, read from `skills/<name>/SKILL.md` and registered with the host.
  *
- * The contract's `register` wires doors 1–3 and does not register skills, so setup does it here, after the host gate
- * and the options. Files are read once, before the synchronous transform, so a replay does no disk I/O.
+ * OpenCode does not discover a plugin's `skills/` directory: the installed package sits under the host's cache, outside
+ * the directories it scans. A plugin adds its skills through `ctx.skill.transform`, so setup reads every file, checks
+ * its frontmatter and registers the body under the directory's name.
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { readdirSync, readFileSync, type Dirent } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { Skill, type Plugin } from "@opencode/plugin"
+import { parse as parseYaml } from "yaml"
 
-/** One bundled skill, as the transform adds it. */
-export interface BundledSkill {
+/** One checked skill, ready to register. */
+export interface SkillFile {
+  /** The skill id: the directory name, and the frontmatter name. */
+  readonly id: string
   readonly name: string
   readonly description: string
+  /** The absolute path of the SKILL.md file. */
   readonly path: string
+  /** The Markdown body below the frontmatter, with no frontmatter. */
   readonly content: string
 }
 
-const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-const BLOCK_MARKER = /^[>|][+-]?\d*$/
+/** The installed package's `skills/` directory, from `src/skills.ts` and from the bundled `dist/index.js`. */
+const SKILLS = fileURLToPath(new URL("../skills/", import.meta.url))
 
-const INVALID = (directory: string, problem: string) =>
-  new Error(
-    `OPTIONS_INVALID: The bundled skill skills/${directory}/SKILL.md ${problem}. Next step: give it a --- front matter with name: ${directory}, a description (one line, or a >/| block with text), then a non-empty body.`,
-  )
-
-const unquote = (value: string) => {
-  const trimmed = value.trim()
-  if (trimmed.length < 2) return trimmed
-  const first = trimmed[0]
-  return (first === '"' || first === "'") && trimmed.endsWith(first) ? trimmed.slice(1, -1) : trimmed
+/** A failure the contract can read: the code, what happened and the next step. */
+function invalid(file: string, what: string): Error {
+  return new Error(`SCHEMA_VIOLATION: ${file} ${what}. Next step: fix the skill file, then reload the plugin.`)
 }
 
-/** One front matter field: a plain value with folded continuation lines, or a `|`/`>` block. */
-function fieldOf(frontmatter: string, key: string): string | undefined {
-  const lines = frontmatter.replace(/\r\n/g, "\n").split("\n")
-  const at = lines.findIndex((line) => line.startsWith(`${key}:`))
-  const line = lines[at]
-  if (line === undefined) return undefined
-  const first = line.slice(key.length + 1).trim()
-  if (!BLOCK_MARKER.test(first)) {
-    const parts = [unquote(first)]
-    for (const line of lines.slice(at + 1)) {
-      if (line.trim() === "") continue
-      if (!/^\s/.test(line)) break
-      parts.push(unquote(line))
-    }
-    return parts.join(" ").trim()
-  }
-  const body: string[] = []
-  for (const line of lines.slice(at + 1)) {
-    if (line.trim() !== "" && !/^\s/.test(line)) break
-    body.push(line)
-  }
-  const indents = body.filter((line) => line.trim() !== "").map((line) => line.length - line.trimStart().length)
-  const indent = indents.length === 0 ? 0 : Math.min(...indents)
-  const dedented = body.map((line) => line.slice(Math.min(indent, line.length)))
-  if (!first.startsWith(">")) return dedented.join("\n").trim()
-  let folded = ""
-  for (const line of dedented) {
-    if (line.trim() === "") {
-      folded += "\n"
-    } else if (folded === "" || folded.endsWith("\n")) {
-      folded += line
-    } else {
-      folded += ` ${line}`
-    }
-  }
-  return folded.trim()
+interface Frontmatter {
+  readonly name: string | undefined
+  readonly description: string | undefined
+  readonly content: string
 }
 
-/** Reads every skills/<name>/SKILL.md under `root`, whose front matter names the skill after its directory. */
-export function readSkills(root: string = fileURLToPath(new URL("../skills/", import.meta.url))): BundledSkill[] {
-  return readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && existsSync(join(root, entry.name, "SKILL.md")))
+/**
+ * The frontmatter fields this plugin checks and the Markdown body. The frontmatter is parsed as YAML, so `>`, `|`
+ * and their chomping variants fold or keep the description exactly as the skill author wrote it; a parser that reads
+ * only the first line would register `>` as the description.
+ */
+function frontmatter(text: string, file: string): Frontmatter {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(text)
+  if (match === null) throw invalid(file, "has no frontmatter")
+  let data: unknown
+  try {
+    data = parseYaml(match[1] ?? "")
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message.split("\n")[0] : String(cause)
+    throw invalid(file, `has frontmatter that is not valid YAML: ${message}`)
+  }
+  if (typeof data !== "object" || data === null || Array.isArray(data)) throw invalid(file, "has frontmatter that is not a mapping")
+  const fields = data as Record<string, unknown>
+  if (fields.name !== undefined && typeof fields.name !== "string") throw invalid(file, "has a frontmatter name that is not text")
+  if (fields.description !== undefined && typeof fields.description !== "string") throw invalid(file, "has a frontmatter description that is not text")
+  return {
+    name: fields.name,
+    description: fields.description,
+    content: text.slice(match[0].length).trim(),
+  }
+}
+
+/** Read and check every `skills/<name>/SKILL.md` below `directory`, sorted by id. */
+export function readSkills(directory = SKILLS): SkillFile[] {
+  let entries: Dirent[]
+  try {
+    entries = readdirSync(directory, { withFileTypes: true })
+  } catch {
+    throw invalid("skills/", "is missing")
+  }
+  const names = entries
+    .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort()
-    .map((directory) => {
-      const path = join(root, directory, "SKILL.md")
-      const text = readFileSync(path, "utf8")
-      const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(text)
-      if (match === null) throw INVALID(directory, "has no --- front matter")
-      if (!KEBAB.test(directory)) throw INVALID(directory, "is not a kebab-case directory")
-      const frontmatter = match[1] ?? ""
-      const name = fieldOf(frontmatter, "name")
-      const description = fieldOf(frontmatter, "description")
-      const content = (match[2] ?? "").trim()
-      if (name !== directory) throw INVALID(directory, `names ${name ?? "no skill"} instead of ${directory}`)
-      if (description === undefined || description === "") throw INVALID(directory, "has no description")
-      if (BLOCK_MARKER.test(description)) throw INVALID(directory, `has the block marker ${description} as its description`)
-      if (content === "") throw INVALID(directory, "has an empty body")
-      return { name: directory, description, path, content }
-    })
+  if (names.length === 0) throw invalid("skills/", "holds no <name>/SKILL.md")
+  return names.map((name) => {
+    const file = `skills/${name}/SKILL.md`
+    let text: string
+    try {
+      text = readFileSync(join(directory, name, "SKILL.md"), "utf8")
+    } catch {
+      throw invalid(file, "is missing")
+    }
+    const parsed = frontmatter(text, file)
+    if (parsed.name === undefined || parsed.name === "") throw invalid(file, "has no frontmatter name")
+    if (parsed.name !== name) throw invalid(file, `names "${parsed.name}", not its directory "${name}"`)
+    if (parsed.description === undefined || parsed.description.trim() === "") throw invalid(file, "has no frontmatter description")
+    if (parsed.description.trim() === ">" || parsed.description.trim() === "|" || parsed.description.trim() === ">-" || parsed.description.trim() === "|-") {
+      throw invalid(file, `has the frontmatter description "${parsed.description.trim()}", which is only a block marker; indent the text below it`)
+    }
+    if (parsed.content === "") throw invalid(file, "has no content below its frontmatter")
+    return { id: name, name: parsed.name, description: parsed.description, path: join(directory, name, "SKILL.md"), content: parsed.content }
+  })
 }
 
-/** Adds every bundled skill to the host's skill list. The files were read before this synchronous transform. */
+/**
+ * Register the checked skills with the host. The transform's `dispose` is the setup cleanup, like every other
+ * registration. A plugin that adds a skill directory calls this once, from `setup`.
+ */
 export async function registerSkills(
-  skill: Pick<Plugin.Context["skill"], "transform">,
-  skills: readonly BundledSkill[],
-): Promise<void> {
-  await skill.transform((editor) => {
+  context: Plugin.Context,
+  skills: readonly SkillFile[] = readSkills(),
+): Promise<Awaited<ReturnType<Plugin.Context["skill"]["transform"]>>> {
+  return context.skill.transform((editor) => {
     for (const skill of skills) {
       editor.add({
-        id: Skill.ID.make(skill.name),
+        id: Skill.ID.make(skill.id),
         name: Skill.Name.make(skill.name),
         description: skill.description,
-        path: Skill.Info.fields.path.make(skill.path),
+        path: skill.path as Skill.Info["path"],
         content: skill.content,
       })
     }

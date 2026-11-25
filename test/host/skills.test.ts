@@ -6,12 +6,12 @@
  * surfaces the last pre-4b release had.
  */
 import assert from "node:assert/strict"
-import { readFileSync, readdirSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { join, sep } from "node:path"
 import { test, after, before } from "node:test"
 import { fileURLToPath } from "node:url"
 import { manifest } from "../../src/manifest.ts"
-import { startHost, type Host } from "../support/host.ts"
+import { REPO, startHost, type Host } from "../support/host.ts"
 
 const SKILLS = fileURLToPath(new URL("../../skills/", import.meta.url))
 const ALIASES = ["default", "work"] as const
@@ -67,6 +67,10 @@ after(async () => {
 
 test("every bundled skill is registered after the plugin loads in OpenCode 2.4.1", async () => {
   assert.ok(host !== undefined)
+  // OpenCode discovers <project>/skills itself, so the project must be an empty temp directory: only the plugin's
+  // own registration can make these ids appear.
+  assert.equal(host.location.directory.startsWith(REPO + sep), false)
+  assert.equal(existsSync(join(host.location.directory, "skills")), false)
   const expected = expectedSkills()
   assert.deepEqual(
     expected.map((skill) => skill.id),

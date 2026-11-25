@@ -12,7 +12,7 @@ body:
     attributes:
       label: Plugin version
       description: The version in package.json, or the release tag you installed.
-      placeholder: "0.0.0"
+      placeholder: "0.0.11"
     validations:
       required: true
   - type: input

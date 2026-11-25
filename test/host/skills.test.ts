@@ -99,7 +99,7 @@ test("every declared method still reaches every agent's rules", async () => {
       [],
       `${agent.id} holds every declared action`,
     )
-    // v0.0.10 also hid sign_out and never exposed it; the rewrite leaves it out of the manifest, so no rule names it.
+    // The pre-4b release also hid sign_out and never exposed it; the rewrite leaves it out of the manifest, so no rule names it.
     for (const server of SERVERS) assert.equal(actions.has(`${server}_sign_out`), false, `${agent.id} has no sign_out`)
   }
 })

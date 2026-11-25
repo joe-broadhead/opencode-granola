@@ -1,6 +1,6 @@
 {
   "name": "@we-the-rebel-alliance/granola-plugin",
-  "version": "0.0.11",
+  "version": "0.0.0",
   "description": "Granola meeting notes for OpenCode: search, read and export meetings through Granola's official MCP server.",
   "license": "MIT",
   "type": "module",
@@ -23,7 +23,8 @@
     "skills",
     "assets",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "capabilities": {
     "version": 1,

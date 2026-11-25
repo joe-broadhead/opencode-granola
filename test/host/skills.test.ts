@@ -99,7 +99,7 @@ test("every declared method still reaches every agent's rules", async () => {
       [],
       `${agent.id} holds every declared action`,
     )
-    // v0.0.10 also hid sign_out and never exposed it; the rewrite leaves it out of the manifest, so no rule names it.
+    // The pre-4b release also hid sign_out and never exposed it; the rewrite leaves it out of the manifest, so no rule names it.
     for (const server of SERVERS) assert.equal(actions.has(`${server}_sign_out`), false, `${agent.id} has no sign_out`)
   }
 })
@@ -126,7 +126,7 @@ test("sign-in and status keep their pre-4b surfaces", async () => {
     unguardedAgents: string[]
   }
   assert.equal(status.name, manifest.plugin.name)
-  assert.equal(status.version, "0.0.11")
+  assert.equal(status.version, "0.0.0")
   assert.equal(status.host.version, "2.4.1")
   assert.deepEqual(
     status.accounts.map((account) => account.alias),

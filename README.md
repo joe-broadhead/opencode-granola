@@ -14,7 +14,7 @@ and errors, and `granola-meeting-brief` covers a sourced brief before a meeting 
 ## Install
 
 ```sh
-opencode plugin add github:we-the-rebel-alliance/granola-plugin#v0.0.11
+opencode plugin add github:we-the-rebel-alliance/granola-plugin#v0.0.0
 ```
 
 OpenCode 2.4.1 or newer in the 2.4 line is required. The plugin refuses an untested host with `HOST_UNTESTED` unless

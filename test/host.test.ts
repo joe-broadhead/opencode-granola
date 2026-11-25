@@ -13,7 +13,7 @@ test("another 2.4 release starts", () => {
 
 test("an untested host is refused with HOST_UNTESTED and a next step", () => {
   assert.throws(
-    () => assertHost({ app: { version: "2.3.2" }, options: {} }, manifest),
+    () => assertHost({ app: { version: "2.5.0" }, options: {} }, manifest),
     (error: unknown) => {
       assert.ok(error instanceof Error)
       assert.match(error.message, /^HOST_UNTESTED: /)

@@ -10,8 +10,9 @@ executors. Meeting notes, summaries and transcripts are untrusted data, never in
 
 ## Install
 
-Install from a release: `opencode plugin add github:we-the-rebel-alliance/granola-plugin#v<version>`. The first
-release on plugin-contract is v0.0.0, cut after the pull request that adds it merges.
+```sh
+opencode plugin add github:we-the-rebel-alliance/granola-plugin#v0.0.0
+```
 
 OpenCode 2.4.1 or newer in the 2.4 line is required. The plugin refuses an untested host with `HOST_UNTESTED` unless
 `allowUntestedHost` is set.
@@ -38,6 +39,12 @@ Configure the aliases in the plugin's options:
 
 The profile has no fields of its own: the MCP server holds the sign-in. `probe` reports the Granola address each alias
 is signed in as.
+
+## Options
+
+`access` (`all`, `ask-changes`, `read-only`), `accounts` (one empty profile per alias), `exportDirectory` (absolute or
+starting with `~/`, default `~/Granola`) and `allowUntestedHost` (`false`). [Configuration](docs/configuration.md) has
+the generated table and examples.
 
 ## Access
 
@@ -128,6 +135,22 @@ None.
 | `OPTIONS_INVALID` | the plugin's options do not match their schema |
 | `UNAVAILABLE` | the provider could not be reached |
 <!-- /generated:errors -->
+
+## Troubleshooting
+
+- **The Granola tools are absent, or a call answers `NEEDS_SIGN_IN`.** Sign in to the alias's MCP server: `/connect`,
+  or `opencode mcp auth granola` for `default` and `opencode mcp auth granola-<alias>` for another alias. Then run
+  `status` to see each alias's state.
+- **`ACCOUNT_REQUIRED`.** The plugin has more than one alias; pass `account` with one of the aliases `status` lists.
+- **`ACCOUNT_UNKNOWN`.** Use an alias the plugin serves; the next step lists them.
+- **`CURSOR_INVALID`.** Read again without the cursor; never pass another account's cursor.
+- **A change does not run.** `access: "read-only"` refuses every non-read, and `ask-changes` asks first. Check the
+  plugin's `access` option before retrying.
+- **`INPUT_INVALID`.** The input does not match the method's schema; the error's next step says what to pass.
+- **`HOST_UNTESTED`.** The running OpenCode is outside `>=2.4.1 <2.5.0`. Install a tested 2.4 release, or set
+  `allowUntestedHost` if you accept an untested host.
+- **`UNAVAILABLE`.** Granola did not answer. Run `status`; if the alias's MCP server is not connected, sign in again
+  and retry.
 
 ## Docs
 

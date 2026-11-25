@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.0.0 (unreleased)
+## 0.0.0 (2026-11-25)
 
 - Rebuilt greenfield on plugin-contract v0: one `register` call, `status` through `statusAnswer`, `probe`,
   `events_list` and `export_markdown`, and every reachable Granola MCP tool (all but the hidden `sign_out`) declared as a pass-through method with its class.

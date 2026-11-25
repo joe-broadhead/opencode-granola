@@ -335,13 +335,13 @@
   "scripts": {
     "lint": "biome check .",
     "typecheck": "tsc -p tsconfig.json",
-    "build": "node scripts/build.mjs",
+    "bundle": "node scripts/build.mjs",
     "test": "node --test \"test/**/*.test.ts\"",
     "test:pack": "node test/pack-smoke.mjs",
     "fixtures": "node scripts/record-fixture.mjs",
     "docs": "plugin-kit docs",
     "docs:check": "plugin-kit docs --check",
-    "check": "npm run lint && npm run typecheck && npm run build && npm test && npm run test:pack && plugin-kit check && plugin-kit docs --check"
+    "check": "npm run lint && npm run typecheck && npm run bundle && npm test && npm run test:pack && plugin-kit check && plugin-kit docs --check"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.9",

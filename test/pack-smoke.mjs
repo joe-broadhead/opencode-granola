@@ -190,7 +190,7 @@ test("the packed tarball installs, is added by opencode plugin add, and starts i
   assert.match(run(binary, ["--version"], WORK).trim(), /opencode v2\.4\.1/)
 
   // Build and pack exactly what a release would.
-  run("npm", ["run", "build"], ROOT)
+  run("npm", ["run", "bundle"], ROOT)
   const packed = JSON.parse(run("npm", ["pack", "--json", "--ignore-scripts", "--pack-destination", WORK], ROOT))[0]
   const tarballPath = join(WORK, packed.filename)
   assert.ok(existsSync(tarballPath))

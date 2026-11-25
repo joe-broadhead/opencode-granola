@@ -60,6 +60,6 @@ provider read fails.
 
 ## Build
 
-`scripts/build.mjs` bundles `src/index.ts` into `dist/index.js` with esbuild. `@opencode/*` stays external, because
-OpenCode provides it; the contract modules are bundled, so an install needs no build and no runtime dependency.
-`dist/` is generated and is not committed.
+`scripts/build.mjs` bundles `src/index.ts` into `dist/index.js` with esbuild, through `npm run bundle`.
+`@opencode/*` stays external, because OpenCode provides it; the contract modules are bundled, so an install needs no
+build and no runtime dependency. `dist/` is committed so a git install works without a lifecycle script.

@@ -21,14 +21,14 @@ npm run check
 |---|---|
 | `npm run lint` | the Biome recommended preset finds no error |
 | `npm run typecheck` | the sources and tests typecheck under strict settings |
-| `npm run build` | `dist/index.js` is built from `src/index.ts` with esbuild |
+| `npm run bundle` | `dist/index.js` is bundled from `src/index.ts` with esbuild |
 | `npm test` | the manifest, accounts, provider, handlers, export, fixture and host-gate tests pass |
 | `npm run test:pack` | the packed tarball installs, `opencode plugin add` accepts it, and it starts in OpenCode 2.4.1 |
 | `plugin-kit check` | conformance T0 and T1, the doc file set, forbidden patterns and no bundled kit |
 | `plugin-kit docs --check` | every generated doc section matches the manifest |
 
-CI runs the same steps in one job named `ci`. `dist/` is generated and is not committed, so CI builds it before
-`plugin-kit check`.
+CI runs the same steps in one job named `ci`. `dist/` is committed; CI runs `npm run bundle && git diff --exit-code dist/`
+so a stale bundle fails the check.
 
 ## The contract pin
 

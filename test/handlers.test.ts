@@ -63,6 +63,21 @@ test("a cursor issued for one alias is CURSOR_INVALID under another", async () =
   assert.match(message, /Next step: /)
 })
 
+test("a since filter with a one-event page returns every matching event exactly once", async () => {
+  const { runtime } = testRuntime()
+  const ids: string[] = []
+  let cursor: string | undefined
+  for (let page = 0; page < 20; page++) {
+    // Keep the since filter on every page, as an automation does; the cursor still wins over it.
+    const answer = await events({ since: SINCE, ...(cursor === undefined ? {} : { cursor }), limit: 1 }, "work", runtime)
+    ids.push(...answer.events.map((event) => event.external_id))
+    cursor = answer.cursor
+    if (!answer.more) break
+  }
+  assert.deepEqual(ids, EXPECTED, "every matching event is listed in order")
+  assert.equal(new Set(ids).size, ids.length, "no event is repeated across the pages")
+})
+
 test("two events at one timestamp across a page boundary are neither skipped nor repeated", async () => {
   const { runtime } = testRuntime()
   // m-05a and m-05b both start at 2026-10-12T08:00:00Z; m-06 follows on another week.

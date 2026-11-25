@@ -95,7 +95,9 @@
         },
         "exportDirectory": {
           "type": "string",
-          "description": "Absolute folder for Markdown exports. Default: ~/Granola."
+          "title": "Export folder",
+          "default": "~/Granola",
+          "description": "Folder for Markdown exports. Absolute, or starting with ~/."
         },
         "allowUntestedHost": {
           "type": "boolean",

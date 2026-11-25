@@ -14,14 +14,18 @@ import { handlersFor } from "./handlers/index.ts"
 import { manifest, packageName, version } from "./manifest.ts"
 import { createProvider } from "./provider/client.ts"
 
-/** The export folder: `exportDirectory` when given, else `~/Granola`. It must be absolute. */
-function exportDirectoryOf(options: Readonly<Record<string, unknown>>): string {
+/** The export folder: `exportDirectory` when given, else `~/Granola`. A leading `~` is the home folder. */
+export function exportDirectoryOf(options: Readonly<Record<string, unknown>>): string {
   const raw = options["exportDirectory"]
   if (raw === undefined) return join(homedir(), "Granola")
-  if (typeof raw !== "string" || !isAbsolute(raw) || raw.includes("\0")) {
-    throw new Error("OPTIONS_INVALID: exportDirectory must be an absolute path. Next step: expand ~ yourself, or set it to an absolute folder.")
+  if (typeof raw !== "string" || raw.includes("\0")) {
+    throw new Error("OPTIONS_INVALID: exportDirectory must be an absolute path or start with ~/. Next step: set an absolute folder, or ~/Granola.")
   }
-  return resolve(raw)
+  const expanded = raw === "~" ? homedir() : raw.startsWith("~/") ? join(homedir(), raw.slice(2)) : raw
+  if (!isAbsolute(expanded)) {
+    throw new Error("OPTIONS_INVALID: exportDirectory must be an absolute path or start with ~/. Next step: set an absolute folder, or ~/Granola.")
+  }
+  return resolve(expanded)
 }
 
 export default Plugin.define({

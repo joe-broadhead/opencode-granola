@@ -1,7 +1,6 @@
 import { promises as fs } from "node:fs"
 import path from "node:path"
-import { toolError } from "../errors.js"
-import { exists, invalidPath, writeFailed } from "./errors.js"
+import { exists, invalidPath, writeFailed } from "./errors.ts"
 
 const MARKDOWN = /\.(?:md|markdown)$/i
 
@@ -21,23 +20,25 @@ export function defaultName(content: string, now: Date): string {
  * paths, `..`, hidden names, backslashes and control characters are refused before anything is read or asked.
  */
 export function exportPath(raw: string): string[] {
-  const refuse = (problem: string) => toolError(invalidPath(raw, problem))
-  if (/[\u0000-\u001f\u007f]/.test(raw)) throw refuse("contains control characters")
-  if (raw.includes("\\")) throw refuse("uses `\\`; separate folders with `/`")
-  if (raw.startsWith("/") || raw.startsWith("~") || /^[A-Za-z]:/.test(raw)) throw refuse("is absolute; give a path relative to the export folder")
+  const refuse = (problem: string): never => {
+    throw invalidPath(raw, problem)
+  }
+  if (/\p{Cc}/u.test(raw)) refuse("contains control characters")
+  if (raw.includes("\\")) refuse("uses `\\`; separate folders with `/`")
+  if (raw.startsWith("/") || raw.startsWith("~") || /^[A-Za-z]:/.test(raw)) refuse("is absolute; give a path relative to the export folder")
   const parts = raw.split("/")
-  if (parts.includes("..")) throw refuse("leaves the export folder")
-  if (parts.includes("")) throw refuse("has an empty folder or file name")
-  if (parts.some((part) => part.startsWith("."))) throw refuse("names a hidden file or folder")
+  if (parts.includes("..")) refuse("leaves the export folder")
+  if (parts.includes("")) refuse("has an empty folder or file name")
+  if (parts.some((part) => part.startsWith("."))) refuse("names a hidden file or folder")
   const last = parts.length - 1
   if (!MARKDOWN.test(parts[last]!)) parts[last] += ".md"
-  if (parts.some((part) => Buffer.byteLength(part) > 255)) throw refuse("has a name longer than 255 bytes")
+  if (parts.some((part) => Buffer.byteLength(part) > 255)) refuse("has a name longer than 255 bytes")
   return parts
 }
 
 /** The configured export folder, after following a link, must be a folder. */
 async function folder(root: string, relative: string): Promise<void> {
-  if (!(await fs.stat(root)).isDirectory()) throw toolError(writeFailed(relative, "the export folder is a file, not a folder"))
+  if (!(await fs.stat(root)).isDirectory()) throw writeFailed(relative, "the export folder is a file, not a folder")
 }
 
 async function lstat(file: string) {
@@ -62,13 +63,13 @@ export async function preflight(root: string, parts: readonly string[], overwrit
     current = path.join(current, part)
     const stat = await lstat(current)
     if (!stat) return
-    if (stat.isSymbolicLink()) throw toolError(invalidPath(relative, `goes through the link \`${part}\``))
+    if (stat.isSymbolicLink()) throw invalidPath(relative, `goes through the link \`${part}\``)
     if (index < parts.length - 1) {
-      if (!stat.isDirectory()) throw toolError(invalidPath(relative, `goes through \`${part}\`, which is a file`))
+      if (!stat.isDirectory()) throw invalidPath(relative, `goes through \`${part}\`, which is a file`)
     } else if (!stat.isFile()) {
-      throw toolError(invalidPath(relative, "names a folder"))
+      throw invalidPath(relative, "names a folder")
     } else if (!overwrite) {
-      throw toolError(exists(relative))
+      throw exists(relative)
     }
   }
 }
@@ -91,7 +92,7 @@ export async function prepare(root: string, parts: readonly string[]): Promise<{
     }
     const stat = await fs.lstat(parent)
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
-      throw toolError(invalidPath(parts.join("/"), `goes through \`${part}\`, which is not a folder`))
+      throw invalidPath(parts.join("/"), `goes through \`${part}\`, which is not a folder`)
     }
   }
   return { root: canonical, destination: path.join(parent, parts.at(-1)!) }

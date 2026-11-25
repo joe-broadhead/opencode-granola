@@ -125,7 +125,7 @@ test("sign-in and status keep their pre-4b surfaces", async () => {
     unguardedAgents: string[]
   }
   assert.equal(status.name, manifest.plugin.name)
-  assert.equal(status.version, "0.0.11")
+  assert.equal(status.version, "0.0.0")
   assert.equal(status.host.version, "2.4.1")
   assert.deepEqual(
     status.accounts.map((account) => account.alias),

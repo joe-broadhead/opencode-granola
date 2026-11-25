@@ -1,69 +1,30 @@
-#!/usr/bin/env node
-// Bundles the two parts OpenCode loads into exactly two self-contained files: dist/index.js (server) and dist/tui.js
-// (TUI). First-party code, including the RPC contract both parts use, is inlined into each, so neither imports a
-// sibling file. OpenCode reloads a plugin in place and can keep an older copy of an unchanged sibling module, which a
-// new entry would then import. The host provides @opencode/plugin, OpenTUI and Solid, so they stay bare imports; the
-// build fails if an output imports anything else.
+// Builds dist/index.js: the one server entry package.json exports, as one self-contained ES module.
 //
-// OpenCode does not compile JSX from node_modules, so the TUI's .tsx files are compiled here: esbuild strips the
-// types and keeps the JSX, then Solid's universal transform for @opentui/solid turns it into plain JavaScript.
-import { transformAsync } from "@babel/core"
-import { build, transform } from "esbuild"
+//   npm run bundle
+//
+// @opencode/* stays external, because OpenCode provides it at run time. The contract modules are bundled, so a tag
+// installs and runs with no build and no runtime dependency. dist/ is generated and committed, never edited by hand.
 import { readFileSync, rmSync } from "node:fs"
-import { dirname, join, relative } from "node:path"
+import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { build } from "esbuild"
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
-const HOST = ["@opencode/plugin", "@opencode/plugin/*", "@opentui/*", "solid-js", "solid-js/*"]
-const allowed = (path) => path.startsWith("node:") || HOST.some((name) => (name.endsWith("/*") ? path.startsWith(name.slice(0, -1)) : path === name))
+const root = join(dirname(fileURLToPath(import.meta.url)), "..")
+const dist = join(root, "dist")
+const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
 
-/** Compiles .tsx with Solid's universal transform before esbuild bundles it. */
-const solid = {
-  name: "solid-universal",
-  setup(plugin) {
-    plugin.onLoad({ filter: /\.tsx$/ }, async ({ path }) => {
-      const stripped = await transform(readFileSync(path, "utf8"), { loader: "tsx", jsx: "preserve", sourcefile: path, format: "esm" })
-      const result = await transformAsync(stripped.code, {
-        filename: path,
-        configFile: false,
-        babelrc: false,
-        sourceMaps: false,
-        presets: [["babel-preset-solid", { moduleName: "@opentui/solid", generate: "universal" }]],
-      })
-      if (!result?.code) throw new Error(`Babel produced no output for ${relative(ROOT, path)}`)
-      return { contents: result.code, loader: "js" }
-    })
-  },
-}
-
-rmSync(join(ROOT, "dist"), { recursive: true, force: true })
-const result = await build({
-  absWorkingDir: ROOT,
-  entryPoints: { index: "src/index.ts", tui: "src/tui/index.tsx" },
-  outdir: "dist",
+rmSync(dist, { recursive: true, force: true })
+await build({
+  entryPoints: [{ in: join(root, "src", "index.ts"), out: "index" }],
+  outdir: dist,
   bundle: true,
-  splitting: false,
   format: "esm",
   platform: "node",
-  target: "es2022",
-  external: HOST,
-  plugins: [solid],
+  target: "node24",
+  external: ["@opencode/*"],
   legalComments: "none",
-  metafile: true,
   logLevel: "warning",
+  banner: { js: `// ${pkg.name} ${pkg.version}. Built by scripts/build.mjs; do not edit.` },
 })
 
-const outputs = Object.keys(result.metafile.outputs).map((file) => relative(ROOT, join(ROOT, file))).sort()
-if (outputs.join() !== "dist/index.js,dist/tui.js") {
-  console.error(`build: expected exactly dist/index.js and dist/tui.js, got ${outputs.join(", ")}`)
-  process.exit(1)
-}
-const unexpected = Object.entries(result.metafile.outputs).flatMap(([file, output]) =>
-  output.imports.filter((entry) => !allowed(entry.path)).map((entry) => `${file}: ${entry.path}`))
-if (unexpected.length > 0) {
-  console.error(`build: outputs import modules that are neither inlined nor provided by the host:\n  ${unexpected.join("\n  ")}`)
-  process.exit(1)
-}
-for (const [file, output] of Object.entries(result.metafile.outputs)) {
-  console.log(`built ${relative(ROOT, join(ROOT, file))} (${(output.bytes / 1024).toFixed(1)} KiB)`)
-}
+console.log(`built ${pkg.name} ${pkg.version} into dist/index.js`)

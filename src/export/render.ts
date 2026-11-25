@@ -1,5 +1,5 @@
-import { size } from "./errors.js"
-import { elements, findAll, isMarkup, parse, textContent, type Element } from "./markup.js"
+import { size } from "./errors.ts"
+import { elements, findAll, isMarkup, parse, textContent, type Element } from "./markup.ts"
 
 export type Content = "notes" | "transcript" | "both"
 
@@ -71,7 +71,7 @@ const TITLE_ATTRIBUTES = new Set(["id", "title", "url"])
 
 /** One line of plain text: no control or line-separator characters, collapsed spaces, bounded length. */
 export function oneLine(value: string, max = 300): string {
-  const clean = value.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim()
+  const clean = value.replace(/[\p{Cc}\u2028\u2029]+/gu, " ").replace(/\s+/g, " ").trim()
   return clean.length > max ? `${clean.slice(0, max - 3)}...` : clean
 }
 

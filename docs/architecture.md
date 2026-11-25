@@ -1,156 +1,65 @@
 # Architecture
 
-The plugin is a thin layer over OpenCode's own MCP support. OpenCode connects to Granola's official MCP server, runs
-the sign-in, stores the credentials, runs Granola's tools and asks for permission. The plugin registers the server,
-sets the default permission rules, and adds a status model, a Markdown export, a status command, two skills and a
-terminal UI dialog. It uses only the public `@opencode/plugin` API of OpenCode 2.4.1.
+## Layers
 
-```text
-OpenCode 2.4
-├─ MCP server "granola"   registered by the plugin; OpenCode owns transport, OAuth and credentials
-│    Granola's tools  →  granola_<tool>, tools.granola.<tool> in Code Mode
-├─ plugin "granola.meetings"   (dist/index.js, one bundle)
-│    setup            validate options; refuse an untested OpenCode version
-│    mcp.transform    register "granola" → https://mcp.granola.ai/mcp, unless the user configured another server
-│    integration      name the server's integration "Granola"; mark a rejected sign-in as needing a new one
-│    agent.transform  after each agent's base "* * allow": granola_* ask, then the known reads allow
-│    tool.transform   namespace description; hide sign_out; add export_markdown and events_list
-│    execute.after    rewrite "server not available" failures; remember the active workspace name
-│    commands         /granola-status
-│    skills           granola, granola-meeting-brief
-│    rpc              granola.meetings/status
-│    tools RPC        granola.meetings.tools: describe, every known tool, events_list and probe, for scripts
-└─ TUI part "granola.meetings.tui"   (dist/tui.js, one bundle)
-     status dialog: palette entry "Granola: Status", slash /granola
-```
+| Layer | Files | Does |
+|---|---|---|
+| Entry | `src/index.ts` | `Plugin.define({ id, setup })`, the host gate, the account wiring and one `register` call |
+| Manifest | `src/manifest.ts` | reads `package.json` `capabilities` and checks it with the contract's validator |
+| Accounts | `src/accounts.ts` | one Granola MCP server per alias, through the contract's `accounts` module |
+| Handlers | `src/handlers/` | one handler per method: the input, the answer schema, the description and the work |
+| Provider | `src/provider/` | the MCP tool executor per alias, Granola's text and JSON shapes, the meeting page and the transcript reader |
+| Export | `src/export/` | Markdown rendering, path and link checks, and the atomic local write |
 
-## Source map
+The entry is deliberately thin. `assertHost` refuses an untested OpenCode release. `register` from the contract wires
+doors 1–3: one agent tool per method in the `granola` namespace, the same tools in Code Mode, one RPC registration
+under `granola`, the permission assertions on `<alias>:<operation>`, and the access rules inserted into every agent.
+This repository never calls `ctx.tool`, `ctx.rpc` or `ctx.permission` itself.
 
-| Path | Role |
-| --- | --- |
-| `src/index.ts` | `Plugin.define` with the id `granola.meetings`; binds the tools RPC to OpenCode's full context. |
-| `src/setup.ts` | Wires the parts below in order. Its `SetupContext` names exactly the parts of OpenCode's context that the plugin uses, apart from the tools RPC's. |
-| `src/meta.ts` | Reads the version and the supported OpenCode range (`opencode.host`) from `package.json`. |
-| `src/hosts.ts` | `TESTED_HOSTS`, the one list of tested OpenCode releases, which status and the host and pack tests read. |
-| `src/options.ts` | Strict option parsing: `exportDirectory`, `allowUntestedHost` and `access`. |
-| `src/host-check.ts` | Compares `ctx.app.version` with the supported range; refuses with `HOST_UNTESTED` unless `allowUntestedHost` is set, and marks a release outside `TESTED_HOSTS` untested. |
-| `src/server.ts` | Registers the official server under `granola`, or records a conflict with the user's own entry. |
-| `src/known-tools.ts` | The known-tool table: reads, writes, the hidden `sign_out`, and the plugin's own tools. |
-| `src/permissions.ts` | The default rule block, its insertion, and the check for agents that missed it. |
-| `src/integration.ts` | Names the server's sign-in "Granola" in `/connect`, and marks a stored sign-in that Granola rejects so `/connect` shows "Sign in required". |
-| `src/tools.ts` | The namespace description, hiding `sign_out`, and the `execute.after` hook, which also names the `external_directory` rule for a refused export. |
-| `src/workspace.ts` | Reads the active workspace's display name from a `get_account_info` result. |
-| `src/status.ts` | The status model behind `/granola-status`, the RPC and the TUI dialog. |
-| `src/errors.ts` | Error codes, messages and next steps, the one `PLUGIN_CODES` table, and `Tool.Error` for the model. |
-| `src/commands.ts` | `/granola-status`, posted as a notice that does not start a model turn. |
-| `src/skills.ts` | Loads `skills/*/SKILL.md`. |
-| `src/export/` | `export_markdown`: input, paths, Granola reads, rendering and its errors. |
-| `src/io/markdown-export.ts` | The atomic file writer. |
-| `src/rpc/` | The RPC contract, shared by the server and the TUI part, and its registration. It also carries the `access` type, so the TUI part names it without importing option parsing. |
-| `src/events/` | The `granola.meetings` source: Granola's text read into meetings, `events_list` with its bound cursor, `probe`, and their errors, on the source contract's `events` and `cursor` modules. |
-| `src/tui/` | The terminal UI status dialog, bundled into `dist/tui.js`. |
-| `src/tools-rpc.ts` | Granola's part of the tools RPC for scripts: the method table, the next steps and the result shaper, as the one `ToolsRpcPlugin` value the source contract's `tools-rpc` module takes. |
+## The call path
 
-## Permissions
+1. OpenCode loads `dist/index.js` through the package's `./server` export and calls `setup(ctx)`.
+2. `assertHost` refuses an OpenCode release outside `>=2.4.1 <2.5.0`, unless `allowUntestedHost` is set.
+3. `accountsOf` reads the aliases from the options; `registerAccounts` adds one remote MCP server per alias through
+   `ctx.mcp.transform`, named `granola` or `granola-<alias>`. A server it could not add becomes a `status` problem.
+4. `register` checks the handler table against `capabilities.methods`, generates the access rules into every agent,
+   and registers the tools and the single RPC id.
+5. A call resolves the account, validates the input against the handler's schema, asserts the method's operations on
+   `<alias>:<operation>`, runs the handler, checks the answer and maps a failure to the contract's error table.
+6. A handler that needs Granola calls the provider. The provider turns the alias into its server name, finds the
+   server's tool (`granola-work_get_meetings`) in OpenCode's own tool registry, and executes it as the same session and
+   agent. OpenCode owns the OAuth token; the plugin never sees it.
 
-OpenCode asserts the action `granola_<tool>` with the resource `*` before each Granola call. Every agent starts from a
-base `* * allow` rule, and OpenCode applies the last matching rule. The plugin's `agent.transform` inserts its block
-directly after that base rule, so the user's top-level rules, the agent's own rules and saved "Always allow" answers,
-which all come later, override it. The block comes from `defaultRules(access)`: every tool is allowed at `"all"`, the
-reads only with everything else asking at `"ask-changes"`, and the reads only with everything else denied at
-`"read-only"`. Agents without the base rule are left alone, so a stricter agent is never
-weakened. The transform is synchronous and idempotent: OpenCode replays it on every rebuild, and the block appears
-once.
+## The provider
 
-Agents defined only in the user's config are created after plugins run and miss the block. The status model finds
-them, by checking which agents have a base allow, lack the block, and would let a Granola tool this plugin does not
-know run without asking, and gives the per-agent fix.
+`src/provider/client.ts` is the only file that names the vendor endpoint. It holds the owner and plan each probe
+recorded, per alias, and reads the live MCP connection state for `status`. `src/provider/granola.ts` is the only file
+that knows Granola's text and JSON shapes; `src/provider/meetings.ts` builds the events page and the list snapshot;
+`src/provider/transcript.ts` pages through a transcript for the export.
 
-The default rules are the whole permission mechanism. Plugin tools are not prompted by OpenCode, so
-`export_markdown` calls `ctx.permission.assert` itself, with its file path as the resource.
+The plugin keeps no content cache and no credential. The consumer owns the cursor and stores it; the plugin binds the
+cursor to the plugin, source, account and scope and refuses one another account presents. `status` reads the host and
+the accounts on demand and never calls Granola for content.
 
-## Known and unknown tools
+`export_markdown` is the plugin's only write. It writes one file under `exportDirectory` with a private staging file
+and an atomic hard link (or rename when overwriting), checks every folder for links, and writes nothing when a
+provider read fails.
 
-`src/known-tools.ts` classifies Granola's tools from the read-only and destructive hints Granola publishes. The
-classification only decides the default rules: the reads are always allowed, and everything else follows the `access`
-option. A tool Granola adds later is never blocked or hidden, and `granola_*` covers it; status lists it by name.
+## OpenCode APIs
 
-## Status
-
-One model, built by `buildStatus` in `src/status.ts`, serves `/granola-status`, the RPC method and the TUI dialog. It
-reads only OpenCode's local state: `ctx.mcp.list()` for the connection, `ctx.tool.list()` for tool counts,
-`ctx.agent.list()` for agents that missed the defaults, and `ctx.skill.list()` for a skill of the user's that uses one
-of the plugin's skill ids and so takes its place. It never calls Granola. The RPC carries the fields every plugin of
-this family shares (`version`, `host`, `state`, `access`, `unguardedAgents`, `nextStep`), and answers a status it cannot
-read with its error `unavailable`. The workspace name comes from the last successful `get_account_info` call, seen by the
-`execute.after` hook or the tools RPC, and is kept in memory only.
-
-## Export
-
-`export_markdown` validates its input and path, checks that Granola's read tools are available, and asks for
-permission. Its folder is outside the project, so OpenCode asks for `external_directory` as well; a refusal that names
-it becomes `EXPORT_PATH_NOT_PERMITTED`, with that rule as its next step. Only then does it read the meetings through the executors of OpenCode's own `granola_get_meetings` and
-`granola_get_meeting_transcript` tools, which check their own permissions. It pages transcripts within an 8 MB budget,
-renders one Markdown document, and writes it atomically under the export folder with mode `0600`. When Granola
-refuses transcripts for the user's plan, or does not list the transcript tool, the export keeps the notes and marks
-each transcript as not on the plan. Those executors skip
-OpenCode's tool hooks, so the export maps connection failures to the plugin's error codes itself.
-
-## Events list
-
-`package.json`'s `sources` declares `granola.meetings` and the list snapshot `granola.meetings.list` under source-contract version 1. `granola.meetings` is what the plugin implements
-with the package's `events` and `cursor` modules, bundled into `dist/index.js`.
-
-`probe` asserts `granola_probe`, then reads `granola_get_account_info`, the source's one identity operation: the
-account is the signed-in email, the owner `mailto:` and that email, with Granola's note-access scopes.
-
-`events_list` asserts `granola_events_list`, checks its input, the account it names and its cursor before any read,
-then reads through the executors of OpenCode's own `granola_search_meetings` and `granola_get_meetings`, which check
-their own permissions: each week from the cursor's position to 2 hours ago, every page of it, sorted by (start, ID),
-and the summaries of the meetings that make the page. It never asks who is signed in: the page's owner is the account's,
-and every get_meetings answer must name that account (`<connected_user_email>`, element or attribute); one that
-holds meetings and names none is `UNAVAILABLE`. A meeting whose title or summary holds a
-secret is refused for good, and a page holds at most 64 KiB. The cursor is bound to the plugin, the source and the
-account. Those executors skip OpenCode's tool hooks, so both map connection failures to the plugin's error codes
-themselves, and Granola's own failures to `UNAVAILABLE`. The tools RPC runs the same functions as owned methods;
-`pluginError` turns their errors into the script's code and next step.
-
-## Scripts
-
-The tools RPC, `granola.meetings.tools`, lets a script call every known Granola tool with no model
-([Scripting](scripting.md)). Each call names a session; the session's agent and rules decide, exactly as for the
-model. The RPC resolves the method's action against the agent's and the session's rules before dispatch, so only an
-allow runs (every tool at the default `access`), and then calls the tool's executor from `ctx.tool.list()`, which checks the agent's rules, the session's
-rules and saved approvals. The transport is the source contract's `tools-rpc` module; `src/tools-rpc.ts` is Granola's
-part. A permission `evaluate` hook turns an inner ask on one of the RPC's own calls in flight into
-a deny, since no one can answer it. Every known tool is a method, with its class: the list is `src/known-tools.ts`, and
-the plugin's export is built in setup, where it has the export folder.
-
-The executor skips `execute.after`, so the RPC does the hook's work itself. An account read records the workspace with
-the hook's own function; the RPC tells every running instance of the plugin, which share OpenCode's one Granola
-sign-in. A call to a server that is not connected gets the connection codes and next steps of `src/errors.ts`.
-
-## Platform facts
-
-These hold on OpenCode 2.4.1, the release in `TESTED_HOSTS`.
-
-| Topic | Fact | Source |
-| --- | --- | --- |
-| Credential status | A status set with `integration.connection.status` is not on what `connection.active` returns; `integration.get` projects it as `connections[].status`, so the plugin reads its own mark back from there and clears only its own message. A 401 whose token refresh fails with no refresh token leaves the credential in place, so the `/connect` mark is only observable then. The host test signs in through the loopback callback and the token endpoint, then challenges, and asserts the mark is set and cleared. | The host test, on 2.4.1 |
-| Unattended Code Mode | An automation's code action has its tools authorized at creation (an ask or a deny is refused), and the program runs, under an unattended grant for those tools, when the scheduler finds it due. The routes are `/api/experimental/automation`; `experimental.schedule` no longer exists. A stock `opencode serve` starts the scheduler; the host test reaches it over raw HTTP. The embedded `@opencode/sdk` host starts none, so the harness gives it one: an override replaces `Automation.node` with a layer that forks `Automation.run`, from the same @opencode/core module the SDK imports. | [`automation/code.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/core/src/automation/code.ts), [`server/process.ts`](https://github.com/anomalyco/opencode/blob/v2.4.1/packages/server/src/process.ts) |
+| API | Who calls it |
+|---|---|
+| `Plugin.define` | `src/index.ts` |
+| `ctx.app.version` | `src/index.ts`, for the host gate and status |
+| `ctx.mcp.transform` | `src/accounts.ts` |
+| `ctx.agent.transform` | `register`'s access rules |
+| `ctx.agent.list` | `register`, for `call.unguardedAgents()` |
+| `ctx.tool.list` and the tool's `execute` | `src/provider/client.ts`, to reach Granola's MCP tools |
+| `ctx.mcp.list` | `src/provider/client.ts`, for each alias's connection state |
+| `ctx.tool.transform`, `ctx.rpc.register`, `ctx.permission.assert` | `register` only |
 
 ## Build
 
-`scripts/build.mjs` bundles each part OpenCode loads into one file with esbuild: `src/index.ts` into `dist/index.js`
-and `src/tui/index.tsx` into `dist/tui.js`. Shared code, such as the RPC contract and the status rows, is inlined into
-both. Neither bundle imports a sibling file, so an in-place update cannot pair a new entry with an older cached module.
-Only `@opencode/plugin`, OpenTUI, Solid and `node:*` built-ins stay external, because OpenCode provides them; the
-build fails on any other import. `dist/index.js` finds `package.json` and `skills/` one level up.
-
-## Terminal UI
-
-The TUI part is compiled at build time with Babel's Solid transform, because OpenCode does not compile `.tsx` from
-`node_modules`. The dialog reads the RPC `status` method
-when it opens and when `r` is pressed. It subscribes to connection, agent, integration, credential and end-of-turn
-events when it opens and unsubscribes when it closes. The palette
-command is registered from the part's setup; the dialog's own keys live in a layer created inside the dialog.
+`scripts/build.mjs` bundles `src/index.ts` into `dist/index.js` with esbuild, through `npm run bundle`.
+`@opencode/*` stays external, because OpenCode provides it; the contract modules are bundled, so an install needs no
+build and no runtime dependency. `dist/` is committed so a git install works without a lifecycle script.

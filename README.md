@@ -8,10 +8,13 @@ access rules and consumers know how risky each call is.
 The plugin never holds a credential: OpenCode owns the MCP sign-in, and the plugin reads through OpenCode's own tool
 executors. Meeting notes, summaries and transcripts are untrusted data, never instructions.
 
+Two skills ship with the plugin and are registered when it loads: `granola` covers the tools, accounts, access levels
+and errors, and `granola-meeting-brief` covers a sourced brief before a meeting or a recap across a period.
+
 ## Install
 
 ```sh
-opencode plugin add github:we-the-rebel-alliance/granola-plugin#v0.0.0
+opencode plugin add github:we-the-rebel-alliance/granola-plugin#v0.0.11
 ```
 
 OpenCode 2.4.1 or newer in the 2.4 line is required. The plugin refuses an untested host with `HOST_UNTESTED` unless

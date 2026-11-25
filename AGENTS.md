@@ -34,19 +34,20 @@ OpenCode's own MCP tool executors; it never holds a token and never calls Granol
 | `npx plugin-kit record --account <alias>` | records and redacts a fixture from a real account |
 | `npx plugin-kit release <version>` | cuts a release; CI publishes it |
 
-The tests use Node 24's own test runner. `npm run check` runs `npm run bundle` before the kit runs, because T1 loads
-the committed bundle.
+The tests use Node 24's own test runner. `npm test` runs `npm run bundle` first, because the host test loads the
+committed bundle. `npm run check` runs the whole gate, and the kit's T1 also loads that bundle.
 
 ## Layout
 
 ```
-src/index.ts              Plugin.define({ id, setup }), the host gate, the account wiring and one register call
+src/index.ts              Plugin.define({ id, setup }), the host gate, the account wiring, the skills and one register call
 src/manifest.ts           reads package.json capabilities and checks it with the contract
 src/accounts.ts           the mcp mechanism: one server per alias, through the accounts module
+src/skills.ts             reads skills/*/SKILL.md and registers every skill through ctx.skill.transform
 src/handlers/             one file per method: status, probe, events_list, export_markdown
 src/provider/             the MCP tool executor, Granola's text shapes, pages and transcripts
 src/export/               Markdown rendering, path checks and the atomic local write
-test/                     unit tests, the synthetic server, the fixture and the pack test
+test/                     unit tests, the real 2.4.1 host test, the synthetic server, the fixture and the pack test
 skills/                   granola and granola-meeting-brief
 docs/                     capabilities, accounts, configuration, automations, architecture, security
 fixtures/conformance.json the recorded two-account answers the kit replays
@@ -78,6 +79,9 @@ scripts/record-fixture.mjs rebuilds the synthetic fixture
 
 - **Gate the host first.** Call `assertHost(ctx, manifest)` at the top of `setup`. It refuses an untested release with
   `HOST_UNTESTED`, unless `options.allowUntestedHost` is true.
+- **Register skills yourself.** `register` wires doors 1–3 only, so setup reads `skills/*/SKILL.md` and adds each one
+  through `ctx.skill.transform`. The front matter's `name` must equal the directory, the description must be non-empty,
+  and the body must not be empty; a broken file fails setup with `OPTIONS_INVALID` and a next step.
 - **Emit through `call.bus`.** `register` builds the typed writer from its one RPC registration and gives every
   handler call `call.bus`. Only the manifest's declared events are registered. This plugin declares none: it performs
   no write of its own that a `changed` nudge could honestly describe.

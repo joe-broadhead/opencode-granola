@@ -1,7 +1,7 @@
 {
   "plugin": "@we-the-rebel-alliance/granola-plugin",
   "accounts": {
-    "real": true,
+    "real": false,
     "aliases": [
       "work",
       "personal"

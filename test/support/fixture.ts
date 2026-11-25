@@ -31,7 +31,7 @@ export async function buildFixture(): Promise<Record<string, unknown>> {
   return {
     plugin: packageName,
     accounts: {
-      real: true,
+      real: false,
       aliases: [...ALIASES],
       required: { method: "events_list", code: required.ok ? "resolved" : required.code },
       unknown: { method: "events_list", account: "nobodyhere", code: unknown.ok ? "resolved" : unknown.code },

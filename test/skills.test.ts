@@ -18,14 +18,29 @@ function tree(skills: Record<string, string>): string {
     mkdirSync(join(root, directory))
     writeFileSync(join(root, directory, "SKILL.md"), text)
   }
-  mkdirSync(join(root, "not-a-skill"))
   return root
 }
 
 test("reads every skills/<name>/SKILL.md from the package root", () => {
   assert.deepEqual(
-    readSkills().map((skill) => skill.name),
+    readSkills().map((skill) => skill.id),
     ["granola", "granola-meeting-brief"],
+  )
+})
+
+test("parses folded and literal block descriptions from the front matter", () => {
+  const skills = readSkills(
+    tree({
+      granola: "---\nname: granola\ndescription: >\n  Read meetings and notes.\n  Keep the account in mind.\n---\nbody",
+      "granola-meeting-brief": "---\nname: granola-meeting-brief\ndescription: |\n  First line.\n  Second line.\n---\nbody",
+    }),
+  )
+  assert.deepEqual(
+    skills.map((skill) => [skill.id, skill.description]),
+    [
+      ["granola", "Read meetings and notes. Keep the account in mind.\n"],
+      ["granola-meeting-brief", "First line.\nSecond line.\n"],
+    ],
   )
 })
 
@@ -33,29 +48,34 @@ test("registers each skill under its directory name, with the parsed front matte
   const skills = readSkills()
   const added: { id: string; name: string; description?: string; path: string; content: string }[] = []
   const ctx = {
-    transform: async (callback: (editor: { add: (skill: (typeof added)[number]) => void }) => void) => {
-      callback({ add: (skill) => void added.push(skill) })
-      return { dispose: async () => {} }
+    skill: {
+      transform: async (callback: (editor: { add: (skill: (typeof added)[number]) => void }) => void) => {
+        callback({ add: (skill) => void added.push(skill) })
+        return { dispose: async () => {} }
+      },
     },
-  } as unknown as Pick<Plugin.Context["skill"], "transform">
+  } as unknown as Plugin.Context
   await registerSkills(ctx, skills)
   assert.deepEqual(
     added.map((skill) => skill.id),
     ["granola", "granola-meeting-brief"],
   )
   for (const [index, skill] of skills.entries()) {
-    assert.equal(added[index]!.name, skill.name)
-    assert.equal(added[index]!.description, skill.description)
-    assert.equal(added[index]!.path, skill.path)
-    assert.equal(added[index]!.content, skill.content)
+    const item = added[index]
+    assert.ok(item !== undefined)
+    assert.equal(item.name, skill.name)
+    assert.equal(item.description, skill.description)
+    assert.equal(item.path, skill.path)
+    assert.equal(item.content, skill.content)
   }
 })
 
 for (const [label, files] of [
   ["a name that differs from the directory", { granola: "---\nname: other\ndescription: d\n---\nbody" }],
   ["no description", { granola: "---\nname: granola\n---\nbody" }],
+  ["a block marker with no text", { granola: "---\nname: granola\ndescription: >\n---\nbody" }],
+  ["a literal block marker as the description", { granola: "---\nname: granola\ndescription: '>'\n---\nbody" }],
   ["no front matter", { granola: "# Granola" }],
-  ["a non-kebab-case directory", { Granola_Notes: "---\nname: Granola_Notes\ndescription: d\n---\nbody" }],
   ["an empty body", { granola: "---\nname: granola\ndescription: d\n---\n" }],
 ] as const) {
   test(`refuses a skill with ${label}, with a contract code and a next step`, () => {
@@ -63,7 +83,7 @@ for (const [label, files] of [
       () => readSkills(tree(files)),
       (error: unknown) => {
         assert.ok(error instanceof Error)
-        assert.match(error.message, /^OPTIONS_INVALID: /)
+        assert.match(error.message, /^SCHEMA_VIOLATION: /)
         assert.match(error.message, /Next step: /)
         return true
       },

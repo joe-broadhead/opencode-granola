@@ -10,6 +10,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { join, sep } from "node:path"
 import { test, after, before } from "node:test"
 import { fileURLToPath } from "node:url"
+import { parse } from "yaml"
 import { manifest } from "../../src/manifest.ts"
 import { REPO, startHost, type Host } from "../support/host.ts"
 
@@ -27,18 +28,12 @@ function expectedSkills(): { id: string; description: string }[] {
       const text = readFileSync(join(SKILLS, id, "SKILL.md"), "utf8")
       const front = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(text)?.[1]
       assert.ok(front !== undefined, `skills/${id}/SKILL.md has front matter`)
-      const name = front
-        .split(/\r?\n/)
-        .find((line) => line.startsWith("name:"))
-        ?.slice("name:".length)
-        .trim()
-      const description = front
-        .split(/\r?\n/)
-        .find((line) => line.startsWith("description:"))
-        ?.slice("description:".length)
-        .trim()
-      assert.equal(name, id)
-      assert.ok(description !== undefined && description !== "")
+      const fields = parse(front) as { name?: unknown; description?: unknown }
+      assert.equal(fields.name, id)
+      assert.equal(typeof fields.description, "string", `skills/${id}/SKILL.md has a description`)
+      const description = fields.description as string
+      assert.notEqual(description.trim(), "", `skills/${id}/SKILL.md has a non-empty description`)
+      assert.doesNotMatch(description.trim(), /^[>|][+-]?\d*$/, `skills/${id}/SKILL.md has a real description, not a block marker`)
       return { id, description }
     })
 }
@@ -82,6 +77,8 @@ test("every bundled skill is registered after the plugin loads in OpenCode 2.4.1
     assert.ok(found !== undefined, `${skill.id} is registered: ${listed.map((entry) => entry.id).join(", ")}`)
     assert.equal(found.name, skill.id)
     assert.equal(found.description, skill.description)
+    assert.notEqual(found.description.trim(), "", `${skill.id} has a non-empty description`)
+    assert.doesNotMatch(found.description, /^[>|][+-]?\d*$/, `${skill.id} has a real description, not a block marker`)
     assert.ok(found.path.endsWith(`skills/${skill.id}/SKILL.md`), found.path)
     assert.ok(found.content !== "")
   }
@@ -107,13 +104,17 @@ test("every declared method still reaches every agent's rules", async () => {
   }
 })
 
-test("sign-in and status keep their pre-4b surfaces", async () => {
+test("registers one MCP server per account on the real host", async () => {
   assert.ok(host !== undefined)
   const servers = (await host.client.mcp.list({ location: host.location })).data.map((entry) => entry.name)
   assert.deepEqual(
-    servers.filter((name) => name.startsWith(manifest.plugin.name)).sort(),
+    servers.filter((name) => name === manifest.plugin.name || name.startsWith(`${manifest.plugin.name}-`)).sort(),
     [...SERVERS].sort(),
   )
+})
+
+test("sign-in and status keep their pre-4b surfaces", async () => {
+  assert.ok(host !== undefined)
   const session = await host.client.sessions.create({ location: host.location, agent: "build", permissions: [] })
   const status = (
     await host.client.rpc.call({ rpcID: manifest.plugin.name, method: "status", input: { sessionID: session.id, input: {} }, location: host.location })

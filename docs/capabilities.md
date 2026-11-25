@@ -74,6 +74,6 @@ None.
 - **The sources** are `granola.meetings` (an events feed of `meeting` items, private, free, 64 KB per answer, note URLs
   on `notes.granola.ai`) and `granola.meetings.list` (a `list` snapshot, private, free, 64 KB). They share the service
   `granola.meetings`, so a person turns one service on or off.
-- **No actions and no bus events.** The plugin performs no write it could honestly announce: its own write is
-  `export_markdown`, a local file, and the pass-through writes are executed by Granola's MCP server, not by the plugin.
-  An app reads through `events_list`; it receives no `changed` nudge from this plugin.
+- **No actions and no bus events.** Under standard §4.7 the plugin makes no write a nudge could honestly announce:
+  its own write is `export_markdown`, a local file, and the pass-through writes are executed by Granola's MCP server,
+  not by the plugin. An app reads through `events_list`; it receives no `changed` nudge from this plugin.

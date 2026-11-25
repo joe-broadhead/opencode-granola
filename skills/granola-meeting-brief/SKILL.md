@@ -1,6 +1,6 @@
 ---
 name: granola-meeting-brief
-description: Build a sourced brief before a meeting or recap a period from the user's Granola notes: background, decisions, open questions and commitments. Use with the granola skill; not for calendars or upcoming meetings.
+description: "Build a sourced brief before a meeting or recap a period from the user's Granola notes: background, decisions, open questions and commitments. Use with the granola skill; not for calendars or upcoming meetings."
 ---
 
 # Granola meeting brief

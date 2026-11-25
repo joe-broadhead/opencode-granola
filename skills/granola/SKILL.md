@@ -1,6 +1,6 @@
 ---
 name: granola
-description: Read and change the user's Granola meeting notes: find meetings, read notes and transcripts, ask across meetings, and export Markdown. Not for calendars or upcoming meetings. Load before the first Granola call.
+description: "Read and change the user's Granola meeting notes: find meetings, read notes and transcripts, ask across meetings, and export Markdown. Not for calendars or upcoming meetings. Load before the first Granola call."
 ---
 
 # Granola

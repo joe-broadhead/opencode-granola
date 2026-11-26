@@ -219,8 +219,8 @@ test("the packed tarball installs, is added by opencode plugin add, and starts i
   }
   assert.deepEqual(readdirSync(join(consumer, "node_modules")).filter((name) => name !== ".package-lock.json"), [pkg.name.split("/")[0]])
   assert.equal(existsSync(join(installed, "dist", "index.js")), true)
-  assert.equal(existsSync(join(installed, "NOTICE")), true, "the tarball carries the bundled yaml NOTICE")
-  assert.match(readFileSync(join(installed, "NOTICE"), "utf8"), /^## yaml 2\.9\.1 \(ISC\)\n/, "the NOTICE names the bundled yaml version and licence")
+  assert.equal(existsSync(join(installed, "NOTICE")), true, "the tarball carries the bundled licence NOTICE")
+  assert.match(readFileSync(join(installed, "NOTICE"), "utf8"), /^## yaml 2\.9\.1 \(ISC\)$/m, "the NOTICE names the bundled yaml version and licence")
 
   // `opencode plugin add` installs the same tarball from a loopback registry.
   console.log("# installing through opencode plugin add")
